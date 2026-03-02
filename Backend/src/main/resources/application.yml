@@ -1,0 +1,79 @@
+# =============================================================================
+# MDVA Backend - Application Configuration
+# =============================================================================
+# Main configuration file for the Environmental Variables Monitoring System.
+# =============================================================================
+
+spring:
+  application:
+    name: mdva-backend
+
+  # ---------------------------------------------------------------------------
+  # Database Configuration
+  # ---------------------------------------------------------------------------
+  datasource:
+    url: jdbc:postgresql://localhost:5432/mdva
+    username: postgres
+    password: "1234"
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 5
+      idle-timeout: 300000
+      connection-timeout: 20000
+
+  # ---------------------------------------------------------------------------
+  # JOOQ Configuration
+  # ---------------------------------------------------------------------------
+  jooq:
+    sql-dialect: postgres
+
+  # ---------------------------------------------------------------------------
+  # Jackson JSON Configuration
+  # ---------------------------------------------------------------------------
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+    default-property-inclusion: non_null
+
+# =============================================================================
+# Server Configuration
+# =============================================================================
+server:
+  port: 8080
+  servlet:
+    context-path: /
+
+# =============================================================================
+# Actuator Configuration
+# =============================================================================
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: always
+
+# =============================================================================
+# OpenAPI / Swagger Configuration
+# =============================================================================
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    operations-sorter: method
+    tags-sorter: alpha
+
+# =============================================================================
+# Logging Configuration
+# =============================================================================
+logging:
+  level:
+    root: INFO
+    ti.mdva: DEBUG
+    org.jooq: DEBUG
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"

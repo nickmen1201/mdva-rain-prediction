@@ -6,6 +6,12 @@ on:
   pull_request:
     branches: [ main, development ]
 
+# Required permissions for test-reporter and artifacts
+permissions:
+  contents: read
+  checks: write
+  pull-requests: write
+
 defaults:
   run:
     working-directory: Backend

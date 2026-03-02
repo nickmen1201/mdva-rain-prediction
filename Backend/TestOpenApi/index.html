@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Clima Valle de Aburrá</title>
+
+<style>
+body {
+    font-family: Arial, sans-serif;
+    background: linear-gradient(135deg, #1e3c72, #2a5298);
+    color: white;
+    text-align: center;
+    padding: 30px;
+}
+
+.panel {
+    background: rgba(255,255,255,0.1);
+    backdrop-filter: blur(10px);
+    padding: 25px;
+    border-radius: 15px;
+    width: 400px;
+    margin: 20px auto;
+}
+
+button {
+    margin: 5px;
+    padding: 8px 12px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+button:hover {
+    background: #ffffff33;
+}
+
+input {
+    padding: 6px;
+    border-radius: 6px;
+    border: none;
+}
+
+.alerta {
+    color: #ffcccb;
+    font-weight: bold;
+}
+</style>
+</head>
+
+<body>
+
+<h1>Clima en Tiempo Real</h1>
+
+<div>
+    <input type="text" id="lat" placeholder="Latitud">
+    <input type="text" id="lon" placeholder="Longitud">
+    <button onclick="consultar()">Consultar</button>
+</div>
+
+<h3>Municipios Valle de Aburrá</h3>
+
+<button onclick="consultarMunicipio(6.2442,-75.5812)">Medellín</button>
+<button onclick="consultarMunicipio(6.337,-75.557)">Bello</button>
+<button onclick="consultarMunicipio(6.168,-75.644)">Itagüí</button>
+<button onclick="consultarMunicipio(6.155,-75.616)">Envigado</button>
+<button onclick="consultarMunicipio(6.091,-75.635)">Sabaneta</button>
+<button onclick="consultarMunicipio(6.157,-75.643)">La Estrella</button>
+<button onclick="consultarMunicipio(6.068,-75.635)">Caldas</button>
+<button onclick="consultarMunicipio(6.348,-75.508)">Copacabana</button>
+<button onclick="consultarMunicipio(6.378,-75.449)">Girardota</button>
+<button onclick="consultarMunicipio(6.438,-75.331)">Barbosa</button>
+
+<h3>Extra Testing</h3>
+<button onclick="consultarMunicipio(4.7110,-74.0721)">Bogotá</button>
+<button onclick="consultarMunicipio(53.4808,-2.2426)">Manchester (UK)</button>
+
+<div class="panel" id="resultado">
+    Esperando consulta...
+</div>
+
+<script>
+
+// Traducción de códigos WMO
+function traducirCodigo(code) {
+
+    const codigos = {
+        0: "Cielo despejado",
+        1: "Mayormente despejado",
+        2: "Parcialmente nublado",
+        3: "Nublado",
+        45: "Niebla",
+        48: "Niebla con escarcha",
+        51: "Llovizna ligera",
+        53: "Llovizna moderada",
+        55: "Llovizna intensa",
+        61: "Lluvia ligera",
+        63: "Lluvia moderada",
+        65: "Lluvia fuerte",
+        80: "Chubascos ligeros",
+        81: "Chubascos moderados",
+        82: "Chubascos fuertes",
+        95: "Tormenta",
+        96: "Tormenta con granizo leve",
+        99: "Tormenta con granizo fuerte"
+    };
+
+    return codigos[code] || "Desconocido";
+}
+
+function consultar() {
+    let lat = document.getElementById("lat").value;
+    let lon = document.getElementById("lon").value;
+    enviar(lat, lon);
+}
+
+function consultarMunicipio(lat, lon) {
+    enviar(lat, lon);
+}
+
+function enviar(lat, lon) {
+
+    fetch("http://localhost:8080/clima", {
+        method: "POST",
+        headers: {
+            "Content-Type": "text/plain"
+        },
+        body: lat + "," + lon
+    })
+    .then(response => response.json())
+    .then(data => {
+
+        let temp = data.current_weather.temperature;
+        let wind = data.current_weather.windspeed;
+        let code = data.current_weather.weathercode;
+        let descripcion = traducirCodigo(code);
+
+        // Próxima hora
+        let nextHourPrecip = data.hourly.precipitation[1];
+        let nextHourProb = data.hourly.precipitation_probability[1];
+
+        let alertaLluvia = "";
+        if(nextHourProb >= 60){
+            alertaLluvia = "<br><span class='alerta'>⚠ Alta probabilidad de lluvia en la próxima hora</span>";
+        }
+
+        document.getElementById("resultado").innerHTML = `
+            <h2>Clima Actual</h2>
+            🌡 Temperatura: ${temp} °C <br>
+            💨 Viento: ${wind} km/h <br>
+            🌤 Estado: ${descripcion} <br><br>
+
+            <h3>Próxima Hora</h3>
+            ☔ Precipitación: ${nextHourPrecip} mm <br>
+            📊 Probabilidad: ${nextHourProb}% 
+            ${alertaLluvia}
+        `;
+    })
+    .catch(error => {
+        document.getElementById("resultado").innerHTML = "Error al consultar el clima";
+    });
+}
+
+</script>
+
+</body>
+</html>

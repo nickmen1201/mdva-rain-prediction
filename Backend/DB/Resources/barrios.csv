@@ -1,0 +1,255 @@
+id_barrio,Nombre,id_comuna
+MED0101,Santo Domingo Savio No. 1,MED01
+MED0102,Santo Domingo Savio No. 2,MED01
+MED0103,Popular,MED01
+MED0104,Granizal,MED01
+MED0105,Moscu No. 2,MED01
+MED0106,Villa de Guadalupe,MED01
+MED0107,San Pablo,MED01
+MED0108,El Compromiso,MED01
+MED0109,Aldea Pablo VI,MED01
+MED0110,La Esperanza No. 2,MED01
+MED0111,La Avanzada,MED01
+MED0112,Carpinelo,MED01
+MED0201,La Isla,MED02
+MED0202,El Playon de los Comuneros,MED02
+MED0203,Pablo VI,MED02
+MED0204,La Frontera,MED02
+MED0205,La Francia,MED02
+MED0206,Andalucia,MED02
+MED0207,Villa del Socorro,MED02
+MED0208,Villa Niza,MED02
+MED0209,Moscu No.1,MED02
+MED0210,Santa Cruz,MED02
+MED0211,La Rosa,MED02
+MED0301,La Salle,MED03
+MED0302,Las Granjas,MED03
+MED0303,Campo Valdes No. 2,MED03
+MED0304,Santa Ines,MED03
+MED0305,Raizal,MED03
+MED0306,El Pomar,MED03
+MED0307,Manrique Central No.2,MED03
+MED0308,Manrique Oriental,MED03
+MED0309,Versalles No.1,MED03
+MED0310,Versalles No.2,MED03
+MED0311,La Cruz,MED03
+MED0312,Oriente,MED03
+MED0313,Maria Cano Carambolas,MED03
+MED0314,San Jose de la Cima No.1,MED03
+MED0315,San Jose de la Cima No.2,MED03
+MED0401,Berlin,MED04
+MED0402,San Isidro,MED04
+MED0403,Palermo,MED04
+MED0404,Bermejal Los Alamos,MED04
+MED0405,Moravia,MED04
+MED0407,Sevilla,MED04
+MED0408,San Pedro,MED04
+MED0409,Manrique Central No.1,MED04
+MED0410,Campo Valdes No.1,MED04
+MED0411,Las Esmeraldas,MED04
+MED0412,La Pinuela,MED04
+MED0413,Aranjuez,MED04
+MED0414,Brasilia,MED04
+MED0415,Miranda,MED04
+MED0501,Toscana,MED05
+MED0502,Las Brisas,MED05
+MED0503,Florencia,MED05
+MED0504,Tejelo,MED05
+MED0505,Boyaca,MED05
+MED0507,Hector Abad Gomez,MED05
+MED0508,Belalcazar,MED05
+MED0509,Girardot,MED05
+MED0510,Tricentenario,MED05
+MED0511,Castilla,MED05
+MED0513,Francisco Antonio Zea,MED05
+MED0514,Alfonso Lopez,MED05
+MED0517,Caribe,MED05
+MED0519,El Progreso,MED05
+MED0601,Santander,MED06
+MED0602,Doce de Octubre No.1,MED06
+MED0603,Doce de Octubre No.2,MED06
+MED0604,Pedregal,MED06
+MED0605,La Esperanza,MED06
+MED0606,San Martin de Porres,MED06
+MED0607,Kennedy,MED06
+MED0608,Picacho,MED06
+MED0609,Picachito,MED06
+MED0610,Mirador del Doce,MED06
+MED0611,El Progreso No.2,MED06
+MED0612,El Triunfo,MED06
+MED0702,Cerro El Volador,MED07
+MED0703,San German,MED07
+MED0705,Facultad de Minas Universidad Nacional,MED07
+MED0706,La Pilarica,MED07
+MED0707,Bosques de San Pablo,MED07
+MED0708,Altamira,MED07
+MED0709,Cordoba,MED07
+MED0710,Lopez de Mesa,MED07
+MED0711,El Diamante,MED07
+MED0712,Aures No.2,MED07
+MED0713,Aures No.1,MED07
+MED0714,Bello Horizonte,MED07
+MED0715,Villa Flora,MED07
+MED0716,Palenque,MED07
+MED0717,Robledo,MED07
+MED0718,Cucaracho,MED07
+MED0719,Fuente Clara,MED07
+MED0720,Santa Margarita,MED07
+MED0722,Olaya Herrera,MED07
+MED0723,Pajarito,MED07
+MED0724,Monteclaro,MED07
+MED0725,Nueva Villa de la Iguana,MED07
+MED0801,Villas Hermosa,MED08
+MED0802,La Mansion,MED08
+MED0803,San Miguel,MED08
+MED0804,La Ladera,MED08
+MED0805,Batallon Girardot,MED08
+MED0806,Llanaditas,MED08
+MED0807,Los Mangos,MED08
+MED0808,Enciso,MED08
+MED0809,Sucre,MED08
+MED0810,El Pinal,MED08
+MED0811,Trece de Noviembre,MED08
+MED0812,La Libertad,MED08
+MED0813,Villatina,MED08
+MED0814,San Antonio,MED08
+MED0815,Las Estancias,MED08
+MED0816,Villa Turbay,MED08
+MED0817,La Sierra,MED08
+MED0819,Villa Liliam,MED08
+MED0901,Juan Pablo II,MED09
+MED0902,Barrios de Jesus,MED09
+MED0903,Bombona No.2,MED09
+MED0904,Los Cerros El Vergel,MED09
+MED0905,Alejandro Echavarria,MED09
+MED0906,Barrio Caycedo,MED09
+MED0907,Buenos Aires,MED09
+MED0908,Miraflores,MED09
+MED0909,Cataluna,MED09
+MED0910,La Milagrosa,MED09
+MED0911,Gerona,MED09
+MED0912,El Salvador,MED09
+MED0913,Loreto,MED09
+MED0914,Asomadera No.1,MED09
+MED0915,Asomadera No.2,MED09
+MED0916,Asomadera No.3,MED09
+MED0917,Ocho de Marzo,MED09
+MED1001,Prado,MED10
+MED1003,Jesus Nazareno,MED10
+MED1004,El Chagualo,MED10
+MED1005,Estacion Villa,MED10
+MED1006,San Benito,MED10
+MED1007,Guayaquil,MED10
+MED1008,Corazon de Jesus,MED10
+MED1011,Calle Nueva,MED10
+MED1012,Perpetuo Socorro,MED10
+MED1013,Barrio Colon,MED10
+MED1014,Las Palmas,MED10
+MED1015,Bombona No.1,MED10
+MED1016,Boston,MED10
+MED1017,Los Angeles,MED10
+MED1018,Villa Nueva,MED10
+MED1019,La Candelaria,MED10
+MED1020,San Diego,MED10
+MED1101,Carlos E. Restrepo,MED11
+MED1102,Suramericana,MED11
+MED1103,Naranjal,MED11
+MED1104,San Joaquin,MED11
+MED1105,Los Conquistadores,MED11
+MED1107,Bolivariana,MED11
+MED1108,Laureles,MED11
+MED1109,Las Acacias,MED11
+MED1110,La Castellana,MED11
+MED1111,Lorena,MED11
+MED1112,El Velodromo,MED11
+MED1113,Estadio,MED11
+MED1114,Los Colores,MED11
+MED1115,Cuarta Brigada,MED11
+MED1117,Florida Nueva,MED11
+MED1201,Ferrini,MED12
+MED1202,Calasanz,MED12
+MED1203,Los Pinos,MED12
+MED1204,La America,MED12
+MED1205,La Floresta,MED12
+MED1206,Santa Lucia,MED12
+MED1207,El Danubio,MED12
+MED1208,Campo Alegre,MED12
+MED1209,Santa Monica,MED12
+MED1210,Barrio Cristobal,MED12
+MED1211,Simon Bolivar,MED12
+MED1212,Santa Teresita,MED12
+MED1213,Calasanz Parte Alta,MED12
+MED1301,El Pesebre,MED13
+MED1302,Blanquizal,MED13
+MED1303,Santa Rosa de Lima,MED13
+MED1304,Los Alcazares,MED13
+MED1305,Metropolitano,MED13
+MED1306,La Pradera,MED13
+MED1307,Juan XXIII La Quiebra,MED13
+MED1308,San Javier No.2,MED13
+MED1309,San Javier No.1,MED13
+MED1310,Veinte de Julio,MED13
+MED1311,Belencito,MED13
+MED1312,Betania,MED13
+MED1313,El Corazon,MED13
+MED1314,La Independencia,MED13
+MED1315,Nuevos Conquistadores,MED13
+MED1316,El Salado,MED13
+MED1317,Eduardo Santos,MED13
+MED1318,Antonio Narino,MED13
+MED1319,El Socorro,MED13
+MED1401,Barrio Colombia,MED14
+MED1403,Villa Carlota,MED14
+MED1404,Castropol,MED14
+MED1405,Lalinde,MED14
+MED1406,Las Lomas No.1,MED14
+MED1407,Las Lomas No.2,MED14
+MED1408,Altos del Poblado,MED14
+MED1409,El Tesoro,MED14
+MED1410,Los Naranjos,MED14
+MED1411,Los Balsos No.1,MED14
+MED1412,San Lucas,MED14
+MED1413,El Diamante No.2,MED14
+MED1414,El Castillo,MED14
+MED1415,Los Balsos No.2,MED14
+MED1416,Alejandria,MED14
+MED1417,La Florida,MED14
+MED1418,El Poblado,MED14
+MED1419,Manila,MED14
+MED1420,Astorga,MED14
+MED1421,Patio Bonito,MED14
+MED1422,La Aguacatala,MED14
+MED1423,Santa Maria de los Angeles,MED14
+MED1502,Tenche,MED15
+MED1503,Trinidad,MED15
+MED1504,Santa Fe,MED15
+MED1507,Campo Amor,MED15
+MED1509,Cristo Rey,MED15
+MED1510,Guayabal,MED15
+MED1511,La Colina,MED15
+MED1601,Fatima,MED16
+MED1602,Rosales,MED16
+MED1603,Belen,MED16
+MED1604,Granada,MED16
+MED1605,San Bernardo,MED16
+MED1606,Las Playas,MED16
+MED1607,Diego Echavarria,MED16
+MED1608,La Mota,MED16
+MED1609,La Hondonada,MED16
+MED1610,El Rincon,MED16
+MED1611,La Loma de Los Bernal,MED16
+MED1612,La Gloria,MED16
+MED1613,Altavista,MED16
+MED1614,La Palma,MED16
+MED1615,Los Alpes,MED16
+MED1616,Las Violetas,MED16
+MED1617,Las Mercedes,MED16
+MED1618,Nueva Villa del Aburra,MED16
+MED1619,Miravalle,MED16
+MED1620,El Nogal - Los Almendros,MED16
+MED1621,Cerro Nutibara,MED16
+MEDC01,Barrios_San Sebastian de Palmitas,MEDC01
+MEDC02,Barrios_San Cristobal,MEDC02
+MEDC03,Barrios_Altavista,MEDC03
+MEDC04,Barrios_San Antonio de Prado,MEDC04
+MEDC05,Barrios_Santa Elena,MEDC05

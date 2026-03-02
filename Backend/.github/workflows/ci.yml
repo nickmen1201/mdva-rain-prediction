@@ -30,10 +30,10 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up JDK 17
+      - name: Set up JDK 21
         uses: actions/setup-java@v4
         with:
-          java-version: '17'
+          java-version: '21'
           distribution: 'temurin'
           cache: gradle
 
@@ -51,14 +51,14 @@ jobs:
             ${{ runner.os }}-gradle-
 
       - name: Build with Gradle
-        run: ./gradlew build -x test -x generateJooq
+        run: ./gradlew build -x test
         env:
           SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/mdva_test
           SPRING_DATASOURCE_USERNAME: postgres
           SPRING_DATASOURCE_PASSWORD: postgres
 
       - name: Run tests
-        run: ./gradlew test -x generateJooq
+        run: ./gradlew test
         env:
           SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/mdva_test
           SPRING_DATASOURCE_USERNAME: postgres
@@ -89,16 +89,15 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up JDK 17
+      - name: Set up JDK 21
         uses: actions/setup-java@v4
         with:
-          java-version: '17'
+          java-version: '21'
           distribution: 'temurin'
           cache: gradle
 
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      - name: Check code style
-        run: ./gradlew compileJava -x generateJooq
-        continue-on-error: true
+      - name: Compile and check
+        run: ./gradlew compileJava compileTestJava

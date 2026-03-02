@@ -1,21 +1,18 @@
 package ti.mdva.service;
 
+import ti.mdva.dto.WeatherRequestDTO;
 import ti.mdva.dto.WeatherResponseDTO;
 
 /**
- * Service interface for weather data operations.
- *
- * @author MDVA Team
- * @version 1.0
+ * Service interface for weather operations using Open-Meteo API.
  */
 public interface WeatherService {
 
     /**
-     * Retrieves current weather conditions and forecast for a location.
+     * Fetches current weather data for given coordinates.
      *
-     * @param latitude  latitude coordinate
-     * @param longitude longitude coordinate
-     * @return weather data including current conditions and 24-hour forecast
+     * @param request the weather request with coordinates
+     * @return current weather data
      */
-    WeatherResponseDTO getCurrentWeather(Double latitude, Double longitude);
+    WeatherResponseDTO getCurrentWeather(WeatherRequestDTO request);
 }

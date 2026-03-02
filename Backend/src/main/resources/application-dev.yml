@@ -1,0 +1,19 @@
+# =============================================================================
+# MDVA Backend - Development Profile Configuration
+# =============================================================================
+# Configuration overrides for local development environment.
+# Activate with: --spring.profiles.active=dev
+# =============================================================================
+
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/mdva
+    username: postgres
+    password: ""
+
+# Enhanced logging for development
+logging:
+  level:
+    ti.mdva: DEBUG
+    org.jooq: DEBUG
+    org.springframework.web: DEBUG

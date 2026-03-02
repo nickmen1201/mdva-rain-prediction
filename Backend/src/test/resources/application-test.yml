@@ -1,0 +1,19 @@
+# =============================================================================
+# MDVA Backend - Test Profile Configuration
+# =============================================================================
+# Configuration for running tests.
+# =============================================================================
+
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/mdva_test
+    username: postgres
+    password: ""
+
+  jooq:
+    sql-dialect: postgres
+
+logging:
+  level:
+    root: WARN
+    ti.mdva: INFO

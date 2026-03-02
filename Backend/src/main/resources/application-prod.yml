@@ -1,0 +1,22 @@
+# =============================================================================
+# MDVA Backend - Production Profile Configuration
+# =============================================================================
+# Configuration overrides for production environment.
+# Uses environment variables for sensitive data.
+# Activate with: --spring.profiles.active=prod
+# =============================================================================
+
+spring:
+  datasource:
+    url: ${DATABASE_URL}
+    username: ${DATABASE_USERNAME}
+    password: ${DATABASE_PASSWORD}
+    hikari:
+      maximum-pool-size: 20
+
+# Reduced logging for production
+logging:
+  level:
+    root: WARN
+    ti.mdva: INFO
+    org.jooq: WARN

@@ -1,116 +1,79 @@
 package ti.mdva.service.impl;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
+import ti.mdva.dto.WeatherRequestDTO;
 import ti.mdva.dto.WeatherResponseDTO;
-import ti.mdva.dto.WeatherResponseDTO.CurrentWeather;
-import ti.mdva.dto.WeatherResponseDTO.HourlyForecast;
-import ti.mdva.dto.WeatherResponseDTO.RiskLevel;
 import ti.mdva.service.WeatherService;
 
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.Map;
 
 /**
- * Weather service implementation using Open-Meteo API.
- *
- * @author MDVA Team
- * @version 1.0
+ * Implementation of WeatherService using Open-Meteo API.
  */
-@Slf4j
 @Service
-@RequiredArgsConstructor
 public class WeatherServiceImpl implements WeatherService {
 
     private static final String OPEN_METEO_URL = "https://api.open-meteo.com/v1/forecast";
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private static final Map<Integer, String> WEATHER_CODES = Map.ofEntries(
+            Map.entry(0, "Clear sky"),
+            Map.entry(1, "Mainly clear"),
+            Map.entry(2, "Partly cloudy"),
+            Map.entry(3, "Overcast"),
+            Map.entry(45, "Fog"),
+            Map.entry(48, "Depositing rime fog"),
+            Map.entry(51, "Light drizzle"),
+            Map.entry(53, "Moderate drizzle"),
+            Map.entry(55, "Dense drizzle"),
+            Map.entry(61, "Slight rain"),
+            Map.entry(63, "Moderate rain"),
+            Map.entry(65, "Heavy rain"),
+            Map.entry(80, "Slight rain showers"),
+            Map.entry(81, "Moderate rain showers"),
+            Map.entry(82, "Violent rain showers"),
+            Map.entry(95, "Thunderstorm"),
+            Map.entry(96, "Thunderstorm with slight hail"),
+            Map.entry(99, "Thunderstorm with heavy hail")
+    );
+
+    private final RestTemplate restTemplate;
+
+    public WeatherServiceImpl() {
+        this.restTemplate = new RestTemplate();
+    }
 
     @Override
-    public WeatherResponseDTO getCurrentWeather(Double latitude, Double longitude) {
-        try {
-            String url = buildUrl(latitude, longitude);
-            RestTemplate restTemplate = new RestTemplate();
-            String response = restTemplate.getForObject(url, String.class);
-            return parseResponse(response, latitude, longitude);
-        } catch (Exception e) {
-            log.error("Error fetching weather: {}", e.getMessage());
-            throw new RuntimeException("Failed to retrieve weather data", e);
+    public WeatherResponseDTO getCurrentWeather(WeatherRequestDTO request) {
+        String url = String.format(
+                "%s?latitude=%f&longitude=%f&current=temperature_2m,relative_humidity_2m,precipitation,weather_code,wind_speed_10m",
+                OPEN_METEO_URL, request.getLatitude(), request.getLongitude()
+        );
+
+        JsonNode response = restTemplate.getForObject(url, JsonNode.class);
+
+        if (response == null || !response.has("current")) {
+            return WeatherResponseDTO.builder()
+                    .latitude(request.getLatitude())
+                    .longitude(request.getLongitude())
+                    .timestamp(LocalDateTime.now())
+                    .build();
         }
-    }
 
-    private String buildUrl(Double lat, Double lon) {
-        return String.format(
-                "%s?latitude=%f&longitude=%f&current=temperature_2m,relative_humidity_2m,apparent_temperature," +
-                        "precipitation,weather_code,wind_speed_10m,wind_direction_10m" +
-                        "&hourly=temperature_2m,precipitation_probability,precipitation&forecast_hours=24&timezone=auto",
-                OPEN_METEO_URL, lat, lon);
-    }
-
-    private WeatherResponseDTO parseResponse(String response, Double lat, Double lon) throws Exception {
-        JsonNode root = objectMapper.readTree(response);
-        JsonNode current = root.get("current");
-        JsonNode hourly = root.get("hourly");
-
-        CurrentWeather currentWeather = CurrentWeather.builder()
-                .temperature(current.get("temperature_2m").asDouble())
-                .feelsLike(current.get("apparent_temperature").asDouble())
-                .relativeHumidity(current.get("relative_humidity_2m").asInt())
-                .precipitation(current.get("precipitation").asDouble())
-                .windSpeed(current.get("wind_speed_10m").asDouble())
-                .windDirection(current.get("wind_direction_10m").asInt())
-                .description(getDescription(current.get("weather_code").asInt()))
-                .rainProbability(hourly.get("precipitation_probability").get(0).asInt())
-                .riskLevel(calculateRisk(current.get("precipitation").asDouble(), current.get("wind_speed_10m").asDouble()))
-                .build();
-
-        List<HourlyForecast> forecast = new ArrayList<>();
-        JsonNode times = hourly.get("time");
-        JsonNode temps = hourly.get("temperature_2m");
-        JsonNode probs = hourly.get("precipitation_probability");
-        JsonNode precips = hourly.get("precipitation");
-
-        for (int i = 0; i < Math.min(24, times.size()); i++) {
-            forecast.add(HourlyForecast.builder()
-                    .time(LocalDateTime.parse(times.get(i).asText(), DateTimeFormatter.ISO_LOCAL_DATE_TIME))
-                    .temperature(temps.get(i).asDouble())
-                    .rainProbability(probs.get(i).asInt())
-                    .precipitation(precips.get(i).asDouble())
-                    .riskLevel(calculateRisk(precips.get(i).asDouble(), 0))
-                    .build());
-        }
+        JsonNode current = response.get("current");
+        int weatherCode = current.has("weather_code") ? current.get("weather_code").asInt() : 0;
 
         return WeatherResponseDTO.builder()
-                .latitude(lat)
-                .longitude(lon)
+                .latitude(request.getLatitude())
+                .longitude(request.getLongitude())
                 .timestamp(LocalDateTime.now())
-                .current(currentWeather)
-                .hourlyForecast(forecast)
+                .temperature(current.has("temperature_2m") ? current.get("temperature_2m").asDouble() : null)
+                .precipitation(current.has("precipitation") ? current.get("precipitation").asDouble() : null)
+                .humidity(current.has("relative_humidity_2m") ? current.get("relative_humidity_2m").asDouble() : null)
+                .windSpeed(current.has("wind_speed_10m") ? current.get("wind_speed_10m").asDouble() : null)
+                .weatherCode(weatherCode)
+                .weatherDescription(WEATHER_CODES.getOrDefault(weatherCode, "Unknown"))
                 .build();
-    }
-
-    private RiskLevel calculateRisk(double precipitation, double wind) {
-        if (precipitation > 10 || wind > 50) return RiskLevel.VERY_HIGH;
-        if (precipitation > 5 || wind > 30) return RiskLevel.HIGH;
-        if (precipitation > 1 || wind > 20) return RiskLevel.MODERATE;
-        return RiskLevel.LOW;
-    }
-
-    private String getDescription(int code) {
-        return switch (code) {
-            case 0 -> "Clear sky";
-            case 1, 2, 3 -> "Partly cloudy";
-            case 45, 48 -> "Fog";
-            case 51, 53, 55 -> "Drizzle";
-            case 61, 63, 65 -> "Rain";
-            case 80, 81, 82 -> "Rain showers";
-            case 95, 96, 99 -> "Thunderstorm";
-            default -> "Variable conditions";
-        };
     }
 }

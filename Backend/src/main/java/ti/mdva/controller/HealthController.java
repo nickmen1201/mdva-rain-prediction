@@ -7,27 +7,24 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.Map;
 
 /**
- * Health check controller.
- *
- * @author MDVA Team
- * @version 1.0
+ * Health check endpoint for monitoring service status.
  */
 @RestController
-@RequestMapping("/api/v1/health")
-@Tag(name = "Health", description = "Service health check endpoints")
+@RequestMapping("/api/health")
+@Tag(name = "Health", description = "Service health monitoring endpoints")
 public class HealthController {
 
     @GetMapping
-    @Operation(summary = "Check service health")
-    public ResponseEntity<Map<String, Object>> checkHealth() {
+    @Operation(summary = "Check service health", description = "Returns service status and timestamp")
+    public ResponseEntity<Map<String, Object>> health() {
         return ResponseEntity.ok(Map.of(
                 "status", "UP",
-                "timestamp", LocalDateTime.now(),
-                "service", "MDVA Backend"
+                "service", "mdva-backend",
+                "timestamp", Instant.now().toString()
         ));
     }
 }

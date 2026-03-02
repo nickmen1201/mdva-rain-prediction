@@ -3,7 +3,6 @@ package ti.mdva.controller;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import ti.mdva.dto.WeatherRequestDTO;
@@ -11,30 +10,33 @@ import ti.mdva.dto.WeatherResponseDTO;
 import ti.mdva.service.WeatherService;
 
 /**
- * Weather data controller.
- *
- * @author MDVA Team
- * @version 1.0
+ * Controller for weather data endpoints using Open-Meteo API.
  */
 @RestController
-@RequestMapping("/api/v1/weather")
-@RequiredArgsConstructor
-@Tag(name = "Weather", description = "Weather and environmental data endpoints")
+@RequestMapping("/api/weather")
+@Tag(name = "Weather", description = "Weather data endpoints using Open-Meteo API")
 public class WeatherController {
 
     private final WeatherService weatherService;
 
-    @GetMapping
-    @Operation(summary = "Get current weather")
-    public ResponseEntity<WeatherResponseDTO> getWeather(
-            @RequestParam Double latitude,
-            @RequestParam Double longitude) {
-        return ResponseEntity.ok(weatherService.getCurrentWeather(latitude, longitude));
+    public WeatherController(WeatherService weatherService) {
+        this.weatherService = weatherService;
     }
 
-    @PostMapping
-    @Operation(summary = "Get weather by coordinates")
-    public ResponseEntity<WeatherResponseDTO> getWeatherPost(@Valid @RequestBody WeatherRequestDTO request) {
-        return ResponseEntity.ok(weatherService.getCurrentWeather(request.getLatitude(), request.getLongitude()));
+    @PostMapping("/current")
+    @Operation(summary = "Get current weather", description = "Fetches current weather data for specified coordinates")
+    public ResponseEntity<WeatherResponseDTO> getCurrentWeather(@Valid @RequestBody WeatherRequestDTO request) {
+        return ResponseEntity.ok(weatherService.getCurrentWeather(request));
+    }
+
+    @GetMapping("/current")
+    @Operation(summary = "Get current weather by coordinates", description = "Fetches current weather using query parameters")
+    public ResponseEntity<WeatherResponseDTO> getCurrentWeatherByCoords(
+            @RequestParam double latitude,
+            @RequestParam double longitude) {
+        WeatherRequestDTO request = new WeatherRequestDTO();
+        request.setLatitude(latitude);
+        request.setLongitude(longitude);
+        return ResponseEntity.ok(weatherService.getCurrentWeather(request));
     }
 }

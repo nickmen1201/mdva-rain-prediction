@@ -4,7 +4,10 @@
       "Bash(tree:*)",
       "Bash(./gradlew compileJava:*)",
       "Bash(./gradlew:*)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(psql:*)",
+      "Bash(\"/c/Program Files/PostgreSQL/18/bin/psql.exe\" -U postgres -c \"\\\\l\")",
+      "Bash(PGPASSWORD=1234 \"/c/Program Files/PostgreSQL/18/bin/psql.exe\":*)"
     ]
   }
 }

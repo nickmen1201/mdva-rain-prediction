@@ -111,7 +111,7 @@ jooq {
 
                     target.apply {
                         packageName = "ti.mdva.jooq"
-                        directory = "${project.projectDir}/build/generated-src/jooq/main"
+                        directory = "${project.projectDir}/src/main/generated-jooq"
                     }
 
                     strategy.apply {
@@ -127,7 +127,7 @@ jooq {
 sourceSets {
     main {
         java {
-            srcDir("build/generated-src/jooq/main")
+            srcDir("src/main/generated-jooq")
         }
     }
 }

@@ -111,7 +111,7 @@ jooq {
 
                     target.apply {
                         packageName = "ti.mdva.jooq"
-                        directory = "src/main/java"
+                        directory = "${project.projectDir}/src/main/generated-jooq"
                     }
 
                     strategy.apply {
@@ -119,6 +119,15 @@ jooq {
                     }
                 }
             }
+        }
+    }
+}
+
+// Add generated JOOQ sources to compilation
+sourceSets {
+    main {
+        java {
+            srcDir("src/main/generated-jooq")
         }
     }
 }

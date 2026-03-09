@@ -32,6 +32,7 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-validation")
     implementation("org.springframework.boot:spring-boot-starter-actuator")
     implementation("org.springframework.boot:spring-boot-starter-jooq")
+    implementation ("org.springframework.boot:spring-boot-starter-security")
 
     // Database
     implementation("org.postgresql:postgresql")

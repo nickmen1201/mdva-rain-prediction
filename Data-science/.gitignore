@@ -12,3 +12,6 @@ __pycache__/
 *.pyc
 .venv/
 .env
+
+# Modelos grandes (>100MB)
+models/random_forest.pkl

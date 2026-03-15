@@ -1,0 +1,17 @@
+# Datos — nunca se suben
+data/
+
+# Imágenes generadas por notebooks
+**/*.png
+
+# Checkpoints de Jupyter
+**/.ipynb_checkpoints/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+.env
+
+# Modelos grandes (>100MB)
+models/random_forest.pkl

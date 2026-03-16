@@ -108,6 +108,23 @@ def health():
 
 
 @app.post(
+    "/predecir/ambos",
+    response_model=list[ResultadoPrediccion],
+    tags=["Predicción"],
+    summary="Predicción con ambos modelos en paralelo",
+)
+def predecir_ambos(entrada: EntradaPrediccion):
+    """Devuelve las predicciones de los dos modelos en una sola llamada."""
+    resultados = []
+    for nombre in MODELS:
+        try:
+            resultados.append(predecir(nombre, entrada))
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Error en {nombre}: {e}")
+    return resultados
+
+
+@app.post(
     "/predecir/{modelo}",
     response_model=ResultadoPrediccion,
     tags=["Predicción"],
@@ -124,20 +141,3 @@ def predecir_con_modelo(modelo: ModeloNombre, entrada: EntradaPrediccion):
         return predecir(modelo.value, entrada)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-
-
-@app.post(
-    "/predecir/ambos",
-    response_model=list[ResultadoPrediccion],
-    tags=["Predicción"],
-    summary="Predicción con ambos modelos en paralelo",
-)
-def predecir_ambos(entrada: EntradaPrediccion):
-    """Devuelve las predicciones de los dos modelos en una sola llamada."""
-    resultados = []
-    for nombre in MODELS:
-        try:
-            resultados.append(predecir(nombre, entrada))
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=f"Error en {nombre}: {e}")
-    return resultados

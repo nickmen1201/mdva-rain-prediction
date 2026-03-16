@@ -75,6 +75,34 @@ public class ViajeUseCase {
         return viajeRepository.save(nuevoViaje);
     }
 
+    /* TODO: Implementar servicio de consumo a partir de estee comando de powershell, el cual, enlaza OpenWeatherAPI con los modelos de ML:
+    
+            # 1. Fetch current weather from Open-Meteo
+        $weather = Invoke-RestMethod -Uri "https://api.open-meteo.com/v1/forecast?latitude=6.2442&longitude=-75.5812&hourly=temperature_2m,relativehumidity_2m,cloudcover,windspeed_10m&current_weather=true&timezone=America%2FBogota"
+
+        # 2. Find the index matching the current hour
+        $now = [System.DateTime]::Now
+        $hora = $now.Hour
+        $mes  = $now.Month
+        $idx  = ($weather.hourly.time | Select-String ($now.ToString("yyyy-MM-ddTHH"))).LineNumber - 1
+
+        # 3. Extract variables
+        $body = @{
+            temperatura_c         = $weather.hourly.temperature_2m[$idx]
+            humedad_relativa_pct  = $weather.hourly.relativehumidity_2m[$idx]
+            cobertura_nubosa_pct  = $weather.hourly.cloudcover[$idx]
+            velocidad_viento_ms   = [math]::Round($weather.hourly.windspeed_10m[$idx] / 3.6, 2)  # km/h → m/s
+            hora                  = $hora
+            mes                   = $mes
+        } | ConvertTo-Json
+
+        # 4. Send to your model
+        Invoke-RestMethod -Uri "http://localhost:8081/predecir/ambos" -Method POST -ContentType "application/json" -Body $body
+            
+    
+    */
+
+
     // -------------------------------------------------------------------------
     // FinalizarViaje
     // -------------------------------------------------------------------------

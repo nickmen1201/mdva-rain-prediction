@@ -26,7 +26,6 @@ python -m uvicorn main:app --host 0.0.0.0 --port 8081 --reload
 | GET | `/health` | Estado del servicio |
 | POST | `/predecir/regresion_logistica` | Predicción con Regresión Logística |
 | POST | `/predecir/random_forest` | Predicción con Random Forest |
-| POST | `/predecir/ambos` | Predicción con ambos modelos |
 
 ---
 

@@ -3,8 +3,9 @@ package ti.mdva.service.impl;
 import com.fasterxml.jackson.databind.JsonNode;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
-import ti.mdva.dto.WeatherRequestDTO;
-import ti.mdva.dto.WeatherResponseDTO;
+
+import ti.mdva.model.dto.WeatherRequestDTO;
+import ti.mdva.model.dto.WeatherResponseDTO;
 import ti.mdva.service.WeatherService;
 
 import java.time.LocalDateTime;

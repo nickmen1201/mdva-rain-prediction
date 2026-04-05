@@ -1,10 +1,10 @@
 package ti.mdva.service;
 
-import ti.mdva.dto.CommuneDTO;
-import ti.mdva.dto.MunicipalityDTO;
-import ti.mdva.dto.NeighborhoodDTO;
-
 import java.util.List;
+
+import ti.mdva.model.dto.CommuneDTO;
+import ti.mdva.model.dto.MunicipalityDTO;
+import ti.mdva.model.dto.NeighborhoodDTO;
 
 /**
  * Service interface for location operations.

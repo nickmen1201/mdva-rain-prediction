@@ -2,9 +2,10 @@ package ti.mdva.service.impl;
 
 import org.jooq.DSLContext;
 import org.springframework.stereotype.Service;
-import ti.mdva.dto.CommuneDTO;
-import ti.mdva.dto.MunicipalityDTO;
-import ti.mdva.dto.NeighborhoodDTO;
+
+import ti.mdva.model.dto.CommuneDTO;
+import ti.mdva.model.dto.MunicipalityDTO;
+import ti.mdva.model.dto.NeighborhoodDTO;
 import ti.mdva.service.LocationService;
 
 import java.util.List;

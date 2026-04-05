@@ -7,9 +7,10 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import ti.mdva.dto.CommuneDTO;
-import ti.mdva.dto.MunicipalityDTO;
-import ti.mdva.dto.NeighborhoodDTO;
+
+import ti.mdva.model.dto.CommuneDTO;
+import ti.mdva.model.dto.MunicipalityDTO;
+import ti.mdva.model.dto.NeighborhoodDTO;
 import ti.mdva.service.LocationService;
 
 import java.util.List;

@@ -1,4 +1,4 @@
-package ti.mdva.dto;
+package ti.mdva.model.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;

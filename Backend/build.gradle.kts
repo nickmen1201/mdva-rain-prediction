@@ -38,6 +38,11 @@ dependencies {
     implementation("org.postgresql:postgresql")
     jooqGenerator("org.postgresql:postgresql")
 
+
+    //Agregamos flyway para migraciones de bases de datos (Camilo)
+    implementation("org.flywaydb:flyway-core")
+    implementation("org.flywaydb:flyway-database-postgresql")
+
     // Lombok
     compileOnly("org.projectlombok:lombok")
     annotationProcessor("org.projectlombok:lombok")

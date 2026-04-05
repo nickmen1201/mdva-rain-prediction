@@ -1,4 +1,4 @@
-package ti.mdva.dto;
+package ti.mdva.model.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -6,14 +6,13 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
- * Data Transfer Object for Neighborhood (Barrio).
+ * Data Transfer Object for Municipality (Municipio).
  */
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class NeighborhoodDTO {
+public class MunicipalityDTO {
     private String id;
     private String name;
-    private String communeId;
 }

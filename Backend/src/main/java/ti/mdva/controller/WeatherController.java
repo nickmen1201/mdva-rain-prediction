@@ -5,8 +5,9 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import ti.mdva.dto.WeatherRequestDTO;
-import ti.mdva.dto.WeatherResponseDTO;
+
+import ti.mdva.model.dto.WeatherRequestDTO;
+import ti.mdva.model.dto.WeatherResponseDTO;
 import ti.mdva.service.WeatherService;
 
 /**

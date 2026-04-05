@@ -9,7 +9,7 @@ spring:
   datasource:
     url: jdbc:postgresql://localhost:5432/mdva
     username: postgres
-    password: ""
+    password: cambiame-db-password
 
 # Enhanced logging for development
 logging:
@@ -17,3 +17,9 @@ logging:
     ti.mdva: DEBUG
     org.jooq: DEBUG
     org.springframework.web: DEBUG
+
+
+# Google Maps API key for development 
+google:
+  maps:
+    api-key: REEMPLAZAR_GOOGLE_MAPS_API_KEY

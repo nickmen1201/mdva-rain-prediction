@@ -1,7 +1,7 @@
 package ti.mdva.service;
 
-import ti.mdva.dto.WeatherRequestDTO;
-import ti.mdva.dto.WeatherResponseDTO;
+import ti.mdva.model.dto.WeatherRequestDTO;
+import ti.mdva.model.dto.WeatherResponseDTO;
 
 /**
  * Service interface for weather operations using Open-Meteo API.
@@ -15,4 +15,4 @@ public interface WeatherService {
      * @return current weather data
      */
     WeatherResponseDTO getCurrentWeather(WeatherRequestDTO request);
-}
+}   

@@ -37,7 +37,6 @@ import org.jooq.impl.TableImpl;
 import ti.mdva.jooq.Indexes;
 import ti.mdva.jooq.Keys;
 import ti.mdva.jooq.Public;
-import ti.mdva.jooq.tables.Barrios.BarriosPath;
 import ti.mdva.jooq.tables.Usuarios.UsuariosPath;
 import ti.mdva.jooq.tables.Vehiculos.VehiculosPath;
 import ti.mdva.jooq.tables.records.ViajesRecord;
@@ -82,12 +81,54 @@ public class Viajes extends TableImpl<ViajesRecord> {
     /**
      * The column <code>public.viajes.id_barrio_origen</code>.
      */
-    public final TableField<ViajesRecord, String> ID_BARRIO_ORIGEN = createField(DSL.name("id_barrio_origen"), SQLDataType.VARCHAR(20).nullable(false), this, "");
+    public final TableField<ViajesRecord, String> ID_BARRIO_ORIGEN = createField(DSL.name("id_barrio_origen"), SQLDataType.VARCHAR(255), this, "");
 
     /**
      * The column <code>public.viajes.id_barrio_destino</code>.
      */
-    public final TableField<ViajesRecord, String> ID_BARRIO_DESTINO = createField(DSL.name("id_barrio_destino"), SQLDataType.VARCHAR(20).nullable(false), this, "");
+    public final TableField<ViajesRecord, String> ID_BARRIO_DESTINO = createField(DSL.name("id_barrio_destino"), SQLDataType.VARCHAR(255), this, "");
+
+    /**
+     * The column <code>public.viajes.lat_origen</code>. Latitud del punto de
+     * origen (Google Places/GPS)
+     */
+    public final TableField<ViajesRecord, Double> LAT_ORIGEN = createField(DSL.name("lat_origen"), SQLDataType.DOUBLE, this, "Latitud del punto de origen (Google Places/GPS)");
+
+    /**
+     * The column <code>public.viajes.lng_origen</code>. Longitud del punto de
+     * origen
+     */
+    public final TableField<ViajesRecord, Double> LNG_ORIGEN = createField(DSL.name("lng_origen"), SQLDataType.DOUBLE, this, "Longitud del punto de origen");
+
+    /**
+     * The column <code>public.viajes.lat_destino</code>. Latitud del punto de
+     * destino
+     */
+    public final TableField<ViajesRecord, Double> LAT_DESTINO = createField(DSL.name("lat_destino"), SQLDataType.DOUBLE, this, "Latitud del punto de destino");
+
+    /**
+     * The column <code>public.viajes.lng_destino</code>. Longitud del punto de
+     * destino
+     */
+    public final TableField<ViajesRecord, Double> LNG_DESTINO = createField(DSL.name("lng_destino"), SQLDataType.DOUBLE, this, "Longitud del punto de destino");
+
+    /**
+     * The column <code>public.viajes.nombre_origen</code>. Nombre legible del
+     * origen (ej: Aeropuerto Rionegro)
+     */
+    public final TableField<ViajesRecord, String> NOMBRE_ORIGEN = createField(DSL.name("nombre_origen"), SQLDataType.VARCHAR(255), this, "Nombre legible del origen (ej: Aeropuerto Rionegro)");
+
+    /**
+     * The column <code>public.viajes.nombre_destino</code>. Nombre legible del
+     * destino
+     */
+    public final TableField<ViajesRecord, String> NOMBRE_DESTINO = createField(DSL.name("nombre_destino"), SQLDataType.VARCHAR(255), this, "Nombre legible del destino");
+
+    /**
+     * The column <code>public.viajes.distancia_metros</code>. Distancia de la
+     * ruta en metros (Google Directions)
+     */
+    public final TableField<ViajesRecord, Integer> DISTANCIA_METROS = createField(DSL.name("distancia_metros"), SQLDataType.INTEGER, this, "Distancia de la ruta en metros (Google Directions)");
 
     /**
      * The column <code>public.viajes.tiempo_estimado_min</code>.
@@ -188,7 +229,7 @@ public class Viajes extends TableImpl<ViajesRecord> {
 
     @Override
     public List<Index> getIndexes() {
-        return Arrays.asList(Indexes.IDX_VIAJES_FECHA, Indexes.IDX_VIAJES_USUARIO);
+        return Arrays.asList(Indexes.IDX_VIAJES_FECHA, Indexes.IDX_VIAJES_USUARIO, Indexes.IDX_VIAJES_USUARIO_HORA);
     }
 
     @Override
@@ -203,33 +244,7 @@ public class Viajes extends TableImpl<ViajesRecord> {
 
     @Override
     public List<ForeignKey<ViajesRecord, ?>> getReferences() {
-        return Arrays.asList(Keys.VIAJES__VIAJES_ID_BARRIO_DESTINO_FKEY, Keys.VIAJES__VIAJES_ID_BARRIO_ORIGEN_FKEY, Keys.VIAJES__VIAJES_ID_USUARIO_FKEY, Keys.VIAJES__VIAJES_ID_VEHICULO_FKEY);
-    }
-
-    private transient BarriosPath _viajesIdBarrioDestinoFkey;
-
-    /**
-     * Get the implicit join path to the <code>public.barrios</code> table, via
-     * the <code>viajes_id_barrio_destino_fkey</code> key.
-     */
-    public BarriosPath viajesIdBarrioDestinoFkey() {
-        if (_viajesIdBarrioDestinoFkey == null)
-            _viajesIdBarrioDestinoFkey = new BarriosPath(this, Keys.VIAJES__VIAJES_ID_BARRIO_DESTINO_FKEY, null);
-
-        return _viajesIdBarrioDestinoFkey;
-    }
-
-    private transient BarriosPath _viajesIdBarrioOrigenFkey;
-
-    /**
-     * Get the implicit join path to the <code>public.barrios</code> table, via
-     * the <code>viajes_id_barrio_origen_fkey</code> key.
-     */
-    public BarriosPath viajesIdBarrioOrigenFkey() {
-        if (_viajesIdBarrioOrigenFkey == null)
-            _viajesIdBarrioOrigenFkey = new BarriosPath(this, Keys.VIAJES__VIAJES_ID_BARRIO_ORIGEN_FKEY, null);
-
-        return _viajesIdBarrioOrigenFkey;
+        return Arrays.asList(Keys.VIAJES__VIAJES_ID_USUARIO_FKEY, Keys.VIAJES__VIAJES_ID_VEHICULO_FKEY);
     }
 
     private transient UsuariosPath _usuarios;

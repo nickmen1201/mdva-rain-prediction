@@ -81,10 +81,10 @@ jooq {
 
                 jdbc.apply {
                     driver = "org.postgresql.Driver"
-                    url = "jdbc:postgresql://localhost:5432/mdva"
+                    url = "jdbc:postgresql://localhost:5436/mdva"
                     user = "postgres"
-                    password = "1234"
-                }
+                password = "cambiame-db-password" // TODO: USAR UN .ENV O CONFIGURACIÓN EXTERNA PARA ESTO. También se puede especificar en el dockercompose (Camilo)
+                } 
 
                 generator.apply {
                     name = "org.jooq.codegen.JavaGenerator"

@@ -130,6 +130,111 @@ public class ViajesDao extends DAOImpl<ViajesRecord, ti.mdva.jooq.tables.pojos.V
     }
 
     /**
+     * Fetch records that have <code>lat_origen BETWEEN lowerInclusive AND
+     * upperInclusive</code>
+     */
+    public List<ti.mdva.jooq.tables.pojos.Viajes> fetchRangeOfLatOrigen(Double lowerInclusive, Double upperInclusive) {
+        return fetchRange(Viajes.VIAJES.LAT_ORIGEN, lowerInclusive, upperInclusive);
+    }
+
+    /**
+     * Fetch records that have <code>lat_origen IN (values)</code>
+     */
+    public List<ti.mdva.jooq.tables.pojos.Viajes> fetchByLatOrigen(Double... values) {
+        return fetch(Viajes.VIAJES.LAT_ORIGEN, values);
+    }
+
+    /**
+     * Fetch records that have <code>lng_origen BETWEEN lowerInclusive AND
+     * upperInclusive</code>
+     */
+    public List<ti.mdva.jooq.tables.pojos.Viajes> fetchRangeOfLngOrigen(Double lowerInclusive, Double upperInclusive) {
+        return fetchRange(Viajes.VIAJES.LNG_ORIGEN, lowerInclusive, upperInclusive);
+    }
+
+    /**
+     * Fetch records that have <code>lng_origen IN (values)</code>
+     */
+    public List<ti.mdva.jooq.tables.pojos.Viajes> fetchByLngOrigen(Double... values) {
+        return fetch(Viajes.VIAJES.LNG_ORIGEN, values);
+    }
+
+    /**
+     * Fetch records that have <code>lat_destino BETWEEN lowerInclusive AND
+     * upperInclusive</code>
+     */
+    public List<ti.mdva.jooq.tables.pojos.Viajes> fetchRangeOfLatDestino(Double lowerInclusive, Double upperInclusive) {
+        return fetchRange(Viajes.VIAJES.LAT_DESTINO, lowerInclusive, upperInclusive);
+    }
+
+    /**
+     * Fetch records that have <code>lat_destino IN (values)</code>
+     */
+    public List<ti.mdva.jooq.tables.pojos.Viajes> fetchByLatDestino(Double... values) {
+        return fetch(Viajes.VIAJES.LAT_DESTINO, values);
+    }
+
+    /**
+     * Fetch records that have <code>lng_destino BETWEEN lowerInclusive AND
+     * upperInclusive</code>
+     */
+    public List<ti.mdva.jooq.tables.pojos.Viajes> fetchRangeOfLngDestino(Double lowerInclusive, Double upperInclusive) {
+        return fetchRange(Viajes.VIAJES.LNG_DESTINO, lowerInclusive, upperInclusive);
+    }
+
+    /**
+     * Fetch records that have <code>lng_destino IN (values)</code>
+     */
+    public List<ti.mdva.jooq.tables.pojos.Viajes> fetchByLngDestino(Double... values) {
+        return fetch(Viajes.VIAJES.LNG_DESTINO, values);
+    }
+
+    /**
+     * Fetch records that have <code>nombre_origen BETWEEN lowerInclusive AND
+     * upperInclusive</code>
+     */
+    public List<ti.mdva.jooq.tables.pojos.Viajes> fetchRangeOfNombreOrigen(String lowerInclusive, String upperInclusive) {
+        return fetchRange(Viajes.VIAJES.NOMBRE_ORIGEN, lowerInclusive, upperInclusive);
+    }
+
+    /**
+     * Fetch records that have <code>nombre_origen IN (values)</code>
+     */
+    public List<ti.mdva.jooq.tables.pojos.Viajes> fetchByNombreOrigen(String... values) {
+        return fetch(Viajes.VIAJES.NOMBRE_ORIGEN, values);
+    }
+
+    /**
+     * Fetch records that have <code>nombre_destino BETWEEN lowerInclusive AND
+     * upperInclusive</code>
+     */
+    public List<ti.mdva.jooq.tables.pojos.Viajes> fetchRangeOfNombreDestino(String lowerInclusive, String upperInclusive) {
+        return fetchRange(Viajes.VIAJES.NOMBRE_DESTINO, lowerInclusive, upperInclusive);
+    }
+
+    /**
+     * Fetch records that have <code>nombre_destino IN (values)</code>
+     */
+    public List<ti.mdva.jooq.tables.pojos.Viajes> fetchByNombreDestino(String... values) {
+        return fetch(Viajes.VIAJES.NOMBRE_DESTINO, values);
+    }
+
+    /**
+     * Fetch records that have <code>distancia_metros BETWEEN lowerInclusive AND
+     * upperInclusive</code>
+     */
+    public List<ti.mdva.jooq.tables.pojos.Viajes> fetchRangeOfDistanciaMetros(Integer lowerInclusive, Integer upperInclusive) {
+        return fetchRange(Viajes.VIAJES.DISTANCIA_METROS, lowerInclusive, upperInclusive);
+    }
+
+    /**
+     * Fetch records that have <code>distancia_metros IN (values)</code>
+     */
+    public List<ti.mdva.jooq.tables.pojos.Viajes> fetchByDistanciaMetros(Integer... values) {
+        return fetch(Viajes.VIAJES.DISTANCIA_METROS, values);
+    }
+
+    /**
      * Fetch records that have <code>tiempo_estimado_min BETWEEN lowerInclusive
      * AND upperInclusive</code>
      */

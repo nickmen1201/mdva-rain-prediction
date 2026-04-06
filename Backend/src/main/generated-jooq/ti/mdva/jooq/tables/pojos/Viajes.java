@@ -21,6 +21,13 @@ public class Viajes implements Serializable {
     private String idVehiculo;
     private String idBarrioOrigen;
     private String idBarrioDestino;
+    private Double latOrigen;
+    private Double lngOrigen;
+    private Double latDestino;
+    private Double lngDestino;
+    private String nombreOrigen;
+    private String nombreDestino;
+    private Integer distanciaMetros;
     private Short tiempoEstimadoMin;
     private OffsetDateTime horaInicio;
     private OffsetDateTime horaFin;
@@ -36,6 +43,13 @@ public class Viajes implements Serializable {
         this.idVehiculo = value.idVehiculo;
         this.idBarrioOrigen = value.idBarrioOrigen;
         this.idBarrioDestino = value.idBarrioDestino;
+        this.latOrigen = value.latOrigen;
+        this.lngOrigen = value.lngOrigen;
+        this.latDestino = value.latDestino;
+        this.lngDestino = value.lngDestino;
+        this.nombreOrigen = value.nombreOrigen;
+        this.nombreDestino = value.nombreDestino;
+        this.distanciaMetros = value.distanciaMetros;
         this.tiempoEstimadoMin = value.tiempoEstimadoMin;
         this.horaInicio = value.horaInicio;
         this.horaFin = value.horaFin;
@@ -50,6 +64,13 @@ public class Viajes implements Serializable {
         String idVehiculo,
         String idBarrioOrigen,
         String idBarrioDestino,
+        Double latOrigen,
+        Double lngOrigen,
+        Double latDestino,
+        Double lngDestino,
+        String nombreOrigen,
+        String nombreDestino,
+        Integer distanciaMetros,
         Short tiempoEstimadoMin,
         OffsetDateTime horaInicio,
         OffsetDateTime horaFin,
@@ -62,6 +83,13 @@ public class Viajes implements Serializable {
         this.idVehiculo = idVehiculo;
         this.idBarrioOrigen = idBarrioOrigen;
         this.idBarrioDestino = idBarrioDestino;
+        this.latOrigen = latOrigen;
+        this.lngOrigen = lngOrigen;
+        this.latDestino = latDestino;
+        this.lngDestino = lngDestino;
+        this.nombreOrigen = nombreOrigen;
+        this.nombreDestino = nombreDestino;
+        this.distanciaMetros = distanciaMetros;
         this.tiempoEstimadoMin = tiempoEstimadoMin;
         this.horaInicio = horaInicio;
         this.horaFin = horaFin;
@@ -142,6 +170,125 @@ public class Viajes implements Serializable {
      */
     public Viajes setIdBarrioDestino(String idBarrioDestino) {
         this.idBarrioDestino = idBarrioDestino;
+        return this;
+    }
+
+    /**
+     * Getter for <code>public.viajes.lat_origen</code>. Latitud del punto de
+     * origen (Google Places/GPS)
+     */
+    public Double getLatOrigen() {
+        return this.latOrigen;
+    }
+
+    /**
+     * Setter for <code>public.viajes.lat_origen</code>. Latitud del punto de
+     * origen (Google Places/GPS)
+     */
+    public Viajes setLatOrigen(Double latOrigen) {
+        this.latOrigen = latOrigen;
+        return this;
+    }
+
+    /**
+     * Getter for <code>public.viajes.lng_origen</code>. Longitud del punto de
+     * origen
+     */
+    public Double getLngOrigen() {
+        return this.lngOrigen;
+    }
+
+    /**
+     * Setter for <code>public.viajes.lng_origen</code>. Longitud del punto de
+     * origen
+     */
+    public Viajes setLngOrigen(Double lngOrigen) {
+        this.lngOrigen = lngOrigen;
+        return this;
+    }
+
+    /**
+     * Getter for <code>public.viajes.lat_destino</code>. Latitud del punto de
+     * destino
+     */
+    public Double getLatDestino() {
+        return this.latDestino;
+    }
+
+    /**
+     * Setter for <code>public.viajes.lat_destino</code>. Latitud del punto de
+     * destino
+     */
+    public Viajes setLatDestino(Double latDestino) {
+        this.latDestino = latDestino;
+        return this;
+    }
+
+    /**
+     * Getter for <code>public.viajes.lng_destino</code>. Longitud del punto de
+     * destino
+     */
+    public Double getLngDestino() {
+        return this.lngDestino;
+    }
+
+    /**
+     * Setter for <code>public.viajes.lng_destino</code>. Longitud del punto de
+     * destino
+     */
+    public Viajes setLngDestino(Double lngDestino) {
+        this.lngDestino = lngDestino;
+        return this;
+    }
+
+    /**
+     * Getter for <code>public.viajes.nombre_origen</code>. Nombre legible del
+     * origen (ej: Aeropuerto Rionegro)
+     */
+    public String getNombreOrigen() {
+        return this.nombreOrigen;
+    }
+
+    /**
+     * Setter for <code>public.viajes.nombre_origen</code>. Nombre legible del
+     * origen (ej: Aeropuerto Rionegro)
+     */
+    public Viajes setNombreOrigen(String nombreOrigen) {
+        this.nombreOrigen = nombreOrigen;
+        return this;
+    }
+
+    /**
+     * Getter for <code>public.viajes.nombre_destino</code>. Nombre legible del
+     * destino
+     */
+    public String getNombreDestino() {
+        return this.nombreDestino;
+    }
+
+    /**
+     * Setter for <code>public.viajes.nombre_destino</code>. Nombre legible del
+     * destino
+     */
+    public Viajes setNombreDestino(String nombreDestino) {
+        this.nombreDestino = nombreDestino;
+        return this;
+    }
+
+    /**
+     * Getter for <code>public.viajes.distancia_metros</code>. Distancia de la
+     * ruta en metros (Google Directions)
+     */
+    public Integer getDistanciaMetros() {
+        return this.distanciaMetros;
+    }
+
+    /**
+     * Setter for <code>public.viajes.distancia_metros</code>. Distancia de la
+     * ruta en metros (Google Directions)
+     */
+    public Viajes setDistanciaMetros(Integer distanciaMetros) {
+        this.distanciaMetros = distanciaMetros;
         return this;
     }
 
@@ -274,6 +421,48 @@ public class Viajes implements Serializable {
         }
         else if (!this.idBarrioDestino.equals(other.idBarrioDestino))
             return false;
+        if (this.latOrigen == null) {
+            if (other.latOrigen != null)
+                return false;
+        }
+        else if (!this.latOrigen.equals(other.latOrigen))
+            return false;
+        if (this.lngOrigen == null) {
+            if (other.lngOrigen != null)
+                return false;
+        }
+        else if (!this.lngOrigen.equals(other.lngOrigen))
+            return false;
+        if (this.latDestino == null) {
+            if (other.latDestino != null)
+                return false;
+        }
+        else if (!this.latDestino.equals(other.latDestino))
+            return false;
+        if (this.lngDestino == null) {
+            if (other.lngDestino != null)
+                return false;
+        }
+        else if (!this.lngDestino.equals(other.lngDestino))
+            return false;
+        if (this.nombreOrigen == null) {
+            if (other.nombreOrigen != null)
+                return false;
+        }
+        else if (!this.nombreOrigen.equals(other.nombreOrigen))
+            return false;
+        if (this.nombreDestino == null) {
+            if (other.nombreDestino != null)
+                return false;
+        }
+        else if (!this.nombreDestino.equals(other.nombreDestino))
+            return false;
+        if (this.distanciaMetros == null) {
+            if (other.distanciaMetros != null)
+                return false;
+        }
+        else if (!this.distanciaMetros.equals(other.distanciaMetros))
+            return false;
         if (this.tiempoEstimadoMin == null) {
             if (other.tiempoEstimadoMin != null)
                 return false;
@@ -322,6 +511,13 @@ public class Viajes implements Serializable {
         result = prime * result + ((this.idVehiculo == null) ? 0 : this.idVehiculo.hashCode());
         result = prime * result + ((this.idBarrioOrigen == null) ? 0 : this.idBarrioOrigen.hashCode());
         result = prime * result + ((this.idBarrioDestino == null) ? 0 : this.idBarrioDestino.hashCode());
+        result = prime * result + ((this.latOrigen == null) ? 0 : this.latOrigen.hashCode());
+        result = prime * result + ((this.lngOrigen == null) ? 0 : this.lngOrigen.hashCode());
+        result = prime * result + ((this.latDestino == null) ? 0 : this.latDestino.hashCode());
+        result = prime * result + ((this.lngDestino == null) ? 0 : this.lngDestino.hashCode());
+        result = prime * result + ((this.nombreOrigen == null) ? 0 : this.nombreOrigen.hashCode());
+        result = prime * result + ((this.nombreDestino == null) ? 0 : this.nombreDestino.hashCode());
+        result = prime * result + ((this.distanciaMetros == null) ? 0 : this.distanciaMetros.hashCode());
         result = prime * result + ((this.tiempoEstimadoMin == null) ? 0 : this.tiempoEstimadoMin.hashCode());
         result = prime * result + ((this.horaInicio == null) ? 0 : this.horaInicio.hashCode());
         result = prime * result + ((this.horaFin == null) ? 0 : this.horaFin.hashCode());
@@ -340,6 +536,13 @@ public class Viajes implements Serializable {
         sb.append(", ").append(idVehiculo);
         sb.append(", ").append(idBarrioOrigen);
         sb.append(", ").append(idBarrioDestino);
+        sb.append(", ").append(latOrigen);
+        sb.append(", ").append(lngOrigen);
+        sb.append(", ").append(latDestino);
+        sb.append(", ").append(lngDestino);
+        sb.append(", ").append(nombreOrigen);
+        sb.append(", ").append(nombreDestino);
+        sb.append(", ").append(distanciaMetros);
         sb.append(", ").append(tiempoEstimadoMin);
         sb.append(", ").append(horaInicio);
         sb.append(", ").append(horaFin);

@@ -1,0 +1,36 @@
+# =============================================================================
+# .dockerignore — contexto raíz del repo (usado por Backend/Dockerfile)
+# =============================================================================
+
+# Gradle cache y archivos locales
+Backend/.gradle/
+Backend/build/
+Backend/bin/
+Backend/out/
+
+# IDE
+**/.idea/
+**/.vscode/
+**/*.iml
+**/nbproject/
+
+# Archivos de entorno local (nunca al contenedor)
+Backend/src/main/resources/application-dev.yml
+Backend/src/main/resources/application-prod.yml
+**/*.env
+**/.env*
+
+# Git
+.git/
+**/.gitignore
+
+# Carpetas que no pertenecen al build del backend
+Data-science/
+Frontend/
+DB/*.backup
+DB/Resources/
+
+# Docs
+**/wiki/
+README.md
+HANDOFF.md

@@ -1,7 +1,8 @@
 package ti.mdva.service.impl;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -16,61 +17,64 @@ import java.util.Map;
 /**
  * Implementación de WeatherMLService.
  *
- * Flujo exacto documentado en el TODO de ViajeUseCase.java:
- *  1. GET Open-Meteo → temperatura, humedad, nubosidad, viento para hora actual
- *  2. POST FastAPI /predecir/ambos → predicción de lluvia de ambos modelos
+ * Flujo:
+ *  1. GET Google Weather API /currentConditions:lookup
+ *       → temperatura (°C), humedad (%), cobertura nubosa (%), viento (km/h → m/s)
+ *  2. POST FastAPI /predecir/ambos → predicción de lluvia de ambos modelos ML
  *  3. Retorna RainPredictionDTO con el resultado consolidado
  *
- * Configurar en application.yml:
- *   ml.service.url: http://localhost:8081   (o URL del contenedor FastAPI)
+ * Documentación: https://developers.google.com/maps/documentation/weather/current-conditions
  */
-@Slf4j
 @Service
 public class WeatherMLServiceImpl implements WeatherMLService {
 
-    private static final String OPEN_METEO_URL =
-        "https://api.open-meteo.com/v1/forecast" +
-        "?latitude=%f&longitude=%f" +
-        "&hourly=temperature_2m,relativehumidity_2m,cloudcover,windspeed_10m" +
-        "&current_weather=true" +
-        "&timezone=America%%2FBogota";
+    private static final Logger log = LoggerFactory.getLogger(WeatherMLServiceImpl.class);
+
+    private static final String GOOGLE_WEATHER_URL =
+        "https://weather.googleapis.com/v1/currentConditions:lookup" +
+        "?key=%s" +
+        "&location.latitude=%f" +
+        "&location.longitude=%f" +
+        "&unitsSystem=METRIC";
 
     private final RestTemplate restTemplate;
     private final String mlServiceUrl;
+    private final String googleApiKey;
 
-    public WeatherMLServiceImpl(@Value("${ml.service.url}") String mlServiceUrl) {
+    public WeatherMLServiceImpl(
+            @Value("${ml.service.url}")      String mlServiceUrl,
+            @Value("${google.maps.api-key}") String googleApiKey
+    ) {
         this.restTemplate = new RestTemplate();
         this.mlServiceUrl = mlServiceUrl;
+        this.googleApiKey = googleApiKey;
     }
 
     @Override
     public RainPredictionDTO predictRainForLocation(double lat, double lng) {
-        // ── Paso 1: Obtener variables climáticas de Open-Meteo ────────────────
-        String weatherUrl = String.format(OPEN_METEO_URL, lat, lng);
-        JsonNode weatherResponse = restTemplate.getForObject(weatherUrl, JsonNode.class);
 
-        if (weatherResponse == null) {
-            throw new RuntimeException("Open-Meteo no respondió para lat=%f, lng=%f".formatted(lat, lng));
+        // ── Paso 1: Condiciones actuales desde Google Weather API ─────────────
+        String weatherUrl = String.format(GOOGLE_WEATHER_URL, googleApiKey, lat, lng);
+        JsonNode weather  = restTemplate.getForObject(weatherUrl, JsonNode.class);
+
+        if (weather == null) {
+            throw new RuntimeException(
+                "Google Weather API no respondió para lat=%.4f, lng=%.4f".formatted(lat, lng));
         }
 
-        LocalDateTime now = LocalDateTime.now();
-        int currentHour   = now.getHour();
-        int currentMonth  = now.getMonthValue();
+        double tempC       = weather.path("temperature").path("degrees").asDouble();
+        double humidityPct = weather.path("relativeHumidity").asDouble();
+        double cloudPct    = inferCloudCover(weather);
+        double windKmh     = weather.path("wind").path("speed").path("value").asDouble();
+        double windMs      = Math.round((windKmh / 3.6) * 100.0) / 100.0;
+        double rainProbPct = weather.path("precipitation").path("probability").path("percent").asDouble();
 
-        // Buscar el índice de la hora actual en el array hourly
-        JsonNode hourlyTimes = weatherResponse.path("hourly").path("time");
-        int idx = findHourIndex(hourlyTimes, now);
+        LocalDateTime now         = LocalDateTime.now();
+        int           currentHour = now.getHour();
+        int           currentMonth= now.getMonthValue();
 
-        JsonNode hourly = weatherResponse.path("hourly");
-        double tempC        = hourly.path("temperature_2m").get(idx).asDouble();
-        double humidityPct  = hourly.path("relativehumidity_2m").get(idx).asDouble();
-        double cloudPct     = hourly.path("cloudcover").get(idx).asDouble();
-        // Open-Meteo entrega windspeed en km/h → convertir a m/s
-        double windKmh      = hourly.path("windspeed_10m").get(idx).asDouble();
-        double windMs       = Math.round((windKmh / 3.6) * 100.0) / 100.0;
-
-        log.debug("Open-Meteo [hora={}]: temp={}°C hum={}% nub={}% viento={}m/s",
-                currentHour, tempC, humidityPct, cloudPct, windMs);
+        log.debug("Google Weather [lat={}, lng={}]: temp={}C hum={}% nub={}% viento={}m/s lluvia={}%",
+                lat, lng, tempC, humidityPct, cloudPct, windMs, rainProbPct);
 
         // ── Paso 2: Enviar al microservicio FastAPI ML ────────────────────────
         Map<String, Object> mlPayload = Map.of(
@@ -91,12 +95,14 @@ public class WeatherMLServiceImpl implements WeatherMLService {
         }
 
         // ── Paso 3: Consolidar resultado ──────────────────────────────────────
-        double probRf = 0.0, probRl = 0.0;
-        boolean anyRain = false;
+        // Fallback inicial: usar probabilidad de lluvia directa de Google
+        double  probRf  = rainProbPct / 100.0;
+        double  probRl  = rainProbPct / 100.0;
+        boolean anyRain = rainProbPct > 40;
 
         for (JsonNode pred : mlResponse.getBody()) {
-            String modelo = pred.path("modelo").asText();
-            double prob   = pred.path("probabilidad_lluvia").asDouble();
+            String  modelo = pred.path("modelo").asText();
+            double  prob   = pred.path("probabilidad_lluvia").asDouble();
             boolean llueve = pred.path("llueve").asBoolean();
             anyRain = anyRain || llueve;
 
@@ -118,20 +124,24 @@ public class WeatherMLServiceImpl implements WeatherMLService {
     }
 
     /**
-     * Busca en el array de tiempos de Open-Meteo (formato "yyyy-MM-ddTHH")
-     * el índice correspondiente a la hora actual.
-     * Fallback: retorna el índice de la hora actual del día (0-23).
+     * Infiere cobertura nubosa (%) desde el tipo de condición de Google Weather.
+     * currentConditions no expone cloudCover directamente, solo en forecast/hours.
      */
-    private int findHourIndex(JsonNode timesNode, LocalDateTime now) {
-        String target = now.toString().substring(0, 13); // "yyyy-MM-ddTHH"
-        if (timesNode.isArray()) {
-            for (int i = 0; i < timesNode.size(); i++) {
-                if (timesNode.get(i).asText().startsWith(target)) {
-                    return i;
-                }
-            }
-        }
-        // Fallback: el índice coincide con la hora del día
-        return now.getHour();
+    private double inferCloudCover(JsonNode weather) {
+        String type = weather.path("weatherCondition").path("type").asText("");
+        return switch (type) {
+            case "CLEAR", "SUNNY"                            -> 0.0;
+            case "MOSTLY_CLEAR", "MOSTLY_SUNNY"              -> 15.0;
+            case "PARTLY_CLOUDY", "PARTLY_SUNNY"             -> 40.0;
+            case "MOSTLY_CLOUDY", "HAZE", "HAZY_MOONLIGHT"  -> 70.0;
+            case "CLOUDY", "OVERCAST"                        -> 90.0;
+            case "FOG", "FOGGY"                              -> 85.0;
+            case "DRIZZLE", "LIGHT_RAIN", "RAIN",
+                 "RAIN_SHOWERS", "HEAVY_RAIN"                -> 95.0;
+            case "THUNDERSTORM", "STRONG_THUNDERSTORM",
+                 "THUNDERSHOWER"                             -> 100.0;
+            case "SNOW", "FLURRIES", "BLIZZARD"              -> 90.0;
+            default                                          -> 50.0;
+        };
     }
 }

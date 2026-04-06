@@ -35,7 +35,6 @@ import ti.mdva.jooq.Keys;
 import ti.mdva.jooq.Public;
 import ti.mdva.jooq.tables.Comunas.ComunasPath;
 import ti.mdva.jooq.tables.Usuarios.UsuariosPath;
-import ti.mdva.jooq.tables.Viajes.ViajesPath;
 import ti.mdva.jooq.tables.records.BarriosRecord;
 
 
@@ -180,32 +179,6 @@ public class Barrios extends TableImpl<BarriosRecord> {
             _usuarios = new UsuariosPath(this, null, Keys.USUARIOS__USUARIOS_ID_BARRIO_FKEY.getInverseKey());
 
         return _usuarios;
-    }
-
-    private transient ViajesPath _viajesIdBarrioDestinoFkey;
-
-    /**
-     * Get the implicit to-many join path to the <code>public.viajes</code>
-     * table, via the <code>viajes_id_barrio_destino_fkey</code> key
-     */
-    public ViajesPath viajesIdBarrioDestinoFkey() {
-        if (_viajesIdBarrioDestinoFkey == null)
-            _viajesIdBarrioDestinoFkey = new ViajesPath(this, null, Keys.VIAJES__VIAJES_ID_BARRIO_DESTINO_FKEY.getInverseKey());
-
-        return _viajesIdBarrioDestinoFkey;
-    }
-
-    private transient ViajesPath _viajesIdBarrioOrigenFkey;
-
-    /**
-     * Get the implicit to-many join path to the <code>public.viajes</code>
-     * table, via the <code>viajes_id_barrio_origen_fkey</code> key
-     */
-    public ViajesPath viajesIdBarrioOrigenFkey() {
-        if (_viajesIdBarrioOrigenFkey == null)
-            _viajesIdBarrioOrigenFkey = new ViajesPath(this, null, Keys.VIAJES__VIAJES_ID_BARRIO_ORIGEN_FKEY.getInverseKey());
-
-        return _viajesIdBarrioOrigenFkey;
     }
 
     @Override

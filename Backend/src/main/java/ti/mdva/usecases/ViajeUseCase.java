@@ -26,10 +26,9 @@ import java.util.Optional;
  *   5. Persistir el viaje en base de datos
  *   6. Retornar TripResponseDTO enriquecido al controller
  *
- * NOTA: Los campos lat/lng se guardan temporalmente como "lat,lng" en
- * idBarrioOrigen/idBarrioDestino hasta que se corra la migración V2 y se
- * regenere JOOQ. Una vez regenerado, actualizar buildViajeEntity() y el
- * ViajeRepositoryImpl.save() para usar los nuevos campos nativos.
+ * NOTA: Los campos lat/lng, nombres de lugar y distancia se persisten
+ * en las columnas nativas agregadas en la migración V2 (lat_origen, lng_origen,
+ * lat_destino, lng_destino, nombre_origen, nombre_destino, distancia_metros).
  */
 @Service
 public class ViajeUseCase {
@@ -137,10 +136,7 @@ public class ViajeUseCase {
     // ── Helpers privados ──────────────────────────────────────────────────────
 
     /**
-     * Construye la entidad Viajes usando los campos existentes en el POJO actual.
-     *
-     * TEMPORAL: lat/lng se serializan como "lat,lng" en idBarrioOrigen/idBarrioDestino
-     * hasta que se corra la migración V2 y se regenere JOOQ con los nuevos campos.
+     * Construye la entidad Viajes con todos los campos disponibles tras la migración V2.
      */
     private Viajes buildViajeEntity(
             TripRequestDTO request,
@@ -152,9 +148,13 @@ public class ViajeUseCase {
         v.setIdUsuario(request.getIdUsuario());
         v.setIdVehiculo(request.getIdVehiculo());
 
-        // TEMPORAL hasta regenerar JOOQ post-V2
-        v.setIdBarrioOrigen(origen.getLat() + "," + origen.getLng());
-        v.setIdBarrioDestino(destino.getLat() + "," + destino.getLng());
+        v.setLatOrigen(origen.getLat());
+        v.setLngOrigen(origen.getLng());
+        v.setLatDestino(destino.getLat());
+        v.setLngDestino(destino.getLng());
+        v.setNombreOrigen(origen.getDisplayName());
+        v.setNombreDestino(destino.getDisplayName());
+        v.setDistanciaMetros(response.getDistanciaMetros());
 
         v.setTiempoEstimadoMin(response.getTiempoEstimadoMin().shortValue());
         v.setPrecipitacionMm(calcularPrecipitacionMm(response.getPrediccionLluvia()));

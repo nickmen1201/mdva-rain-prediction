@@ -1,20 +1,22 @@
-// CLASE GENERADA POR IA DEBIDO A ERRORES DE COMPILACIÓN A LA HORA DE LLAMAR A LOS DAOS
-
-package ti.mdva.jooq.tables.daos;
+package ti.mdva.config;
 
 import org.jooq.Configuration;
 import org.springframework.context.annotation.Bean;
+
 import ti.mdva.jooq.tables.daos.UsuariosDao;
 import ti.mdva.jooq.tables.daos.VehiculosDao;
 import ti.mdva.jooq.tables.daos.ViajesDao;
 
 /**
- * Registers JOOQ-generated DAOs as Spring beans.
+ * Registra los DAOs generados por JOOQ como beans de Spring.
  *
- * JOOQ DAOs are not component-scanned automatically — they have no @Component
- * or @Repository annotation since they are generated code. This config bridges
- * that gap by constructing each DAO with the JOOQ Configuration that Spring
- * already manages (auto-configured by spring-boot-starter-jooq).
+ * Los DAOs de JOOQ no tienen @Component ni @Repository porque son código
+ * generado. Esta config los instancia con el Configuration de JOOQ que
+ * Spring Boot ya gestiona vía spring-boot-starter-jooq.
+ *
+ * IMPORTANTE: Esta clase debe estar en el paquete ti.mdva.config (o cualquier
+ * subpaquete de ti.mdva) para que @SpringBootApplication la encuentre en el
+ * component scan. No debe vivir en ti.mdva.jooq.* (paquete generado).
  */
 @org.springframework.context.annotation.Configuration
 public class JooqDaoConfig {

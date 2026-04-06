@@ -32,4 +32,5 @@ public class Indexes {
     public static final Index IDX_VEHICULOS_USUARIO = Internal.createIndex(DSL.name("idx_vehiculos_usuario"), Vehiculos.VEHICULOS, new OrderField[] { Vehiculos.VEHICULOS.ID_USUARIO }, false);
     public static final Index IDX_VIAJES_FECHA = Internal.createIndex(DSL.name("idx_viajes_fecha"), Viajes.VIAJES, new OrderField[] { Viajes.VIAJES.HORA_INICIO }, false);
     public static final Index IDX_VIAJES_USUARIO = Internal.createIndex(DSL.name("idx_viajes_usuario"), Viajes.VIAJES, new OrderField[] { Viajes.VIAJES.ID_USUARIO }, false);
+    public static final Index IDX_VIAJES_USUARIO_HORA = Internal.createIndex(DSL.name("idx_viajes_usuario_hora"), Viajes.VIAJES, new OrderField[] { Viajes.VIAJES.ID_USUARIO, Viajes.VIAJES.HORA_INICIO.desc() }, false);
 }

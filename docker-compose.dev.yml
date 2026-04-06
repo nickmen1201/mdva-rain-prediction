@@ -1,0 +1,102 @@
+# =============================================================================
+# MDVA — Docker Compose · Entorno de Development
+# =============================================================================
+# Levanta los 4 servicios: PostgreSQL + FastAPI ML + Spring Boot Backend + React Frontend
+#
+# Uso:
+#   docker compose -f docker-compose.dev.yml up --build
+#   docker compose -f docker-compose.dev.yml down -v   ← borra también los volúmenes
+#
+# Puertos expuestos al host:
+#   5436  → PostgreSQL (5432 interno, mapeado a 5436 en host para evitar conflicto con Postgres local)
+#   8080  → Backend Spring Boot  (Swagger: http://localhost:8080/swagger-ui.html)
+#   8081  → FastAPI ML           (Docs:    http://localhost:8081/docs)
+#   8090  → Frontend React       (http://localhost:8090)
+# =============================================================================
+
+services:
+
+  # ---------------------------------------------------------------------------
+  # PostgreSQL 16
+  # ---------------------------------------------------------------------------
+  postgres:
+    image: postgres:16-alpine
+    container_name: mdva-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB:       mdva
+      POSTGRES_USER:     postgres
+      POSTGRES_PASSWORD: cambiame-db-password
+    ports:
+      - "5436:5432"
+    volumes:
+      # Script de inicialización: crea tablas + datos base al primer arranque
+      - ./DB/init-docker.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+      # Volumen persistente para no perder datos entre reinicios
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d mdva"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # ---------------------------------------------------------------------------
+  # FastAPI — Microservicio ML
+  # ---------------------------------------------------------------------------
+  ml-service:
+    build:
+      context: ./Data-science          # Ajustar si la carpeta tiene otro nombre
+      dockerfile: Dockerfile
+    container_name: mdva-ml
+    restart: unless-stopped
+    ports:
+      - "8081:8081"
+    environment:
+      PORT: 8081
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  # ---------------------------------------------------------------------------
+  # Spring Boot Backend
+  # ---------------------------------------------------------------------------
+  backend:
+    build:
+      context: .                         # Raíz del repo — el Dockerfile usa paths Backend/src, Backend/gradlew, etc.
+      dockerfile: Backend/Dockerfile
+    container_name: mdva-backend
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE:           dev
+      SPRING_DATASOURCE_URL:            jdbc:postgresql://postgres:5432/mdva
+      SPRING_DATASOURCE_USERNAME:       postgres
+      SPRING_DATASOURCE_PASSWORD:       cambiame-db-password
+      GOOGLE_MAPS_API_KEY:              REEMPLAZAR_GOOGLE_MAPS_API_KEY
+      ML_SERVICE_URL:                   http://ml-service:8081
+    depends_on:
+      postgres:
+        condition: service_healthy
+      ml-service:
+        condition: service_healthy
+
+  # ---------------------------------------------------------------------------
+  # React Frontend (Vite build servido con nginx)
+  # ---------------------------------------------------------------------------
+  frontend:
+    build:
+      context: ./Frontend
+      dockerfile: Dockerfile
+    container_name: mdva-frontend
+    restart: unless-stopped
+    ports:
+      - "8090:80"
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:

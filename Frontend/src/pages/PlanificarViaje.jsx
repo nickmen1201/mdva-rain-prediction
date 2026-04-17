@@ -1,38 +1,77 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { planificarViaje } from '../api/client';
-
-const initialPoint = { lat: '', lng: '', displayName: '' };
+import { useMapsLibrary } from '@vis.gl/react-google-maps';
 
 export default function PlanificarViaje() {
   const navigate = useNavigate();
-  const [idUsuario,  setIdUsuario]  = useState('1');
-  const [idVehiculo, setIdVehiculo] = useState('');
-  const [origen,     setOrigen]     = useState({ ...initialPoint });
-  const [destino,    setDestino]    = useState({ ...initialPoint });
-  const [loading,    setLoading]    = useState(false);
-  const [error,      setError]      = useState(null);
+  const placesLib = useMapsLibrary('places');
 
-  const updateOrigen  = (k, v) => setOrigen((p)  => ({ ...p, [k]: v }));
-  const updateDestino = (k, v) => setDestino((p) => ({ ...p, [k]: v }));
+  const [idVehiculo, setIdVehiculo] = useState('');
+  const [origen, setOrigen] = useState({ lat: null, lng: null, displayName: '' });
+  const [destino, setDestino] = useState({ lat: null, lng: null, displayName: '' });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  const originInputRef = useRef(null);
+  const destInputRef = useRef(null);
+
+  useEffect(() => {
+    if (!placesLib || !originInputRef.current) return;
+    const originAutocomplete = new placesLib.Autocomplete(originInputRef.current, {
+      fields: ['geometry', 'name', 'formatted_address'],
+    });
+
+    originAutocomplete.addListener('place_changed', () => {
+      const place = originAutocomplete.getPlace();
+      if (place.geometry) {
+        setOrigen({
+          lat: place.geometry.location.lat(),
+          lng: place.geometry.location.lng(),
+          displayName: place.name || place.formatted_address,
+        });
+      }
+    });
+  }, [placesLib]);
+
+  useEffect(() => {
+    if (!placesLib || !destInputRef.current) return;
+    const destAutocomplete = new placesLib.Autocomplete(destInputRef.current, {
+      fields: ['geometry', 'name', 'formatted_address'],
+    });
+
+    destAutocomplete.addListener('place_changed', () => {
+      const place = destAutocomplete.getPlace();
+      if (place.geometry) {
+        setDestino({
+          lat: place.geometry.location.lat(),
+          lng: place.geometry.location.lng(),
+          displayName: place.name || place.formatted_address,
+        });
+      }
+    });
+  }, [placesLib]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!origen.lat || !destino.lat) {
+      setError("Por favor seleccione origen y destino de las sugerencias del autocompletado.");
+      return;
+    }
     setError(null);
     setLoading(true);
 
     const payload = {
-      idUsuario: parseInt(idUsuario, 10),
       idVehiculo: idVehiculo || null,
       origen: {
-        lat:         parseFloat(origen.lat),
-        lng:         parseFloat(origen.lng),
-        displayName: origen.displayName || undefined,
+        lat: origen.lat,
+        lng: origen.lng,
+        displayName: origen.displayName,
       },
       destino: {
-        lat:         parseFloat(destino.lat),
-        lng:         parseFloat(destino.lng),
-        displayName: destino.displayName || undefined,
+        lat: destino.lat,
+        lng: destino.lng,
+        displayName: destino.displayName,
       },
     };
 
@@ -50,123 +89,54 @@ export default function PlanificarViaje() {
     }
   };
 
-  // Quick-fill buttons for testing
-  const fillMedellinItagui = () => {
-    setOrigen({ lat: '6.2442', lng: '-75.5812', displayName: 'Medellín Centro' });
-    setDestino({ lat: '6.1132', lng: '-75.6145', displayName: 'Itagüí' });
-  };
-
-  const fillEnvigadoBello = () => {
-    setOrigen({ lat: '6.1719', lng: '-75.5939', displayName: 'Envigado' });
-    setDestino({ lat: '6.3329', lng: '-75.5567', displayName: 'Bello' });
-  };
-
   return (
     <div>
       <h1 className="page-title fade-up">Planificar viaje</h1>
-      <p className="page-subtitle fade-up">Ruta óptima · Predicción de lluvia · Ajuste inteligente</p>
-
-      {/* Quick fill */}
-      <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1.5rem' }} className="fade-up">
-        <button className="btn btn-secondary" type="button" onClick={fillMedellinItagui}>
-          Medellín → Itagüí
-        </button>
-        <button className="btn btn-secondary" type="button" onClick={fillEnvigadoBello}>
-          Envigado → Bello
-        </button>
-      </div>
+      <p className="page-subtitle fade-up">Búsqueda rápida con Google Places · Ajuste inteligente</p>
 
       <form onSubmit={handleSubmit} className="card fade-up-2">
         <div className="form-grid">
-
-          {/* Usuario / vehículo */}
-          <div className="field">
-            <label>ID Usuario</label>
-            <input
-              type="number" min="1" required
-              value={idUsuario}
-              onChange={(e) => setIdUsuario(e.target.value)}
-              placeholder="1"
-            />
-          </div>
-          <div className="field">
+          {/* Vehículo */}
+          <div className="field" style={{ gridColumn: '1 / -1' }}>
             <label>Placa vehículo (opcional)</label>
             <input
               type="text"
               value={idVehiculo}
               onChange={(e) => setIdVehiculo(e.target.value)}
-              placeholder="ABC123"
+              placeholder="Ej. ABC123"
               maxLength={10}
             />
           </div>
 
           {/* Origen */}
           <div className="field-section">Origen</div>
-          <div className="field">
-            <label>Nombre</label>
+          <div className="field" style={{ gridColumn: '1 / -1' }}>
+            <label>Buscar Punto de Origen</label>
             <input
+              ref={originInputRef}
               type="text"
-              value={origen.displayName}
-              onChange={(e) => updateOrigen('displayName', e.target.value)}
-              placeholder="Medellín Centro"
+              placeholder="Ej. UPB, Medellín"
             />
-          </div>
-          <div className="field" />
-          <div className="field">
-            <label>Latitud</label>
-            <input
-              type="number" step="any" required
-              value={origen.lat}
-              onChange={(e) => updateOrigen('lat', e.target.value)}
-              placeholder="6.2442"
-            />
-          </div>
-          <div className="field">
-            <label>Longitud</label>
-            <input
-              type="number" step="any" required
-              value={origen.lng}
-              onChange={(e) => updateOrigen('lng', e.target.value)}
-              placeholder="-75.5812"
-            />
+            {origen.lat && <span style={{fontSize: '0.75rem', color: 'var(--accent)', marginTop: '0.5rem'}}>✓ Origen fijado: {origen.displayName}</span>}
           </div>
 
           {/* Destino */}
           <div className="field-section">Destino</div>
-          <div className="field">
-            <label>Nombre</label>
+          <div className="field" style={{ gridColumn: '1 / -1' }}>
+            <label>Buscar Punto de Destino</label>
             <input
+              ref={destInputRef}
               type="text"
-              value={destino.displayName}
-              onChange={(e) => updateDestino('displayName', e.target.value)}
-              placeholder="Itagüí"
+              placeholder="Ej. EAFIT, Medellín"
             />
-          </div>
-          <div className="field" />
-          <div className="field">
-            <label>Latitud</label>
-            <input
-              type="number" step="any" required
-              value={destino.lat}
-              onChange={(e) => updateDestino('lat', e.target.value)}
-              placeholder="6.1132"
-            />
-          </div>
-          <div className="field">
-            <label>Longitud</label>
-            <input
-              type="number" step="any" required
-              value={destino.lng}
-              onChange={(e) => updateDestino('lng', e.target.value)}
-              placeholder="-75.6145"
-            />
+            {destino.lat && <span style={{fontSize: '0.75rem', color: 'var(--accent)', marginTop: '0.5rem'}}>✓ Destino fijado: {destino.displayName}</span>}
           </div>
 
         </div>
 
         {error && <div className="error-box">{error}</div>}
 
-        <button className="btn btn-primary" type="submit" disabled={loading}>
+        <button className="btn btn-primary" type="submit" disabled={loading} style={{ marginTop: '2rem' }}>
           {loading ? <><span className="spinner" /> Calculando ruta...</> : 'Planificar viaje →'}
         </button>
       </form>

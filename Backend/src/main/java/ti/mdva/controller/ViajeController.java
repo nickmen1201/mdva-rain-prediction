@@ -13,6 +13,9 @@ import ti.mdva.usecases.ViajeUseCase;
 
 import java.net.URI;
 import java.util.List;
+import java.security.Principal;
+import ti.mdva.repositories.UsuarioRepositoryImpl;
+import ti.mdva.jooq.tables.pojos.Usuarios;
 
 /**
  * Controller REST para operaciones de viaje.
@@ -28,9 +31,11 @@ import java.util.List;
 public class ViajeController {
 
     private final ViajeUseCase viajeUseCase;
+    private final UsuarioRepositoryImpl usuarioRepository;
 
-    public ViajeController(ViajeUseCase viajeUseCase) {
+    public ViajeController(ViajeUseCase viajeUseCase, UsuarioRepositoryImpl usuarioRepository) {
         this.viajeUseCase = viajeUseCase;
+        this.usuarioRepository = usuarioRepository;
     }
 
     @PostMapping("/planificar")
@@ -39,17 +44,23 @@ public class ViajeController {
         description = "Calcula la ruta óptima con Google Directions, predice lluvia con el modelo ML " +
                       "y ajusta el tiempo estimado. Persiste el viaje en base de datos."
     )
-    public ResponseEntity<TripResponseDTO> planificar(@Valid @RequestBody TripRequestDTO request) {
-        TripResponseDTO response = viajeUseCase.planificarViaje(request);
+    public ResponseEntity<TripResponseDTO> planificar(@Valid @RequestBody TripRequestDTO request, Principal principal) {
+        if (principal == null) {
+            return ResponseEntity.status(401).build();
+        }
+        Usuarios usuario = usuarioRepository.findByUsername(principal.getName())
+                .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado"));
+                
+        TripResponseDTO response = viajeUseCase.planificarViaje(usuario.getId().intValue(), request);
         return ResponseEntity
                 .created(URI.create("/api/viajes/" + response.getIdViaje()))
                 .body(response);
     }
 
     @PatchMapping("/{id}/finalizar")
-    @Operation(summary = "Finalizar un viaje", description = "Marca el viaje como finalizado y registra la hora de fin.")
-    public ResponseEntity<Viajes> finalizar(@PathVariable Integer id) {
-        return ResponseEntity.ok(viajeUseCase.finalizarViaje(id));
+    @Operation(summary = "Finalizar un viaje", description = "Marca el viaje como finalizado, registra la hora de fin y opcionalmente la calificación.")
+    public ResponseEntity<Viajes> finalizar(@PathVariable Integer id, @RequestParam(required = false) Short userRating) {
+        return ResponseEntity.ok(viajeUseCase.finalizarViaje(id, userRating));
     }
 
     @GetMapping("/usuario/{idUsuario}")

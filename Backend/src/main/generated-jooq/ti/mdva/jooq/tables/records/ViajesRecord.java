@@ -66,41 +66,11 @@ public class ViajesRecord extends UpdatableRecordImpl<ViajesRecord> {
     }
 
     /**
-     * Setter for <code>public.viajes.id_barrio_origen</code>.
-     */
-    public ViajesRecord setIdBarrioOrigen(String value) {
-        set(3, value);
-        return this;
-    }
-
-    /**
-     * Getter for <code>public.viajes.id_barrio_origen</code>.
-     */
-    public String getIdBarrioOrigen() {
-        return (String) get(3);
-    }
-
-    /**
-     * Setter for <code>public.viajes.id_barrio_destino</code>.
-     */
-    public ViajesRecord setIdBarrioDestino(String value) {
-        set(4, value);
-        return this;
-    }
-
-    /**
-     * Getter for <code>public.viajes.id_barrio_destino</code>.
-     */
-    public String getIdBarrioDestino() {
-        return (String) get(4);
-    }
-
-    /**
      * Setter for <code>public.viajes.lat_origen</code>. Latitud del punto de
      * origen (Google Places/GPS)
      */
     public ViajesRecord setLatOrigen(Double value) {
-        set(5, value);
+        set(3, value);
         return this;
     }
 
@@ -109,7 +79,7 @@ public class ViajesRecord extends UpdatableRecordImpl<ViajesRecord> {
      * origen (Google Places/GPS)
      */
     public Double getLatOrigen() {
-        return (Double) get(5);
+        return (Double) get(3);
     }
 
     /**
@@ -117,7 +87,7 @@ public class ViajesRecord extends UpdatableRecordImpl<ViajesRecord> {
      * origen
      */
     public ViajesRecord setLngOrigen(Double value) {
-        set(6, value);
+        set(4, value);
         return this;
     }
 
@@ -126,7 +96,7 @@ public class ViajesRecord extends UpdatableRecordImpl<ViajesRecord> {
      * origen
      */
     public Double getLngOrigen() {
-        return (Double) get(6);
+        return (Double) get(4);
     }
 
     /**
@@ -134,7 +104,7 @@ public class ViajesRecord extends UpdatableRecordImpl<ViajesRecord> {
      * destino
      */
     public ViajesRecord setLatDestino(Double value) {
-        set(7, value);
+        set(5, value);
         return this;
     }
 
@@ -143,7 +113,7 @@ public class ViajesRecord extends UpdatableRecordImpl<ViajesRecord> {
      * destino
      */
     public Double getLatDestino() {
-        return (Double) get(7);
+        return (Double) get(5);
     }
 
     /**
@@ -151,7 +121,7 @@ public class ViajesRecord extends UpdatableRecordImpl<ViajesRecord> {
      * destino
      */
     public ViajesRecord setLngDestino(Double value) {
-        set(8, value);
+        set(6, value);
         return this;
     }
 
@@ -160,7 +130,7 @@ public class ViajesRecord extends UpdatableRecordImpl<ViajesRecord> {
      * destino
      */
     public Double getLngDestino() {
-        return (Double) get(8);
+        return (Double) get(6);
     }
 
     /**
@@ -168,7 +138,7 @@ public class ViajesRecord extends UpdatableRecordImpl<ViajesRecord> {
      * origen (ej: Aeropuerto Rionegro)
      */
     public ViajesRecord setNombreOrigen(String value) {
-        set(9, value);
+        set(7, value);
         return this;
     }
 
@@ -177,7 +147,7 @@ public class ViajesRecord extends UpdatableRecordImpl<ViajesRecord> {
      * origen (ej: Aeropuerto Rionegro)
      */
     public String getNombreOrigen() {
-        return (String) get(9);
+        return (String) get(7);
     }
 
     /**
@@ -185,7 +155,7 @@ public class ViajesRecord extends UpdatableRecordImpl<ViajesRecord> {
      * destino
      */
     public ViajesRecord setNombreDestino(String value) {
-        set(10, value);
+        set(8, value);
         return this;
     }
 
@@ -194,7 +164,7 @@ public class ViajesRecord extends UpdatableRecordImpl<ViajesRecord> {
      * destino
      */
     public String getNombreDestino() {
-        return (String) get(10);
+        return (String) get(8);
     }
 
     /**
@@ -202,7 +172,7 @@ public class ViajesRecord extends UpdatableRecordImpl<ViajesRecord> {
      * ruta en metros (Google Directions)
      */
     public ViajesRecord setDistanciaMetros(Integer value) {
-        set(11, value);
+        set(9, value);
         return this;
     }
 
@@ -211,14 +181,14 @@ public class ViajesRecord extends UpdatableRecordImpl<ViajesRecord> {
      * ruta en metros (Google Directions)
      */
     public Integer getDistanciaMetros() {
-        return (Integer) get(11);
+        return (Integer) get(9);
     }
 
     /**
      * Setter for <code>public.viajes.tiempo_estimado_min</code>.
      */
     public ViajesRecord setTiempoEstimadoMin(Short value) {
-        set(12, value);
+        set(10, value);
         return this;
     }
 
@@ -226,14 +196,14 @@ public class ViajesRecord extends UpdatableRecordImpl<ViajesRecord> {
      * Getter for <code>public.viajes.tiempo_estimado_min</code>.
      */
     public Short getTiempoEstimadoMin() {
-        return (Short) get(12);
+        return (Short) get(10);
     }
 
     /**
      * Setter for <code>public.viajes.hora_inicio</code>.
      */
     public ViajesRecord setHoraInicio(OffsetDateTime value) {
-        set(13, value);
+        set(11, value);
         return this;
     }
 
@@ -241,14 +211,14 @@ public class ViajesRecord extends UpdatableRecordImpl<ViajesRecord> {
      * Getter for <code>public.viajes.hora_inicio</code>.
      */
     public OffsetDateTime getHoraInicio() {
-        return (OffsetDateTime) get(13);
+        return (OffsetDateTime) get(11);
     }
 
     /**
      * Setter for <code>public.viajes.hora_fin</code>.
      */
     public ViajesRecord setHoraFin(OffsetDateTime value) {
-        set(14, value);
+        set(12, value);
         return this;
     }
 
@@ -256,14 +226,14 @@ public class ViajesRecord extends UpdatableRecordImpl<ViajesRecord> {
      * Getter for <code>public.viajes.hora_fin</code>.
      */
     public OffsetDateTime getHoraFin() {
-        return (OffsetDateTime) get(14);
+        return (OffsetDateTime) get(12);
     }
 
     /**
      * Setter for <code>public.viajes.precipitacion_mm</code>.
      */
     public ViajesRecord setPrecipitacionMm(Short value) {
-        set(15, value);
+        set(13, value);
         return this;
     }
 
@@ -271,14 +241,14 @@ public class ViajesRecord extends UpdatableRecordImpl<ViajesRecord> {
      * Getter for <code>public.viajes.precipitacion_mm</code>.
      */
     public Short getPrecipitacionMm() {
-        return (Short) get(15);
+        return (Short) get(13);
     }
 
     /**
      * Setter for <code>public.viajes.finalizado</code>.
      */
     public ViajesRecord setFinalizado(Boolean value) {
-        set(16, value);
+        set(14, value);
         return this;
     }
 
@@ -286,14 +256,14 @@ public class ViajesRecord extends UpdatableRecordImpl<ViajesRecord> {
      * Getter for <code>public.viajes.finalizado</code>.
      */
     public Boolean getFinalizado() {
-        return (Boolean) get(16);
+        return (Boolean) get(14);
     }
 
     /**
      * Setter for <code>public.viajes.user_rating</code>.
      */
     public ViajesRecord setUserRating(Short value) {
-        set(17, value);
+        set(15, value);
         return this;
     }
 
@@ -301,7 +271,7 @@ public class ViajesRecord extends UpdatableRecordImpl<ViajesRecord> {
      * Getter for <code>public.viajes.user_rating</code>.
      */
     public Short getUserRating() {
-        return (Short) get(17);
+        return (Short) get(15);
     }
 
     // -------------------------------------------------------------------------
@@ -327,14 +297,12 @@ public class ViajesRecord extends UpdatableRecordImpl<ViajesRecord> {
     /**
      * Create a detached, initialised ViajesRecord
      */
-    public ViajesRecord(Integer idViaje, Integer idUsuario, String idVehiculo, String idBarrioOrigen, String idBarrioDestino, Double latOrigen, Double lngOrigen, Double latDestino, Double lngDestino, String nombreOrigen, String nombreDestino, Integer distanciaMetros, Short tiempoEstimadoMin, OffsetDateTime horaInicio, OffsetDateTime horaFin, Short precipitacionMm, Boolean finalizado, Short userRating) {
+    public ViajesRecord(Integer idViaje, Integer idUsuario, String idVehiculo, Double latOrigen, Double lngOrigen, Double latDestino, Double lngDestino, String nombreOrigen, String nombreDestino, Integer distanciaMetros, Short tiempoEstimadoMin, OffsetDateTime horaInicio, OffsetDateTime horaFin, Short precipitacionMm, Boolean finalizado, Short userRating) {
         super(Viajes.VIAJES);
 
         setIdViaje(idViaje);
         setIdUsuario(idUsuario);
         setIdVehiculo(idVehiculo);
-        setIdBarrioOrigen(idBarrioOrigen);
-        setIdBarrioDestino(idBarrioDestino);
         setLatOrigen(latOrigen);
         setLngOrigen(lngOrigen);
         setLatDestino(latDestino);
@@ -361,8 +329,6 @@ public class ViajesRecord extends UpdatableRecordImpl<ViajesRecord> {
             setIdViaje(value.getIdViaje());
             setIdUsuario(value.getIdUsuario());
             setIdVehiculo(value.getIdVehiculo());
-            setIdBarrioOrigen(value.getIdBarrioOrigen());
-            setIdBarrioDestino(value.getIdBarrioDestino());
             setLatOrigen(value.getLatOrigen());
             setLngOrigen(value.getLngOrigen());
             setLatDestino(value.getLatDestino());

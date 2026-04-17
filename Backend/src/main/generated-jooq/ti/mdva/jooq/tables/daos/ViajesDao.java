@@ -100,36 +100,6 @@ public class ViajesDao extends DAOImpl<ViajesRecord, ti.mdva.jooq.tables.pojos.V
     }
 
     /**
-     * Fetch records that have <code>id_barrio_origen BETWEEN lowerInclusive AND
-     * upperInclusive</code>
-     */
-    public List<ti.mdva.jooq.tables.pojos.Viajes> fetchRangeOfIdBarrioOrigen(String lowerInclusive, String upperInclusive) {
-        return fetchRange(Viajes.VIAJES.ID_BARRIO_ORIGEN, lowerInclusive, upperInclusive);
-    }
-
-    /**
-     * Fetch records that have <code>id_barrio_origen IN (values)</code>
-     */
-    public List<ti.mdva.jooq.tables.pojos.Viajes> fetchByIdBarrioOrigen(String... values) {
-        return fetch(Viajes.VIAJES.ID_BARRIO_ORIGEN, values);
-    }
-
-    /**
-     * Fetch records that have <code>id_barrio_destino BETWEEN lowerInclusive
-     * AND upperInclusive</code>
-     */
-    public List<ti.mdva.jooq.tables.pojos.Viajes> fetchRangeOfIdBarrioDestino(String lowerInclusive, String upperInclusive) {
-        return fetchRange(Viajes.VIAJES.ID_BARRIO_DESTINO, lowerInclusive, upperInclusive);
-    }
-
-    /**
-     * Fetch records that have <code>id_barrio_destino IN (values)</code>
-     */
-    public List<ti.mdva.jooq.tables.pojos.Viajes> fetchByIdBarrioDestino(String... values) {
-        return fetch(Viajes.VIAJES.ID_BARRIO_DESTINO, values);
-    }
-
-    /**
      * Fetch records that have <code>lat_origen BETWEEN lowerInclusive AND
      * upperInclusive</code>
      */

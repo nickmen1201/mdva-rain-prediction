@@ -57,6 +57,11 @@ ml:
   service:
     url: ${ML_SERVICE_URL:http://localhost:8081}
 
+mdva:
+  jwt:
+    secret: ${JWT_SECRET:cambiame-dev-jwt-secret-de-al-menos-256-bits-para-hs256-signing}
+    expiration-ms: 86400000  # 24 hours
+
 logging:
   level:
     root: INFO

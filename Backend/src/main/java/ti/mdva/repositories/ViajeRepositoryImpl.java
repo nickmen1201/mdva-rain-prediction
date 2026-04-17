@@ -32,8 +32,6 @@ public class ViajeRepositoryImpl implements IViajeRepository {
             Integer generatedId = dsl.insertInto(VIAJES)
                     .set(VIAJES.ID_USUARIO,          viaje.getIdUsuario())
                     .set(VIAJES.ID_VEHICULO,         viaje.getIdVehiculo())
-                    .set(VIAJES.ID_BARRIO_ORIGEN,    viaje.getIdBarrioOrigen())
-                    .set(VIAJES.ID_BARRIO_DESTINO,   viaje.getIdBarrioDestino())
                     .set(VIAJES.LAT_ORIGEN,          viaje.getLatOrigen())
                     .set(VIAJES.LNG_ORIGEN,          viaje.getLngOrigen())
                     .set(VIAJES.LAT_DESTINO,         viaje.getLatDestino())

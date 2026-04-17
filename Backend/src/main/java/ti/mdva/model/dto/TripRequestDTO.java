@@ -17,8 +17,6 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class TripRequestDTO {
 
-    @NotNull(message = "El ID del usuario es obligatorio")
-    private Integer idUsuario;
 
     private String idVehiculo;
 

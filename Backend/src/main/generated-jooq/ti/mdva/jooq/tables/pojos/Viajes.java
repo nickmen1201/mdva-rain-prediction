@@ -19,8 +19,6 @@ public class Viajes implements Serializable {
     private Integer idViaje;
     private Integer idUsuario;
     private String idVehiculo;
-    private String idBarrioOrigen;
-    private String idBarrioDestino;
     private Double latOrigen;
     private Double lngOrigen;
     private Double latDestino;
@@ -41,8 +39,6 @@ public class Viajes implements Serializable {
         this.idViaje = value.idViaje;
         this.idUsuario = value.idUsuario;
         this.idVehiculo = value.idVehiculo;
-        this.idBarrioOrigen = value.idBarrioOrigen;
-        this.idBarrioDestino = value.idBarrioDestino;
         this.latOrigen = value.latOrigen;
         this.lngOrigen = value.lngOrigen;
         this.latDestino = value.latDestino;
@@ -62,8 +58,6 @@ public class Viajes implements Serializable {
         Integer idViaje,
         Integer idUsuario,
         String idVehiculo,
-        String idBarrioOrigen,
-        String idBarrioDestino,
         Double latOrigen,
         Double lngOrigen,
         Double latDestino,
@@ -81,8 +75,6 @@ public class Viajes implements Serializable {
         this.idViaje = idViaje;
         this.idUsuario = idUsuario;
         this.idVehiculo = idVehiculo;
-        this.idBarrioOrigen = idBarrioOrigen;
-        this.idBarrioDestino = idBarrioDestino;
         this.latOrigen = latOrigen;
         this.lngOrigen = lngOrigen;
         this.latDestino = latDestino;
@@ -140,36 +132,6 @@ public class Viajes implements Serializable {
      */
     public Viajes setIdVehiculo(String idVehiculo) {
         this.idVehiculo = idVehiculo;
-        return this;
-    }
-
-    /**
-     * Getter for <code>public.viajes.id_barrio_origen</code>.
-     */
-    public String getIdBarrioOrigen() {
-        return this.idBarrioOrigen;
-    }
-
-    /**
-     * Setter for <code>public.viajes.id_barrio_origen</code>.
-     */
-    public Viajes setIdBarrioOrigen(String idBarrioOrigen) {
-        this.idBarrioOrigen = idBarrioOrigen;
-        return this;
-    }
-
-    /**
-     * Getter for <code>public.viajes.id_barrio_destino</code>.
-     */
-    public String getIdBarrioDestino() {
-        return this.idBarrioDestino;
-    }
-
-    /**
-     * Setter for <code>public.viajes.id_barrio_destino</code>.
-     */
-    public Viajes setIdBarrioDestino(String idBarrioDestino) {
-        this.idBarrioDestino = idBarrioDestino;
         return this;
     }
 
@@ -409,18 +371,6 @@ public class Viajes implements Serializable {
         }
         else if (!this.idVehiculo.equals(other.idVehiculo))
             return false;
-        if (this.idBarrioOrigen == null) {
-            if (other.idBarrioOrigen != null)
-                return false;
-        }
-        else if (!this.idBarrioOrigen.equals(other.idBarrioOrigen))
-            return false;
-        if (this.idBarrioDestino == null) {
-            if (other.idBarrioDestino != null)
-                return false;
-        }
-        else if (!this.idBarrioDestino.equals(other.idBarrioDestino))
-            return false;
         if (this.latOrigen == null) {
             if (other.latOrigen != null)
                 return false;
@@ -509,8 +459,6 @@ public class Viajes implements Serializable {
         result = prime * result + ((this.idViaje == null) ? 0 : this.idViaje.hashCode());
         result = prime * result + ((this.idUsuario == null) ? 0 : this.idUsuario.hashCode());
         result = prime * result + ((this.idVehiculo == null) ? 0 : this.idVehiculo.hashCode());
-        result = prime * result + ((this.idBarrioOrigen == null) ? 0 : this.idBarrioOrigen.hashCode());
-        result = prime * result + ((this.idBarrioDestino == null) ? 0 : this.idBarrioDestino.hashCode());
         result = prime * result + ((this.latOrigen == null) ? 0 : this.latOrigen.hashCode());
         result = prime * result + ((this.lngOrigen == null) ? 0 : this.lngOrigen.hashCode());
         result = prime * result + ((this.latDestino == null) ? 0 : this.latDestino.hashCode());
@@ -534,8 +482,6 @@ public class Viajes implements Serializable {
         sb.append(idViaje);
         sb.append(", ").append(idUsuario);
         sb.append(", ").append(idVehiculo);
-        sb.append(", ").append(idBarrioOrigen);
-        sb.append(", ").append(idBarrioDestino);
         sb.append(", ").append(latOrigen);
         sb.append(", ").append(lngOrigen);
         sb.append(", ").append(latDestino);

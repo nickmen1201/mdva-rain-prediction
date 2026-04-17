@@ -79,16 +79,6 @@ public class Viajes extends TableImpl<ViajesRecord> {
     public final TableField<ViajesRecord, String> ID_VEHICULO = createField(DSL.name("id_vehiculo"), SQLDataType.VARCHAR(10), this, "");
 
     /**
-     * The column <code>public.viajes.id_barrio_origen</code>.
-     */
-    public final TableField<ViajesRecord, String> ID_BARRIO_ORIGEN = createField(DSL.name("id_barrio_origen"), SQLDataType.VARCHAR(255), this, "");
-
-    /**
-     * The column <code>public.viajes.id_barrio_destino</code>.
-     */
-    public final TableField<ViajesRecord, String> ID_BARRIO_DESTINO = createField(DSL.name("id_barrio_destino"), SQLDataType.VARCHAR(255), this, "");
-
-    /**
      * The column <code>public.viajes.lat_origen</code>. Latitud del punto de
      * origen (Google Places/GPS)
      */

@@ -65,24 +65,22 @@ function PolylineLayer({ encodedPolyline, origen, destino }) {
 
 export default function MapaRuta({ encodedPolyline, origen, destino }) {
   return (
-    <div className="map-container">
-      <APIProvider apiKey={MAPS_KEY} libraries={['geometry']}>
-        <Map
-          defaultCenter={{ lat: (origen.lat + destino.lat) / 2, lng: (origen.lng + destino.lng) / 2 }}
-          defaultZoom={12}
-          mapId="mdva-map"
-          colorScheme="DARK"
-          gestureHandling="greedy"
-          disableDefaultUI={false}
-          style={{ width: '100%', height: '100%' }}
-        >
-          <PolylineLayer
-            encodedPolyline={encodedPolyline}
-            origen={origen}
-            destino={destino}
-          />
-        </Map>
-      </APIProvider>
+    <div className="map-container" style={{ height: '100%', width: '100%' }}>
+      <Map
+        defaultCenter={{ lat: (origen.lat + destino.lat) / 2, lng: (origen.lng + destino.lng) / 2 }}
+        defaultZoom={12}
+        mapId="mdva-map"
+        colorScheme="DARK"
+        gestureHandling="greedy"
+        disableDefaultUI={false}
+        style={{ width: '100%', height: '100%' }}
+      >
+        <PolylineLayer
+          encodedPolyline={encodedPolyline}
+          origen={origen}
+          destino={destino}
+        />
+      </Map>
     </div>
   );
 }

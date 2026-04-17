@@ -10,6 +10,7 @@ import ti.mdva.repositories.ViajeRepositoryImpl;
 import ti.mdva.service.GoogleMapsService;
 import ti.mdva.service.TripPlannerOrchestrator;
 import ti.mdva.service.WeatherMLService;
+import ti.mdva.repositories.VehiculoRepositoryImpl;
 
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -36,22 +37,25 @@ public class ViajeUseCase {
     private static final Logger log = LoggerFactory.getLogger(ViajeUseCase.class);
 
     private final ViajeRepositoryImpl viajeRepository;
+    private final VehiculoRepositoryImpl vehiculoRepository;
     private final GoogleMapsService   googleMapsService;
     private final WeatherMLService    weatherMLService;
 
     public ViajeUseCase(
             ViajeRepositoryImpl viajeRepository,
+            VehiculoRepositoryImpl vehiculoRepository,
             GoogleMapsService googleMapsService,
             WeatherMLService weatherMLService
     ) {
-        this.viajeRepository   = viajeRepository;
-        this.googleMapsService = googleMapsService;
-        this.weatherMLService  = weatherMLService;
+        this.viajeRepository    = viajeRepository;
+        this.vehiculoRepository = vehiculoRepository;
+        this.googleMapsService  = googleMapsService;
+        this.weatherMLService   = weatherMLService;
     }
 
     // ── Planificación ─────────────────────────────────────────────────────────
 
-    public TripResponseDTO planificarViaje(TripRequestDTO request) {
+    public TripResponseDTO planificarViaje(Integer idUsuario, TripRequestDTO request) {
 
         // 1. Resolver coordenadas
         LocationPointDTO origen  = googleMapsService.resolveCoordinates(request.getOrigen());
@@ -59,6 +63,19 @@ public class ViajeUseCase {
 
         log.debug("Origen resuelto: lat={} lng={}", origen.getLat(), origen.getLng());
         log.debug("Destino resuelto: lat={} lng={}", destino.getLat(), destino.getLng());
+
+        // Validar vehículo opcional
+        String idVehiculo = request.getIdVehiculo();
+        if (idVehiculo != null && !idVehiculo.trim().isEmpty()) {
+            if (!vehiculoRepository.existsByPlaca(idVehiculo.trim())) {
+                log.warn("El vehículo {} no existe en la base de datos. Se omitirá y asignará nulo.", idVehiculo);
+                request.setIdVehiculo(null);
+            } else {
+                request.setIdVehiculo(idVehiculo.trim());
+            }
+        } else {
+            request.setIdVehiculo(null);
+        }
 
         if (puntosCercanos(origen, destino)) {
             throw new IllegalArgumentException("El origen y el destino no pueden ser el mismo lugar.");
@@ -89,7 +106,7 @@ public class ViajeUseCase {
         TripResponseDTO response = builder.build();
 
         // 5. Persistir
-        Viajes saved = viajeRepository.save(buildViajeEntity(request, origen, destino, response));
+        Viajes saved = viajeRepository.save(buildViajeEntity(idUsuario, request, origen, destino, response));
 
         log.info("Viaje {} planificado: {}min base → {}min ajustado, alerta={}",
                 saved.getIdViaje(),
@@ -106,7 +123,7 @@ public class ViajeUseCase {
 
     // ── Finalización ──────────────────────────────────────────────────────────
 
-    public Viajes finalizarViaje(Integer idViaje) {
+    public Viajes finalizarViaje(Integer idViaje, Short userRating) {
         Viajes viaje = viajeRepository.findById(idViaje)
                 .orElseThrow(() -> new IllegalArgumentException(
                         "No se encontró un viaje con id: " + idViaje
@@ -120,6 +137,9 @@ public class ViajeUseCase {
 
         viaje.setFinalizado(true);
         viaje.setHoraFin(OffsetDateTime.now());
+        if (userRating != null) {
+            viaje.setUserRating(userRating);
+        }
         return viajeRepository.save(viaje);
     }
 
@@ -139,13 +159,14 @@ public class ViajeUseCase {
      * Construye la entidad Viajes con todos los campos disponibles tras la migración V2.
      */
     private Viajes buildViajeEntity(
+            Integer idUsuario,
             TripRequestDTO request,
             LocationPointDTO origen,
             LocationPointDTO destino,
             TripResponseDTO response
     ) {
         Viajes v = new Viajes();
-        v.setIdUsuario(request.getIdUsuario());
+        v.setIdUsuario(idUsuario);
         v.setIdVehiculo(request.getIdVehiculo());
 
         v.setLatOrigen(origen.getLat());

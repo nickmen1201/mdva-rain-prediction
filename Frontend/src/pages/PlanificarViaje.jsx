@@ -18,12 +18,11 @@ export default function PlanificarViaje() {
 
   useEffect(() => {
     if (!placesLib || !originInputRef.current) return;
-    const originAutocomplete = new placesLib.Autocomplete(originInputRef.current, {
+    const ac = new placesLib.Autocomplete(originInputRef.current, {
       fields: ['geometry', 'name', 'formatted_address'],
     });
-
-    originAutocomplete.addListener('place_changed', () => {
-      const place = originAutocomplete.getPlace();
+    ac.addListener('place_changed', () => {
+      const place = ac.getPlace();
       if (place.geometry) {
         setOrigen({
           lat: place.geometry.location.lat(),
@@ -36,12 +35,11 @@ export default function PlanificarViaje() {
 
   useEffect(() => {
     if (!placesLib || !destInputRef.current) return;
-    const destAutocomplete = new placesLib.Autocomplete(destInputRef.current, {
+    const ac = new placesLib.Autocomplete(destInputRef.current, {
       fields: ['geometry', 'name', 'formatted_address'],
     });
-
-    destAutocomplete.addListener('place_changed', () => {
-      const place = destAutocomplete.getPlace();
+    ac.addListener('place_changed', () => {
+      const place = ac.getPlace();
       if (place.geometry) {
         setDestino({
           lat: place.geometry.location.lat(),
@@ -63,16 +61,8 @@ export default function PlanificarViaje() {
 
     const payload = {
       idVehiculo: idVehiculo || null,
-      origen: {
-        lat: origen.lat,
-        lng: origen.lng,
-        displayName: origen.displayName,
-      },
-      destino: {
-        lat: destino.lat,
-        lng: destino.lng,
-        displayName: destino.displayName,
-      },
+      origen: { lat: origen.lat, lng: origen.lng, displayName: origen.displayName },
+      destino: { lat: destino.lat, lng: destino.lng, displayName: destino.displayName },
     };
 
     try {
@@ -90,9 +80,9 @@ export default function PlanificarViaje() {
   };
 
   return (
-    <div>
+    <div style={{ textAlign: "center" }}>
       <h1 className="page-title fade-up">Planificar viaje</h1>
-      <p className="page-subtitle fade-up">Búsqueda rápida con Google Places · Ajuste inteligente</p>
+      <p className="page-subtitle fade-up"> Búsqueda rápida con Google Places · Ajuste inteligente</p>
 
       <form onSubmit={handleSubmit} className="card fade-up-2">
         <div className="form-grid">
@@ -112,26 +102,17 @@ export default function PlanificarViaje() {
           <div className="field-section">Origen</div>
           <div className="field" style={{ gridColumn: '1 / -1' }}>
             <label>Buscar Punto de Origen</label>
-            <input
-              ref={originInputRef}
-              type="text"
-              placeholder="Ej. UPB, Medellín"
-            />
-            {origen.lat && <span style={{fontSize: '0.75rem', color: 'var(--accent)', marginTop: '0.5rem'}}>✓ Origen fijado: {origen.displayName}</span>}
+            <input ref={originInputRef} type="text" placeholder="Ej. UPB, Medellín" />
+            {origen.lat && <span style={{ fontSize: '0.75rem', color: 'var(--accent)', marginTop: '0.5rem' }}>✓ Origen fijado: {origen.displayName}</span>}
           </div>
 
           {/* Destino */}
           <div className="field-section">Destino</div>
           <div className="field" style={{ gridColumn: '1 / -1' }}>
             <label>Buscar Punto de Destino</label>
-            <input
-              ref={destInputRef}
-              type="text"
-              placeholder="Ej. EAFIT, Medellín"
-            />
-            {destino.lat && <span style={{fontSize: '0.75rem', color: 'var(--accent)', marginTop: '0.5rem'}}>✓ Destino fijado: {destino.displayName}</span>}
+            <input ref={destInputRef} type="text" placeholder="Ej. EAFIT, Medellín" />
+            {destino.lat && <span style={{ fontSize: '0.75rem', color: 'var(--accent)', marginTop: '0.5rem' }}>✓ Destino fijado: {destino.displayName}</span>}
           </div>
-
         </div>
 
         {error && <div className="error-box">{error}</div>}

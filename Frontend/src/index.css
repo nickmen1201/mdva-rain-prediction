@@ -354,3 +354,17 @@ main { max-width: 900px; margin: 0 auto; padding: 2.5rem 1.5rem 4rem; }
 .fade-up { animation: fadeUp 0.4s ease both; }
 .fade-up-2 { animation: fadeUp 0.4s 0.1s ease both; }
 .fade-up-3 { animation: fadeUp 0.4s 0.2s ease both; }
+
+/* ── PlaceAutocompleteElement ── */
+.autocomplete-container { width: 100%; }
+
+.autocomplete-container gmp-place-autocomplete {
+  width: 100%;
+  --gmp-input-background: var(--bg);
+  --gmp-input-border-color: var(--border);
+  --gmp-input-border-radius: 6px;
+  --gmp-input-font-color: var(--text);
+  --gmp-input-font-size: 0.9rem;
+  --gmp-input-padding: 0.65rem 0.85rem;
+  --gmp-input-placeholder-font-color: var(--muted);
+}

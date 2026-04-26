@@ -5,6 +5,7 @@ import HistorialViajes from './pages/HistorialViajes';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import MapaCiudad from './pages/MapaCiudad';
+import EnRuta from './pages/EnRuta';
 import { APIProvider } from '@vis.gl/react-google-maps';
 
 const MAPS_KEY = import.meta.env.VITE_GOOGLE_MAPS_KEY;
@@ -54,6 +55,11 @@ export default function App() {
           <Route path="/viaje/:id" element={
             <PrivateRoute>
               <ResultadoViaje />
+            </PrivateRoute>
+          } />
+          <Route path="/viaje/:id/en-ruta" element={
+            <PrivateRoute>
+              <EnRuta />
             </PrivateRoute>
           } />
           <Route path="/historial/:idUsuario" element={

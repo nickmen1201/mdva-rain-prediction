@@ -29,15 +29,15 @@ def load_models():
         "random_forest":       MODELS_DIR / "random_forest.pkl",
     }
     for name, path in paths.items():
-        if not path.exists():
-            raise RuntimeError(f"Modelo no encontrado: {path}")
-        models[name] = joblib.load(path)
+        if path.exists():
+            models[name] = joblib.load(path)
+        else:
+            print(f"[WARN] Modelo omitido (archivo no encontrado): {path}")
+    if not models:
+        raise RuntimeError(f"No se encontró ningún modelo en: {MODELS_DIR}")
     return models
 
-try:
-    MODELS = load_models()
-except RuntimeError as e:
-    raise RuntimeError(str(e))
+MODELS = load_models()
 
 
 # ── Schemas ────────────────────────────────────────────────────────────────────

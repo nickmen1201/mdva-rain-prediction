@@ -25,12 +25,14 @@ export default function ResultadoViaje() {
     setFinalizing(true);
     try {
       await finalizarViaje(id);
-      navigate('/historial/1');
-    } catch {
-      setError('Error al finalizar el viaje.');
-    } finally {
-      setFinalizing(false);
+    } catch (err) {
+      if (err.response?.status !== 409) {
+        setError('Error al finalizar el viaje.');
+        setFinalizing(false);
+        return;
+      }
     }
+    navigate('/historial/1');
   };
 
   if (loading) return <div style={{ padding: '3rem', color: 'var(--muted)', fontFamily: 'DM Mono' }}>Cargando viaje...</div>;
@@ -112,7 +114,15 @@ export default function ResultadoViaje() {
       )}
 
       {/* Actions */}
-      <div style={{ display: 'flex', gap: '1rem', marginTop: '1.75rem' }} className="fade-up-3">
+      <div style={{ display: 'flex', gap: '1rem', marginTop: '1.75rem', flexWrap: 'wrap' }} className="fade-up-3">
+        <Link
+          to={`/viaje/${id}/en-ruta`}
+          state={{ viaje }}
+          className="btn btn-primary"
+          style={{ marginTop: 0 }}
+        >
+          Iniciar navegación →
+        </Link>
         <button
           className="btn btn-danger"
           onClick={handleFinalizar}

@@ -1,0 +1,17 @@
+# Editor / IDE
+.vscode/
+.idea/
+*.iml
+
+# Claude Code (metadata local, no compartida)
+.claude/
+
+# Documentación interna del equipo (Trello/Teams es la fuente)
+doc/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log

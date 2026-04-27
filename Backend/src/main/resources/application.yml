@@ -3,9 +3,9 @@ spring:
     name: mdva-backend
 
   datasource:
-    url: jdbc:postgresql://localhost:5432/mdva
-    username: postgres
-    password: "cambiame-db-password"
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/mdva}
+    username: ${SPRING_DATASOURCE_USERNAME:postgres}
+    password: ${SPRING_DATASOURCE_PASSWORD:}
     driver-class-name: org.postgresql.Driver
     hikari:
       maximum-pool-size: 10

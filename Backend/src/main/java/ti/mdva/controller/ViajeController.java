@@ -7,6 +7,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import ti.mdva.jooq.tables.pojos.Viajes;
+import ti.mdva.model.dto.AlertaActualDTO;
 import ti.mdva.model.dto.TripRequestDTO;
 import ti.mdva.model.dto.TripResponseDTO;
 import ti.mdva.usecases.ViajeUseCase;
@@ -75,5 +76,24 @@ public class ViajeController {
         return viajeUseCase.findById(id)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
+    }
+
+    @GetMapping("/{id}/alerta-actual")
+    @Operation(
+        summary = "Alerta climática actual del viaje (HU031)",
+        description = "Recalcula la predicción de lluvia con el clima del momento sobre el " +
+                      "origen del viaje y devuelve el nivel de alerta actualizado. La ruta no " +
+                      "se recalcula. Solo el dueño del viaje puede consultarlo."
+    )
+    public ResponseEntity<AlertaActualDTO> alertaActual(@PathVariable Integer id, Principal principal) {
+        if (principal == null) {
+            return ResponseEntity.status(401).build();
+        }
+        Usuarios usuario = usuarioRepository.findByUsername(principal.getName())
+                .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado"));
+
+        return ResponseEntity.ok(
+                viajeUseCase.obtenerAlertaActual(id, usuario.getId().intValue())
+        );
     }
 }

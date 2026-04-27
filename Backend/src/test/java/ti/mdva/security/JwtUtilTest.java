@@ -17,7 +17,7 @@ class JwtUtilTest {
     private static final String SECRET = "test-secret-for-mdva-jwt-signing-needs-256-bits-min";
     private static final long ONE_DAY_MS = 86_400_000L;
 
-    private final JwtUtil jwtUtil = new JwtUtil(SECRET, ONE_DAY_MS);
+    private final JwtUtil jwtUtil = new JwtUtil(SECRET, ONE_DAY_MS, "");
 
     @Nested
     @DisplayName("generateToken")
@@ -76,7 +76,7 @@ class JwtUtilTest {
 
         @Test
         void tokenConSecretDiferenteEsRechazado() {
-            JwtUtil otroSigner = new JwtUtil("otro-secreto-completamente-distinto-de-256-bits", ONE_DAY_MS);
+            JwtUtil otroSigner = new JwtUtil("otro-secreto-completamente-distinto-de-256-bits", ONE_DAY_MS, "");
             String tokenForaneo = otroSigner.generateToken("juan01", 1L);
 
             assertThat(jwtUtil.validateToken(tokenForaneo)).isFalse();
@@ -91,7 +91,7 @@ class JwtUtilTest {
 
         @Test
         void tokenExpiradoEsRechazado() throws InterruptedException {
-            JwtUtil shortLived = new JwtUtil(SECRET, 1L); // 1ms de expiración
+            JwtUtil shortLived = new JwtUtil(SECRET, 1L, ""); // 1ms de expiración
             String token = shortLived.generateToken("juan01", 1L);
 
             // Garantizamos que pase la ventana de expiración
@@ -108,7 +108,60 @@ class JwtUtilTest {
         @Test
         void retornaElValorConfiguradoEnConstruccion() {
             assertThat(jwtUtil.getExpirationMs()).isEqualTo(ONE_DAY_MS);
-            assertThat(new JwtUtil(SECRET, 60_000L).getExpirationMs()).isEqualTo(60_000L);
+            assertThat(new JwtUtil(SECRET, 60_000L, "").getExpirationMs()).isEqualTo(60_000L);
+        }
+    }
+
+    @Nested
+    @DisplayName("Hardening: secret obligatorio en perfil prod")
+    class ProdHardening {
+
+        @Test
+        @DisplayName("perfil 'prod' + secret default → falla el arranque")
+        void prodConDefaultSecretLanza() {
+            org.junit.jupiter.api.Assertions.assertThrows(
+                IllegalStateException.class,
+                () -> new JwtUtil(JwtUtil.DEFAULT_DEV_SECRET, ONE_DAY_MS, "prod")
+            );
+        }
+
+        @Test
+        @DisplayName("perfil 'prod' + secret vacío → falla el arranque")
+        void prodConSecretVacioLanza() {
+            org.junit.jupiter.api.Assertions.assertThrows(
+                IllegalStateException.class,
+                () -> new JwtUtil("", ONE_DAY_MS, "prod")
+            );
+        }
+
+        @Test
+        @DisplayName("perfil combinado 'prod,monitoring' → también falla con default")
+        void prodConCombinacionDePerfilesLanza() {
+            org.junit.jupiter.api.Assertions.assertThrows(
+                IllegalStateException.class,
+                () -> new JwtUtil(JwtUtil.DEFAULT_DEV_SECRET, ONE_DAY_MS, "prod,monitoring")
+            );
+        }
+
+        @Test
+        @DisplayName("perfil 'prod' + secret robusto → arranca normal")
+        void prodConSecretRobustoArranca() {
+            JwtUtil jwt = new JwtUtil("super-secret-de-produccion-rotado-por-vault-256bits!!", ONE_DAY_MS, "prod");
+            assertThat(jwt).isNotNull();
+        }
+
+        @Test
+        @DisplayName("perfil 'dev' + secret default → arranca normal")
+        void devConDefaultSecretArranca() {
+            JwtUtil jwt = new JwtUtil(JwtUtil.DEFAULT_DEV_SECRET, ONE_DAY_MS, "dev");
+            assertThat(jwt).isNotNull();
+        }
+
+        @Test
+        @DisplayName("perfil vacío + secret default → arranca normal")
+        void perfilVacioArranca() {
+            JwtUtil jwt = new JwtUtil(JwtUtil.DEFAULT_DEV_SECRET, ONE_DAY_MS, "");
+            assertThat(jwt).isNotNull();
         }
     }
 }

@@ -40,17 +40,23 @@ public class ViajeUseCase {
     private final VehiculoRepositoryImpl vehiculoRepository;
     private final GoogleMapsService   googleMapsService;
     private final WeatherMLService    weatherMLService;
+    private final ti.mdva.repositories.CondicionesSnapshotRepository snapshotRepo;
+    private final ti.mdva.repositories.ParadaViajeRepository paradaRepo;
 
     public ViajeUseCase(
             ViajeRepositoryImpl viajeRepository,
             VehiculoRepositoryImpl vehiculoRepository,
             GoogleMapsService googleMapsService,
-            WeatherMLService weatherMLService
+            WeatherMLService weatherMLService,
+            ti.mdva.repositories.CondicionesSnapshotRepository snapshotRepo,
+            ti.mdva.repositories.ParadaViajeRepository paradaRepo
     ) {
         this.viajeRepository    = viajeRepository;
         this.vehiculoRepository = vehiculoRepository;
         this.googleMapsService  = googleMapsService;
         this.weatherMLService   = weatherMLService;
+        this.snapshotRepo       = snapshotRepo;
+        this.paradaRepo         = paradaRepo;
     }
 
     // ── Planificación ─────────────────────────────────────────────────────────
@@ -81,8 +87,16 @@ public class ViajeUseCase {
             throw new IllegalArgumentException("El origen y el destino no pueden ser el mismo lugar.");
         }
 
-        // 2. Ruta óptima
-        GoogleMapsService.RouteResult route = googleMapsService.getOptimalRoute(origen, destino);
+        // 2. Resolver paradas (waypoints)
+        List<LocationPointDTO> waypoints = null;
+        if (request.getParadas() != null && !request.getParadas().isEmpty()) {
+            waypoints = request.getParadas().stream()
+                    .map(googleMapsService::resolveCoordinates)
+                    .toList();
+        }
+
+        // 3. Ruta óptima
+        GoogleMapsService.RouteResult route = googleMapsService.getOptimalRoute(origen, destino, waypoints);
         int tiempoBaseMin = (int) Math.ceil(route.durationSeconds() / 60.0);
 
         log.debug("Ruta: {}m, {}min, {} pasos", route.distanceMeters(), tiempoBaseMin, route.steps().size());
@@ -113,6 +127,24 @@ public class ViajeUseCase {
                 tiempoBaseMin,
                 response.getTiempoEstimadoMin(),
                 response.getAlertaNivel());
+
+        // 5.1 Guardar snapshot para monitoreo (Sprint 5.2A)
+        snapshotRepo.save(
+                saved.getIdViaje(),
+                prediccion.getProbabilidadRf() != null ? prediccion.getProbabilidadRf() : 0.0,
+                prediccion.getProbabilidadRl() != null ? prediccion.getProbabilidadRl() : 0.0,
+                prediccion.getTemperaturaC(),
+                prediccion.getHumedadPct(),
+                prediccion.getCoberturaAnubosaPct(),
+                prediccion.getVelocidadVientoMs(),
+                response.getAlertaNivel() != null ? response.getAlertaNivel().name() : "VERDE",
+                OffsetDateTime.now() // idealmente vendría de weather API, usamos now()
+        );
+
+        // 5.2 Guardar paradas (Sprint 5.3)
+        if (waypoints != null && !waypoints.isEmpty()) {
+            paradaRepo.saveAll(saved.getIdViaje(), waypoints);
+        }
 
         // 6. Retornar DTO completo con el ID generado por la BD
         return response.toBuilder()

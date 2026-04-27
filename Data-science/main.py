@@ -141,3 +141,85 @@ def predecir_con_modelo(modelo: ModeloNombre, entrada: EntradaPrediccion):
         return predecir(modelo.value, entrada)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# ── Sprint 5.2A: Monitoreo de Trayecto ─────────────────────────────────────────
+
+class SnapshotCondiciones(BaseModel):
+    probabilidad_rf_inicio: float
+    temperatura_inicio: float
+    timestamp_snapshot: str
+    timestamp_dato_weather: str
+
+class MonitoreoRequest(BaseModel):
+    snapshot: SnapshotCondiciones
+    condiciones_actuales: EntradaPrediccion
+
+class MonitoreoResponse(BaseModel):
+    probabilidad_rf_actual: float
+    delta_probabilidad: float
+    dato_con_latencia: bool
+    minutos_latencia: int
+    nivel_cambio: str
+
+@app.post(
+    "/monitorear/trayecto",
+    response_model=MonitoreoResponse,
+    tags=["Monitoreo"],
+    summary="Evalúa el cambio de condiciones durante el trayecto",
+)
+def monitorear_trayecto(req: MonitoreoRequest):
+    """
+    Compara las condiciones iniciales con las actuales.
+    Retorna el nivel de cambio y si hay latencia en los datos.
+    """
+    from datetime import datetime, timezone
+    
+    # 1. Calcular predicción actual usando RF (mayor AUC) o el primer modelo disponible
+    target_model = "random_forest" if "random_forest" in MODELS else list(MODELS.keys())[0]
+    res_actual = predecir(target_model, req.condiciones_actuales)
+    prob_actual = res_actual.probabilidad_lluvia
+
+    
+    # 2. Calcular delta
+    delta = prob_actual - req.snapshot.probabilidad_rf_inicio
+    
+    # 3. Calcular latencia (simulada basada en el timestamp de weather de inicio)
+    # En producción real, este timestamp vendría de la respuesta actual de la API del clima
+    try:
+        ts_weather = datetime.fromisoformat(req.snapshot.timestamp_dato_weather.replace('Z', '+00:00'))
+        ahora = datetime.now(timezone.utc)
+        minutos_latencia = int((ahora - ts_weather).total_seconds() / 60)
+        # Asumimos latencia si el dato tiene más de 15 minutos de antigüedad
+        # Nota: en una impl real, enviaríamos el timestamp actual de weather
+        # Aquí forzamos 0 para probar si la API del clima reportó algo fresco
+        minutos_latencia = max(0, minutos_latencia - 5) # Pequeño buffer
+    except:
+        minutos_latencia = 0
+        
+    con_latencia = minutos_latencia > 15
+    
+    # 4. Determinar nivel de cambio
+    nivel_cambio = "ESTABLE"
+    if delta >= 0.10 and delta <= 0.25:
+        nivel_cambio = "MODERADO"
+    elif delta > 0.25:
+        nivel_cambio = "SIGNIFICATIVO"
+        
+    if con_latencia and nivel_cambio != "CRITICO":
+        # Sube un nivel si hay latencia
+        niveles = ["ESTABLE", "MODERADO", "SIGNIFICATIVO", "CRITICO"]
+        idx = niveles.index(nivel_cambio)
+        if idx < len(niveles) - 1:
+            nivel_cambio = niveles[idx + 1]
+            
+    if prob_actual > 0.85:
+        nivel_cambio = "CRITICO"
+        
+    return MonitoreoResponse(
+        probabilidad_rf_actual=prob_actual,
+        delta_probabilidad=delta,
+        dato_con_latencia=con_latencia,
+        minutos_latencia=minutos_latencia,
+        nivel_cambio=nivel_cambio
+    )

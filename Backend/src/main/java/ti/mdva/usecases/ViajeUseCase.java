@@ -153,6 +153,55 @@ public class ViajeUseCase {
         return viajeRepository.findByUsuario(idUsuario);
     }
 
+    // ── Alerta en tiempo real (HU031) ─────────────────────────────────────────
+
+    /**
+     * Recalcula el clima sobre el origen del viaje y devuelve la alerta actualizada.
+     *
+     * No vuelve a llamar a Google Directions: la ruta y la distancia ya están
+     * persistidas en BD. Solo cambia la predicción de lluvia y, por tanto,
+     * el nivel de alerta y la sugerencia de ruta alterna.
+     *
+     * @throws IllegalArgumentException si el viaje no existe o no pertenece al usuario
+     */
+    public AlertaActualDTO obtenerAlertaActual(Integer idViaje, Integer idUsuario) {
+        Viajes viaje = viajeRepository.findById(idViaje)
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "No se encontró un viaje con id: " + idViaje));
+
+        // Por seguridad, mismo mensaje que "no existe" para no revelar IDs ajenos
+        if (!viaje.getIdUsuario().equals(idUsuario)) {
+            throw new IllegalArgumentException(
+                    "No se encontró un viaje con id: " + idViaje);
+        }
+
+        if (viaje.getLatOrigen() == null || viaje.getLngOrigen() == null) {
+            throw new IllegalStateException(
+                    "El viaje no tiene coordenadas de origen registradas (¿viaje legado pre-V2?)");
+        }
+
+        RainPredictionDTO prediccion = weatherMLService.predictRainForLocation(
+                viaje.getLatOrigen(), viaje.getLngOrigen());
+
+        // Reutilizamos el orchestrator pasándole un builder temporal.
+        // tiempoBaseMin=1 es placeholder: solo nos interesa nivel/factor/alterna/mensaje.
+        Integer distancia = viaje.getDistanciaMetros() != null ? viaje.getDistanciaMetros() : 0;
+        TripResponseDTO.TripResponseDTOBuilder builder = TripResponseDTO.builder();
+        TripPlannerOrchestrator.apply(builder, prediccion, 1, distancia);
+        TripResponseDTO calc = builder.build();
+
+        return AlertaActualDTO.builder()
+                .idViaje(idViaje)
+                .calculadoEn(OffsetDateTime.now())
+                .alertaNivel(calc.getAlertaNivel())
+                .alertaMensaje(calc.getAlertaMensaje())
+                .factorAjuste(calc.getFactorAjuste())
+                .sugerirRutaAlterna(calc.getSugerirRutaAlterna())
+                .razonRutaAlterna(calc.getRazonRutaAlterna())
+                .prediccionLluvia(prediccion)
+                .build();
+    }
+
     // ── Helpers privados ──────────────────────────────────────────────────────
 
     /**

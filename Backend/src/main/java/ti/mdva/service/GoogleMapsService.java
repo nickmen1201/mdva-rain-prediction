@@ -22,14 +22,16 @@ public interface GoogleMapsService {
     LocationPointDTO resolveCoordinates(LocationPointDTO point);
 
     /**
-     * Obtiene la ruta óptima entre dos puntos usando Directions API.
+     * Obtiene la ruta óptima entre dos puntos usando Directions API,
+     * soportando paradas intermedias (waypoints).
      * Usa modo "driving" y tráfico actual.
      *
      * @param origin      punto de origen (con lat/lng resueltos)
      * @param destination punto de destino (con lat/lng resueltos)
+     * @param waypoints   lista opcional de paradas intermedias
      * @return RouteResult con duración, distancia, polyline y pasos
      */
-    RouteResult getOptimalRoute(LocationPointDTO origin, LocationPointDTO destination);
+    RouteResult getOptimalRoute(LocationPointDTO origin, LocationPointDTO destination, List<LocationPointDTO> waypoints);
 
     /**
      * Resultado de una consulta a Directions API.

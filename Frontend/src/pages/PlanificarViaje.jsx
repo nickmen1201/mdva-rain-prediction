@@ -43,13 +43,6 @@ export default function PlanificarViaje() {
     });
   }, [placesLib]);
 
-  // Handle waypoints dynamic refs
-  useEffect(() => {
-    paradasRefs.current = paradasRefs.current.slice(0, paradas.length);
-    paradas.forEach((_, i) => {
-      if (!paradasRefs.current[i]) paradasRefs.current[i] = createRef();
-    });
-  }, [paradas]);
 
   // Attach autocomplete to waypoints
   useEffect(() => {
@@ -79,7 +72,10 @@ export default function PlanificarViaje() {
   }, [placesLib, paradas.length]); 
 
   const addParada = () => setParadas([...paradas, { lat: null, lng: null, displayName: '' }]);
-  const removeParada = (i) => setParadas(paradas.filter((_, idx) => idx !== i));
+  const removeParada = (i) => {
+    paradasRefs.current.splice(i, 1);
+    setParadas(paradas.filter((_, idx) => idx !== i));
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -97,27 +93,17 @@ export default function PlanificarViaje() {
     const payload = {
       idVehiculo: idVehiculo || null,
       origen: { lat: origen.lat, lng: origen.lng, displayName: origen.displayName },
-      destino: null, // to be determined
-      paradas: []
+      destino: { lat: destino.lat, lng: destino.lng, displayName: destino.displayName },
+      paradas: validParadas.map(p => ({ lat: p.lat, lng: p.lng, displayName: p.displayName }))
     };
-
-    // Chaining strategy: Target first stop, or final destination if no stops.
-    let nextStops = [];
-    if (validParadas.length > 0) {
-      payload.destino = validParadas[0];
-      nextStops = [...validParadas.slice(1), { ...destino }];
-    } else {
-      payload.destino = { ...destino };
-    }
 
     try {
       const response = await planificarViaje(payload);
-      // Pass remaining stops in location state
-      navigate(`/viaje/${response.idViaje}/en-ruta`, { 
-        state: { 
+      navigate(`/viaje/${response.idViaje}`, {
+        state: {
           viaje: response,
-          pendingStops: nextStops
-        } 
+          paradas: validParadas
+        }
       });
     } catch (err) {
       const msg = err.response?.data?.detail
@@ -180,16 +166,19 @@ export default function PlanificarViaje() {
           </div>
 
           {/* Paradas (Waypoints) */}
-          {paradas.map((parada, i) => (
-            <div key={i} className="field" style={{ gridColumn: '1 / -1', borderLeft: '2px solid var(--accent)', paddingLeft: '1rem', marginLeft: '0.5rem' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                <label style={{ margin: 0 }}>Parada {i + 1}</label>
-                <button type="button" onClick={() => removeParada(i)} style={{ background: 'none', border: 'none', color: 'var(--danger)', cursor: 'pointer', fontSize: '0.8rem' }}>✕ Quitar</button>
+          {paradas.map((parada, i) => {
+            if (!paradasRefs.current[i]) paradasRefs.current[i] = createRef();
+            return (
+              <div key={i} className="field" style={{ gridColumn: '1 / -1', borderLeft: '2px solid var(--accent)', paddingLeft: '1rem', marginLeft: '0.5rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                  <label style={{ margin: 0 }}>Parada {i + 1}</label>
+                  <button type="button" onClick={() => removeParada(i)} style={{ background: 'none', border: 'none', color: 'var(--danger)', cursor: 'pointer', fontSize: '0.8rem' }}>✕ Quitar</button>
+                </div>
+                <input ref={paradasRefs.current[i]} type="text" placeholder="Ej. Centro Comercial" />
+                {parada.lat && <span style={{ fontSize: '0.75rem', color: 'var(--accent)', marginTop: '0.5rem', display: 'block' }}>✓ Parada fijada: {parada.displayName}</span>}
               </div>
-              <input ref={paradasRefs.current[i]} type="text" placeholder="Ej. Centro Comercial" />
-              {parada.lat && <span style={{ fontSize: '0.75rem', color: 'var(--accent)', marginTop: '0.5rem', display: 'block' }}>✓ Parada fijada: {parada.displayName}</span>}
-            </div>
-          ))}
+            );
+          })}
 
           <div className="field" style={{ gridColumn: '1 / -1', textAlign: 'left' }}>
             <button type="button" onClick={addParada} className="btn" style={{ background: 'transparent', border: '1px dashed var(--border)', color: 'var(--text-muted)', fontSize: '0.85rem' }}>

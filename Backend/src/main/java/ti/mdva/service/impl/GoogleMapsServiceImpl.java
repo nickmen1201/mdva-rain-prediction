@@ -96,8 +96,11 @@ public class GoogleMapsServiceImpl implements GoogleMapsService {
                 .queryParam("region",      "CO")
                 .queryParam("key",         apiKey);
 
+        // Waypoints se construyen fuera del builder para evitar doble codificación de '|'.
+        // UriComponentsBuilder convierte '|' → '%7C', y luego RestTemplate re-codifica
+        // '%' → '%25', produciendo '%257C' que Google Maps no reconoce.
+        List<String> wpStrings = new ArrayList<>();
         if (waypoints != null && !waypoints.isEmpty()) {
-            List<String> wpStrings = new ArrayList<>();
             for (LocationPointDTO wp : waypoints) {
                 if (wp.getLat() != null && wp.getLng() != null) {
                     wpStrings.add(wp.getLat() + "," + wp.getLng());
@@ -105,14 +108,14 @@ public class GoogleMapsServiceImpl implements GoogleMapsService {
                     wpStrings.add("place_id:" + wp.getPlaceId());
                 }
             }
-            if (!wpStrings.isEmpty()) {
-                builder.queryParam("waypoints", "optimize:true|" + String.join("|", wpStrings));
-            }
         }
 
         String url = builder.toUriString();
+        if (!wpStrings.isEmpty()) {
+            url += "&waypoints=optimize:true%7C" + String.join("%7C", wpStrings);
+        }
 
-        JsonNode response = restTemplate.getForObject(url, JsonNode.class);
+        JsonNode response = restTemplate.getForObject(java.net.URI.create(url), JsonNode.class);
 
         if (response == null || !"OK".equals(response.path("status").asText())) {
             String status = response != null ? response.path("status").asText() : "NULL_RESPONSE";

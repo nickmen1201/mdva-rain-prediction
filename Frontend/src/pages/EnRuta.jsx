@@ -15,13 +15,43 @@ import {
 const NAV_ARROW_PATH = 'M 0,-14 L 6,8 L 0,4 L -6,8 Z';
 
 // ── Subcomponent: draws route, animated GPS marker ────────────────────────────
-function CapaRuta({ viaje, posicion, heading, pasoActivo, centering, theme }) {
+function CapaRuta({ viaje, posicion, heading, pasoActivo, centering, theme, paradas }) {
   const map = useMap();
   const marcadorRef  = useRef(null);
   const polylineRef  = useRef(null);
   const recorridoRef = useRef(null);
 
   const isDark = theme === 'dark';
+
+  // POI markers: origen, paradas intermedias, destino
+  useEffect(() => {
+    if (!map || !viaje?.origen || !viaje?.destino) return;
+
+    const markers = [];
+    const makeMarker = (position, title, fillColor, scale) => {
+      const m = new window.google.maps.Marker({
+        position,
+        map,
+        title,
+        zIndex: 5,
+        icon: {
+          path: window.google.maps.SymbolPath.CIRCLE,
+          scale,
+          fillColor,
+          fillOpacity: 1,
+          strokeColor: '#0a0c10',
+          strokeWeight: 2,
+        },
+      });
+      markers.push(m);
+    };
+
+    makeMarker({ lat: viaje.origen.lat,  lng: viaje.origen.lng  }, viaje.origen.displayName  ?? 'Origen',  '#4af0a0', 8);
+    paradas?.forEach(p => makeMarker({ lat: p.lat, lng: p.lng }, p.displayName ?? 'Parada', '#c084fc', 6));
+    makeMarker({ lat: viaje.destino.lat, lng: viaje.destino.lng }, viaje.destino.displayName ?? 'Destino', '#f0a04a', 8);
+
+    return () => markers.forEach(m => m.setMap(null));
+  }, [map, viaje, paradas]);
 
   // Draw route polyline on mount
   useEffect(() => {
@@ -133,6 +163,9 @@ export default function EnRuta() {
   
   // Pending stops for trip chaining
   const [pendingStops,  setPendingStops]  = useState(state?.pendingStops ?? []);
+
+  // Paradas intermedias para marcadores en mapa (estables, no cambian)
+  const [paradas] = useState(state?.paradas ?? []);
 
   const watchId      = useRef(null);
   const lastHeading  = useRef(0);
@@ -319,6 +352,7 @@ export default function EnRuta() {
             pasoActivo={pasoActivo}
             centering={centering}
             theme={theme}
+            paradas={paradas}
           />
         )}
       </Map>

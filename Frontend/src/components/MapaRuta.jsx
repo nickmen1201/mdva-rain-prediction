@@ -1,15 +1,15 @@
 import { APIProvider, Map, useMap } from '@vis.gl/react-google-maps';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 
 const MAPS_KEY = import.meta.env.VITE_GOOGLE_MAPS_KEY;
 
-function PolylineLayer({ encodedPolyline, origen, destino }) {
+function PolylineLayer({ encodedPolyline, origen, destino, paradas }) {
   const map = useMap();
+  const markersRef = useRef([]);
 
   useEffect(() => {
     if (!map || !encodedPolyline) return;
 
-    // Decode the overview polyline using Google Maps geometry library
     const path = window.google.maps.geometry.encoding.decodePath(encodedPolyline);
 
     const polyline = new window.google.maps.Polyline({
@@ -20,50 +20,51 @@ function PolylineLayer({ encodedPolyline, origen, destino }) {
       map,
     });
 
-    // Fit bounds to the route
     const bounds = new window.google.maps.LatLngBounds();
     path.forEach((p) => bounds.extend(p));
     map.fitBounds(bounds, { top: 40, right: 40, bottom: 40, left: 40 });
 
-    // Origin marker
-    new window.google.maps.Marker({
-      position: { lat: origen.lat, lng: origen.lng },
-      map,
-      title: origen.displayName,
-      icon: {
-        path: window.google.maps.SymbolPath.CIRCLE,
-        scale: 8,
-        fillColor: '#4af0a0',
-        fillOpacity: 1,
-        strokeColor: '#0a0c10',
-        strokeWeight: 2,
-      },
-    });
+    // Limpia marcadores anteriores
+    markersRef.current.forEach(m => m.setMap(null));
+    markersRef.current = [];
 
-    // Destination marker
-    new window.google.maps.Marker({
-      position: { lat: destino.lat, lng: destino.lng },
-      map,
-      title: destino.displayName,
-      icon: {
-        path: window.google.maps.SymbolPath.CIRCLE,
-        scale: 8,
-        fillColor: '#f0a04a',
-        fillOpacity: 1,
-        strokeColor: '#0a0c10',
-        strokeWeight: 2,
-      },
-    });
+    const makeMarker = (position, title, fillColor, scale) => {
+      const m = new window.google.maps.Marker({
+        position,
+        map,
+        title,
+        icon: {
+          path: window.google.maps.SymbolPath.CIRCLE,
+          scale,
+          fillColor,
+          fillOpacity: 1,
+          strokeColor: '#0a0c10',
+          strokeWeight: 2,
+        },
+      });
+      markersRef.current.push(m);
+    };
+
+    // Origen (verde)
+    makeMarker({ lat: origen.lat, lng: origen.lng }, origen.displayName, '#4af0a0', 9);
+
+    // Paradas intermedias (violeta)
+    paradas?.forEach(p => makeMarker({ lat: p.lat, lng: p.lng }, p.displayName, '#c084fc', 7));
+
+    // Destino (naranja)
+    makeMarker({ lat: destino.lat, lng: destino.lng }, destino.displayName, '#f0a04a', 9);
 
     return () => {
       polyline.setMap(null);
+      markersRef.current.forEach(m => m.setMap(null));
+      markersRef.current = [];
     };
-  }, [map, encodedPolyline, origen, destino]);
+  }, [map, encodedPolyline, origen, destino, paradas]);
 
   return null;
 }
 
-export default function MapaRuta({ encodedPolyline, origen, destino }) {
+export default function MapaRuta({ encodedPolyline, origen, destino, paradas }) {
   return (
     <div className="map-container" style={{ height: '100%', width: '100%' }}>
       <Map
@@ -79,6 +80,7 @@ export default function MapaRuta({ encodedPolyline, origen, destino }) {
           encodedPolyline={encodedPolyline}
           origen={origen}
           destino={destino}
+          paradas={paradas}
         />
       </Map>
     </div>

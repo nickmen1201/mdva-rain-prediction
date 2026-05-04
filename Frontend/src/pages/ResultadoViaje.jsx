@@ -18,7 +18,7 @@ function getRainHero(pred) {
 }
 
 const REC = {
-  VERDE:    { icon: '✅', texto: 'Buen momento para salir. Sin lluvia prevista.' },
+  VERDE:    { icon: '✓', texto: 'Buen momento para salir. Sin lluvia prevista.' },
   AMARILLO: { icon: '🌂', texto: 'Lleva paraguas. Posibles lloviznas en el camino.' },
   ROJO:     { icon: '⚠️', texto: 'Lluvia fuerte. Usa impermeable y conduce despacio.' },
 };
@@ -99,7 +99,7 @@ export default function ResultadoViaje() {
   const heroBorder = HERO_BORDER[viaje.alertaNivel] ?? 'var(--border)';
 
   return (
-    <div style={{ paddingTop: '1.5rem' }}>
+    <div className="page-content">
 
       {/* ── Header ── */}
       <div className="fade-up" style={{ marginBottom: '0.25rem' }}>
@@ -117,7 +117,7 @@ export default function ResultadoViaje() {
             <span style={{ fontSize: '2.6rem', lineHeight: 1, flexShrink: 0 }}>{hero.icon}</span>
             <div>
               <div style={{ fontWeight: 700, fontSize: '1.05rem', color: 'var(--text)' }}>{hero.titulo}</div>
-              <div style={{ color: 'var(--muted)', fontSize: '0.85rem', marginTop: '0.2rem' }}>{hero.sub}</div>
+              <div style={{ color: 'var(--muted)', fontSize: '0.9rem', marginTop: '0.2rem' }}>{hero.sub}</div>
             </div>
           </div>
           {rec && (
@@ -128,7 +128,7 @@ export default function ResultadoViaje() {
               display: 'flex',
               alignItems: 'center',
               gap: '0.5rem',
-              fontSize: '0.88rem',
+              fontSize: '0.92rem',
               color: 'var(--text-soft)',
             }}>
               <span style={{ fontSize: '1rem' }}>{rec.icon}</span>
@@ -176,7 +176,7 @@ export default function ResultadoViaje() {
             <span style={{
               background: 'var(--bg-elevated)', border: '1px solid var(--border)',
               borderRadius: '999px', padding: '0.3rem 0.85rem',
-              fontSize: '0.82rem', color: 'var(--text-soft)',
+              fontSize: '0.88rem', color: 'var(--text-soft)',
             }}>
               🌡️ {Math.round(pred.temperaturaC)}°C
             </span>
@@ -185,7 +185,7 @@ export default function ResultadoViaje() {
             <span style={{
               background: 'var(--bg-elevated)', border: '1px solid var(--border)',
               borderRadius: '999px', padding: '0.3rem 0.85rem',
-              fontSize: '0.82rem', color: 'var(--text-soft)',
+              fontSize: '0.88rem', color: 'var(--text-soft)',
             }}>
               💧 {Math.round(pred.humedadPct)}% humedad
             </span>
@@ -194,7 +194,7 @@ export default function ResultadoViaje() {
             <span style={{
               background: 'var(--bg-elevated)', border: '1px solid var(--border)',
               borderRadius: '999px', padding: '0.3rem 0.85rem',
-              fontSize: '0.82rem', color: 'var(--text-soft)',
+              fontSize: '0.88rem', color: 'var(--text-soft)',
             }}>
               💨 {vientoKmh} km/h
             </span>
@@ -236,17 +236,17 @@ export default function ResultadoViaje() {
         >
           {gpsCheck === 'checking'
             ? <><span className="spinner" /> Verificando ubicación...</>
-            : 'Iniciar navegación →'}
+            : 'Iniciar navegación'}
         </button>
         <button className="btn btn-danger" onClick={handleFinalizar} disabled={finalizing}>
           {finalizing ? <><span className="spinner" /> Finalizando...</> : 'Cancelar viaje'}
         </button>
-        <Link to="/planificar" className="btn btn-secondary">← Nuevo viaje</Link>
+        <Link to="/planificar" className="btn btn-secondary">Nuevo viaje</Link>
         <Link to="/historial/1" className="btn btn-secondary">Ver historial</Link>
       </div>
 
       {gpsCheck === 'far' && distOrigen != null && (
-        <p style={{ marginTop: '1rem', marginBottom: '3rem', fontSize: '0.8rem', color: 'var(--muted)', lineHeight: 1.5 }}>
+        <p style={{ marginTop: '1rem', marginBottom: '2rem', fontSize: '0.88rem', color: 'var(--muted)', lineHeight: 1.5 }}>
           Estás a {(distOrigen / 1000).toFixed(1)} km del punto de partida. Acércate para poder iniciar la navegación.
         </p>
       )}

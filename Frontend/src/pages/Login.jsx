@@ -55,10 +55,10 @@ export default function Login() {
         </div>
         
         <button className="btn btn-primary" type="submit" style={{ marginTop: '2rem' }}>
-          Entrar →
+          Entrar
         </button>
-        
-        <p style={{ marginTop: '1.5rem', textAlign: 'center', fontSize: '0.85rem', color: 'var(--muted)' }}>
+
+        <p style={{ marginTop: '1.5rem', textAlign: 'center', fontSize: '0.9rem', color: 'var(--muted)' }}>
           ¿No tienes cuenta? <Link to="/register" style={{ color: 'var(--accent)', textDecoration: 'none' }}>Regístrate aquí</Link>
         </p>
       </form>

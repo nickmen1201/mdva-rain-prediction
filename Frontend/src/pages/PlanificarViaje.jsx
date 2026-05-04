@@ -117,7 +117,7 @@ export default function PlanificarViaje() {
   };
 
   return (
-    <div style={{ textAlign: "center" }}>
+    <div className="page-content" style={{ textAlign: "center" }}>
       <h1 className="page-title fade-up">Planificar viaje</h1>
       <p className="page-subtitle fade-up"> Búsqueda rápida con Google Places · Soporte multi-parada</p>
 
@@ -154,7 +154,7 @@ export default function PlanificarViaje() {
                   }
                 );
               }}
-              style={{ background: 'none', border: 'none', color: 'var(--accent)', cursor: 'pointer', fontSize: '0.75rem', padding: '4px 8px' }}
+              style={{ background: 'none', border: 'none', color: 'var(--accent)', cursor: 'pointer', fontSize: '0.82rem', padding: '4px 8px' }}
             >
               📍 Usar ubicación actual
             </button>
@@ -162,7 +162,7 @@ export default function PlanificarViaje() {
           <div className="field" style={{ gridColumn: '1 / -1' }}>
             <label>Buscar Punto de Origen</label>
             <input ref={originInputRef} type="text" placeholder="Ej. UPB, Medellín" />
-            {origen.lat && <span style={{ fontSize: '0.75rem', color: 'var(--accent)', marginTop: '0.5rem' }}>✓ Origen fijado: {origen.displayName}</span>}
+            {origen.lat && <span style={{ fontSize: '0.82rem', color: 'var(--accent)', marginTop: '0.5rem' }}>✓ Origen fijado: {origen.displayName}</span>}
           </div>
 
           {/* Paradas (Waypoints) */}
@@ -175,7 +175,7 @@ export default function PlanificarViaje() {
                   <button type="button" onClick={() => removeParada(i)} style={{ background: 'none', border: 'none', color: 'var(--danger)', cursor: 'pointer', fontSize: '0.8rem' }}>✕ Quitar</button>
                 </div>
                 <input ref={paradasRefs.current[i]} type="text" placeholder="Ej. Centro Comercial" />
-                {parada.lat && <span style={{ fontSize: '0.75rem', color: 'var(--accent)', marginTop: '0.5rem', display: 'block' }}>✓ Parada fijada: {parada.displayName}</span>}
+                {parada.lat && <span style={{ fontSize: '0.82rem', color: 'var(--accent)', marginTop: '0.5rem', display: 'block' }}>✓ Parada fijada: {parada.displayName}</span>}
               </div>
             );
           })}
@@ -191,14 +191,14 @@ export default function PlanificarViaje() {
           <div className="field" style={{ gridColumn: '1 / -1' }}>
             <label>Buscar Punto de Destino</label>
             <input ref={destInputRef} type="text" placeholder="Ej. EAFIT, Medellín" />
-            {destino.lat && <span style={{ fontSize: '0.75rem', color: 'var(--accent)', marginTop: '0.5rem' }}>✓ Destino fijado: {destino.displayName}</span>}
+            {destino.lat && <span style={{ fontSize: '0.82rem', color: 'var(--accent)', marginTop: '0.5rem' }}>✓ Destino fijado: {destino.displayName}</span>}
           </div>
         </div>
 
         {error && <div className="error-box">{error}</div>}
 
         <button className="btn btn-primary" type="submit" disabled={loading} style={{ marginTop: '2rem' }}>
-          {loading ? <><span className="spinner" /> Calculando ruta...</> : 'Planificar viaje →'}
+          {loading ? <><span className="spinner" /> Calculando ruta...</> : 'Planificar viaje'}
         </button>
       </form>
     </div>

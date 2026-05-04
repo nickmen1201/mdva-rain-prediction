@@ -28,8 +28,8 @@ export default function TarjetaViaje({ viaje }) {
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.4rem' }}>
         {viaje.finalizado
-          ? <span style={{ fontFamily: 'DM Mono', fontSize: '0.72rem', color: 'var(--muted)' }}>COMPLETADO</span>
-          : <span style={{ fontFamily: 'DM Mono', fontSize: '0.72rem', color: 'var(--accent)' }}>EN CURSO</span>
+          ? <span style={{ fontFamily: 'DM Mono', fontSize: '0.78rem', color: 'var(--muted)' }}>COMPLETADO</span>
+          : <span style={{ fontFamily: 'DM Mono', fontSize: '0.78rem', color: 'var(--accent)' }}>EN CURSO</span>
         }
       </div>
     </Link>

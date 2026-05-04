@@ -17,7 +17,7 @@ export default function HistorialViajes() {
   }, [idUsuario]);
 
   return (
-    <div>
+    <div className="page-content">
       <h1 className="page-title fade-up">Historial</h1>
       <p className="page-subtitle fade-up">Usuario #{idUsuario}</p>
 

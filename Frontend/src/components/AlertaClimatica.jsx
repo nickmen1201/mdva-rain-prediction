@@ -20,7 +20,7 @@ export default function AlertaClimatica({ prediccion, alertaNivel, alertaMensaje
       </div>
 
       {alertaMensaje && (
-        <p style={{ fontSize: '0.88rem', color: 'var(--muted)', marginBottom: '1rem', lineHeight: 1.5 }}>
+        <p style={{ fontSize: '0.92rem', color: 'var(--muted)', marginBottom: '1rem', lineHeight: 1.5 }}>
           {alertaMensaje}
         </p>
       )}

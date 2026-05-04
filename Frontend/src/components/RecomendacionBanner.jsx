@@ -1,10 +1,10 @@
 import { useEffect } from 'react';
 
 const CONFIG = {
-  INFORMATIVA: { cls: 'toast',     bg: 'rgba(8,10,14,0.96)', border: 'rgba(74,240,160,0.4)', color: '#4af0a0',  icon: '☁️', autoDismiss: 6000 },
-  PRECAUCION:  { cls: 'banner',    bg: 'rgba(240,160,74,0.92)', border: null, color: '#1a1200',  icon: '⚠️', autoDismiss: null },
-  PELIGRO:     { cls: 'modal',     bg: null, border: null, color: null, icon: '⚠️', autoDismiss: null },
-  CRISIS:      { cls: 'crisis',    bg: null, border: null, color: null, icon: '🚨', autoDismiss: null },
+  INFORMATIVA: { cls: 'toast',     bg: 'rgba(8,10,14,0.96)', border: 'rgba(74,240,160,0.4)', color: '#4af0a0',  icon: 'ℹ', autoDismiss: 6000 },
+  PRECAUCION:  { cls: 'banner',    bg: 'rgba(240,160,74,0.92)', border: null, color: '#1a1200',  icon: '⚠', autoDismiss: null },
+  PELIGRO:     { cls: 'modal',     bg: null, border: null, color: null, icon: '⚠', autoDismiss: null },
+  CRISIS:      { cls: 'crisis',    bg: null, border: null, color: null, icon: '⚠', autoDismiss: null },
 };
 
 export default function RecomendacionBanner({ alerta, onCerrar }) {
@@ -40,7 +40,7 @@ export default function RecomendacionBanner({ alerta, onCerrar }) {
       <div className="recomendacion-banner precaucion">
         <span style={{ fontSize: '1.4rem' }}>{cfg.icon}</span>
         <span style={{ flex: 1 }}>{alerta.mensaje}</span>
-        <button onClick={onCerrar} style={{ background: 'none', border: '1px solid rgba(0,0,0,0.3)', color: '#1a1200', cursor: 'pointer', padding: '0.3rem 0.75rem', borderRadius: '4px', fontSize: '0.82rem' }}>
+        <button onClick={onCerrar} style={{ background: 'none', border: '1px solid rgba(0,0,0,0.3)', color: '#1a1200', cursor: 'pointer', padding: '0.35rem 0.85rem', borderRadius: '4px', fontSize: '0.88rem' }}>
           Entendido
         </button>
       </div>
@@ -57,7 +57,7 @@ export default function RecomendacionBanner({ alerta, onCerrar }) {
             {alerta.mensaje}
           </h2>
           {alerta.detalleRecomendacion && (
-            <p style={{ color: '#c0c4d0', fontSize: '0.9rem', lineHeight: 1.5, marginBottom: '1.5rem' }}>
+            <p style={{ color: '#c0c4d0', fontSize: '0.95rem', lineHeight: 1.5, marginBottom: '1.5rem' }}>
               {alerta.detalleRecomendacion}
             </p>
           )}

@@ -8,6 +8,7 @@ import ti.mdva.jooq.tables.pojos.Viajes;
 import ti.mdva.model.dto.*;
 import ti.mdva.repositories.ViajeRepositoryImpl;
 import ti.mdva.service.GoogleMapsService;
+import ti.mdva.service.EnvironmentalRoutingService;
 import ti.mdva.service.TripPlannerOrchestrator;
 import ti.mdva.service.WeatherMLService;
 import ti.mdva.repositories.VehiculoRepositoryImpl;
@@ -19,13 +20,14 @@ import java.util.Optional;
 /**
  * UseCase principal de viajes.
  *
- * Flujo de planificarViaje():
+ * Flujo de planificarViaje() (INTEGRADO CON ENRUTAMIENTO AMBIENTAL):
  *   1. Resolver coordenadas de origen y destino (Geocoding API si vienen como placeId)
- *   2. Calcular ruta óptima (Directions API → duración, distancia, polyline, pasos)
- *   3. Obtener predicción de lluvia (Open-Meteo → FastAPI ML)
- *   4. Aplicar lógica de ajuste (TripPlannerOrchestrator)
- *   5. Persistir el viaje en base de datos
- *   6. Retornar TripResponseDTO enriquecido al controller
+ *   2. Intentar ruta con Enrutamiento Ambiental (OSMnx + MDVA ML + SIATA)
+ *      - Si el servicio está disponible: la ruta ya incluye variables ambientales
+ *      - Si falla: fallback a Google Directions + ML por separado
+ *   3. Aplicar lógica de ajuste (TripPlannerOrchestrator)
+ *   4. Persistir el viaje en base de datos
+ *   5. Retornar TripResponseDTO enriquecido al controller
  *
  * NOTA: Los campos lat/lng, nombres de lugar y distancia se persisten
  * en las columnas nativas agregadas en la migración V2 (lat_origen, lng_origen,
@@ -39,6 +41,7 @@ public class ViajeUseCase {
     private final ViajeRepositoryImpl viajeRepository;
     private final VehiculoRepositoryImpl vehiculoRepository;
     private final GoogleMapsService   googleMapsService;
+    private final EnvironmentalRoutingService environmentalRoutingService;
     private final WeatherMLService    weatherMLService;
     private final ti.mdva.repositories.CondicionesSnapshotRepository snapshotRepo;
     private final ti.mdva.repositories.ParadaViajeRepository paradaRepo;
@@ -47,6 +50,7 @@ public class ViajeUseCase {
             ViajeRepositoryImpl viajeRepository,
             VehiculoRepositoryImpl vehiculoRepository,
             GoogleMapsService googleMapsService,
+            EnvironmentalRoutingService environmentalRoutingService,
             WeatherMLService weatherMLService,
             ti.mdva.repositories.CondicionesSnapshotRepository snapshotRepo,
             ti.mdva.repositories.ParadaViajeRepository paradaRepo
@@ -54,6 +58,7 @@ public class ViajeUseCase {
         this.viajeRepository    = viajeRepository;
         this.vehiculoRepository = vehiculoRepository;
         this.googleMapsService  = googleMapsService;
+        this.environmentalRoutingService = environmentalRoutingService;
         this.weatherMLService   = weatherMLService;
         this.snapshotRepo       = snapshotRepo;
         this.paradaRepo         = paradaRepo;
@@ -95,18 +100,45 @@ public class ViajeUseCase {
                     .toList();
         }
 
-        // 3. Ruta óptima
+        // 3. Ruta óptima (SIEMPRE Google Maps para tráfico en tiempo real)
         GoogleMapsService.RouteResult route = googleMapsService.getOptimalRoute(origen, destino, waypoints);
         int tiempoBaseMin = (int) Math.ceil(route.durationSeconds() / 60.0);
 
         log.debug("Ruta: {}m, {}min, {} pasos", route.distanceMeters(), tiempoBaseMin, route.steps().size());
 
-        // 3. Predicción de lluvia
-        RainPredictionDTO prediccion = weatherMLService.predictRainForLocation(
-                origen.getLat(), origen.getLng()
-        );
+        // 4. OBTENER MÉTRICAS AMBIENTALES (Python: ML + SIATA + Open-Meteo)
+        RainPredictionDTO prediccion;
+        String alertaNivel = "VERDE";
+        
+        try {
+            log.info("Obteniendo métricas ambientales para enriquecer ruta de Google...");
+            EnvironmentalRoutingService.EnvironmentalMetricsResult metrics =
+                    environmentalRoutingService.getEnvironmentalMetrics(origen);
 
-        // 4. Ajuste por lluvia
+            prediccion = RainPredictionDTO.builder()
+                    .llueve(metrics.mdvaLlueve())
+                    .probabilidadRf(metrics.mdvaProbabilidadRf())
+                    .probabilidadRl(metrics.mdvaProbabilidadRl())
+                    .temperaturaC(metrics.mdvaTemperaturaC())
+                    .humedadPct(metrics.mdvaHumedadPct())
+                    .coberturaAnubosaPct(metrics.mdvaCoberturaNubosaPct())
+                    .velocidadVientoMs(metrics.mdvaVelocidadVientoMs())
+                    .build();
+            
+            // Opcionalmente, aquí podríamos multiplicar el tiempoBaseMin por metrics.rainFactor()
+            // pero el TripPlannerOrchestrator ya hace su propio ajuste basado en probRf.
+            // Para mantener compatibilidad con el factor de SIATA:
+            tiempoBaseMin = (int) Math.ceil(tiempoBaseMin * metrics.rainFactor());
+
+            log.info("✓ Métricas obtenidas: probRF={}, factor_lluvia={}, elevacion={}",
+                    metrics.mdvaProbabilidadRf(), metrics.rainFactor(), metrics.elevationAvg());
+
+        } catch (Exception e) {
+            log.warn("Métricas ambientales no disponibles ({}), fallback a ML clásico", e.getMessage());
+            prediccion = weatherMLService.predictRainForLocation(origen.getLat(), origen.getLng());
+        }
+
+        // 5. Ajuste por lluvia (TripPlannerOrchestrator)
         TripResponseDTO.TripResponseDTOBuilder builder = TripResponseDTO.builder()
                 .origen(origen)
                 .destino(destino)
@@ -116,7 +148,6 @@ public class ViajeUseCase {
                 .pasos(route.steps());
 
         TripPlannerOrchestrator.apply(builder, prediccion, tiempoBaseMin, route.distanceMeters());
-
         TripResponseDTO response = builder.build();
 
         // 5. Persistir
@@ -124,7 +155,7 @@ public class ViajeUseCase {
 
         log.info("Viaje {} planificado: {}min base → {}min ajustado, alerta={}",
                 saved.getIdViaje(),
-                tiempoBaseMin,
+                response.getTiempoBaseMin(),
                 response.getTiempoEstimadoMin(),
                 response.getAlertaNivel());
 

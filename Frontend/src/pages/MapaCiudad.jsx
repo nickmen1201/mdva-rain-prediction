@@ -36,15 +36,15 @@ export default function MapaCiudad() {
           boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
           textAlign: 'center'
         }}>
-          <h2 style={{ fontSize: '1.2rem', marginBottom: '5px', color: 'var(--text)' }}>Explora la Ciudad</h2>
-          <p style={{ fontSize: '0.85rem', color: 'var(--muted)', marginBottom: '15px' }}>
+          <h2 style={{ fontSize: '1.25rem', marginBottom: '8px', color: 'var(--text)' }}>Explora la Ciudad</h2>
+          <p style={{ fontSize: '0.9rem', color: 'var(--muted)', marginBottom: '16px' }}>
             Revisa el estado actual o planifica un viaje inteligente.
           </p>
-          <button 
+          <button
             className="btn btn-primary"
             onClick={() => navigate('/planificar')}
           >
-            Planificar nuevo viaje →
+            Planificar nuevo viaje
           </button>
         </div>
       </div>

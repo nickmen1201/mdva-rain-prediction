@@ -390,22 +390,23 @@ export default function EnRuta() {
           onClick={() => setCentering(true)}
           className={`btn-icon nav-hud ${centering ? 'nav-hud-accent' : ''}`}
           title="Modo Navegación"
-          style={{ fontSize: '1.2rem' }}
+          style={{ fontSize: '1.1rem' }}
         >
-          🎯
+          ◉
         </button>
         <button
           onClick={() => setPanelOpen(v => !v)}
           className="btn-icon nav-hud"
+          title="Ver pasos"
         >
-          📋
+          ☰
         </button>
       </div>
 
       {/* Chaining notification */}
       {transitionRef.current && (
         <div className="alerta-badge alerta-VERDE" style={{ position: 'absolute', top: '5.5rem', left: '50%', transform: 'translateX(-50%)', zIndex: 30 }}>
-          🔄 Reanudando siguiente tramo...
+          Reanudando siguiente tramo...
         </div>
       )}
 
@@ -419,14 +420,14 @@ export default function EnRuta() {
         zIndex: 10,
       }}>
         <div>
-          <div className="nav-hud-muted" style={{ fontSize: '0.68rem', fontFamily: 'DM Mono', letterSpacing: '0.1em' }}>
+          <div className="nav-hud-muted" style={{ fontSize: '0.75rem', fontFamily: 'DM Mono', letterSpacing: '0.1em' }}>
             {pendingStops.length > 0 ? `TRAMO ACTUAL (${pendingStops.length} pendientes)` : 'TRAMO FINAL'}
           </div>
           <div style={{ fontWeight: 700, fontSize: '0.95rem' }}>
             {viaje?.destino?.displayName ?? '...'}
           </div>
           <div style={{ marginTop: '0.25rem', display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
-            <span className="nav-hud-accent" style={{ fontSize: '0.7rem' }}>● GPS ACTIVO</span>
+            <span className="nav-hud-accent" style={{ fontSize: '0.75rem' }}>● GPS ACTIVO</span>
             <span className={`alerta-badge alerta-${alertaNivel}`}>{alertaNivel}</span>
           </div>
         </div>

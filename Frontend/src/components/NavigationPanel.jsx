@@ -17,7 +17,7 @@ export default function NavigationPanel({ pasos = [], pasoActivo = 0, visible, o
         alignItems: 'center',
         justifyContent: 'space-between',
       }}>
-        <span style={{ color: '#4af0a0', fontFamily: 'DM Mono, monospace', fontSize: '0.72rem', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+        <span style={{ color: '#4af0a0', fontFamily: 'DM Mono, monospace', fontSize: '0.78rem', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
           Pasos de ruta
         </span>
         <button
@@ -46,7 +46,7 @@ export default function NavigationPanel({ pasos = [], pasoActivo = 0, visible, o
           </div>
         ))}
         {!pasos.length && (
-          <div style={{ padding: '1.5rem 1rem', color: '#5a6070', fontFamily: 'DM Mono, monospace', fontSize: '0.82rem' }}>
+          <div style={{ padding: '1.5rem 1rem', color: '#5a6070', fontFamily: 'DM Mono, monospace', fontSize: '0.88rem' }}>
             No hay pasos disponibles.
           </div>
         )}

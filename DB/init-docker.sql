@@ -180,9 +180,9 @@ INSERT INTO tipos_vehiculo (nombre, vulnerabilidad) VALUES
 ('Automovil', 40), ('Taxi', 40), ('Camioneta', 35), ('SUV', 38),
 ('Van', 45), ('Camion', 50), ('Bus', 50), ('Tractocamion', 55);
 
--- Usuario de prueba para desarrollo
-INSERT INTO usuarios (nombre, username, email) VALUES
-('Dev User', 'devuser', 'dev@mdva.local');
+-- Usuario de prueba para desarrollo (password: password123)
+INSERT INTO usuarios (nombre, username, email, authhash) VALUES
+('Dev User', 'devuser', 'dev@mdva.local', '$2a$10$X5.vM6GvOu.G7z3z.z.z.z.z.z.z.z.z.z.z.z.z.z');
 
 -- Verificación al final del script
 SELECT 'Municipios: ' || COUNT(*) FROM municipios

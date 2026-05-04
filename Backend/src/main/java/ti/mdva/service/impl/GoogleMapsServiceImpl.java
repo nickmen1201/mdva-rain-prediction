@@ -83,21 +83,39 @@ public class GoogleMapsServiceImpl implements GoogleMapsService {
     // ── Ruta óptima ───────────────────────────────────────────────────────────
 
     @Override
-    public RouteResult getOptimalRoute(LocationPointDTO origin, LocationPointDTO destination) {
+    public RouteResult getOptimalRoute(LocationPointDTO origin, LocationPointDTO destination, List<LocationPointDTO> waypoints) {
         String originParam      = origin.getLat()      + "," + origin.getLng();
         String destinationParam = destination.getLat() + "," + destination.getLng();
 
-        String url = UriComponentsBuilder.fromHttpUrl(DIRECTIONS_URL)
+        UriComponentsBuilder builder = UriComponentsBuilder.fromHttpUrl(DIRECTIONS_URL)
                 .queryParam("origin",      originParam)
                 .queryParam("destination", destinationParam)
                 .queryParam("mode",        "driving")
                 .queryParam("departure_time", "now")       // tráfico en tiempo real
                 .queryParam("language",    "es")
                 .queryParam("region",      "CO")
-                .queryParam("key",         apiKey)
-                .toUriString();
+                .queryParam("key",         apiKey);
 
-        JsonNode response = restTemplate.getForObject(url, JsonNode.class);
+        // Waypoints se construyen fuera del builder para evitar doble codificación de '|'.
+        // UriComponentsBuilder convierte '|' → '%7C', y luego RestTemplate re-codifica
+        // '%' → '%25', produciendo '%257C' que Google Maps no reconoce.
+        List<String> wpStrings = new ArrayList<>();
+        if (waypoints != null && !waypoints.isEmpty()) {
+            for (LocationPointDTO wp : waypoints) {
+                if (wp.getLat() != null && wp.getLng() != null) {
+                    wpStrings.add(wp.getLat() + "," + wp.getLng());
+                } else if (wp.getPlaceId() != null) {
+                    wpStrings.add("place_id:" + wp.getPlaceId());
+                }
+            }
+        }
+
+        String url = builder.toUriString();
+        if (!wpStrings.isEmpty()) {
+            url += "&waypoints=optimize:true%7C" + String.join("%7C", wpStrings);
+        }
+
+        JsonNode response = restTemplate.getForObject(java.net.URI.create(url), JsonNode.class);
 
         if (response == null || !"OK".equals(response.path("status").asText())) {
             String status = response != null ? response.path("status").asText() : "NULL_RESPONSE";
@@ -105,28 +123,29 @@ public class GoogleMapsServiceImpl implements GoogleMapsService {
             throw new RuntimeException("No se pudo calcular la ruta: " + status);
         }
 
-        JsonNode leg = response
-                .path("routes").get(0)
-                .path("legs").get(0);
+        JsonNode routeNode = response.path("routes").get(0);
+        JsonNode legs = routeNode.path("legs");
 
-        // Preferir duration_in_traffic si está disponible (requiere departure_time=now)
-        JsonNode durationNode = leg.has("duration_in_traffic")
-                ? leg.path("duration_in_traffic")
-                : leg.path("duration");
+        int totalDurationSeconds = 0;
+        int totalDistanceMeters = 0;
+        List<RouteStepDTO> allSteps = new ArrayList<>();
 
-        int durationSeconds = durationNode.path("value").asInt();
-        int distanceMeters  = leg.path("distance").path("value").asInt();
+        for (JsonNode leg : legs) {
+            JsonNode durationNode = leg.has("duration_in_traffic")
+                    ? leg.path("duration_in_traffic")
+                    : leg.path("duration");
 
-        String overviewPolyline = response
-                .path("routes").get(0)
-                .path("overview_polyline")
-                .path("points").asText();
+            totalDurationSeconds += durationNode.path("value").asInt();
+            totalDistanceMeters += leg.path("distance").path("value").asInt();
 
-        List<RouteStepDTO> steps = parseSteps(leg.path("steps"));
+            allSteps.addAll(parseSteps(leg.path("steps")));
+        }
 
-        log.debug("Ruta calculada: {}m, {}s, {} pasos", distanceMeters, durationSeconds, steps.size());
+        String overviewPolyline = routeNode.path("overview_polyline").path("points").asText();
 
-        return new RouteResult(durationSeconds, distanceMeters, overviewPolyline, steps);
+        log.debug("Ruta calculada: {}m, {}s, {} pasos", totalDistanceMeters, totalDurationSeconds, allSteps.size());
+
+        return new RouteResult(totalDurationSeconds, totalDistanceMeters, overviewPolyline, allSteps);
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────

@@ -1,7 +1,7 @@
 # =============================================================================
 # MDVA — Docker Compose · Entorno de Development
 # =============================================================================
-# Levanta los 4 servicios: PostgreSQL + FastAPI ML + Spring Boot Backend + React Frontend
+# Levanta los 5 servicios: PostgreSQL + FastAPI ML + Routing Ambiental + Spring Boot Backend + React Frontend
 #
 # Uso:
 #   docker compose -f docker-compose.dev.yml up --build
@@ -11,6 +11,7 @@
 #   5436  → PostgreSQL (5432 interno, mapeado a 5436 en host para evitar conflicto con Postgres local)
 #   8080  → Backend Spring Boot  (Swagger: http://localhost:8080/swagger-ui.html)
 #   8081  → FastAPI ML           (Docs:    http://localhost:8081/docs)
+#   8000  → Enrutamiento Ambiental (Docs: http://localhost:8000/docs)
 #   8090  → Frontend React       (http://localhost:8090)
 # =============================================================================
 
@@ -41,7 +42,7 @@ services:
       retries: 10
 
   # ---------------------------------------------------------------------------
-  # FastAPI — Microservicio ML
+  # FastAPI — Microservicio ML (Predicción de lluvia)
   # ---------------------------------------------------------------------------
   ml-service:
     build:
@@ -61,6 +62,34 @@ services:
       start_period: 15s
 
   # ---------------------------------------------------------------------------
+  # FastAPI — Enrutamiento Ambiental (OSMnx + NetworkX + MDVA ML)
+  # ---------------------------------------------------------------------------
+  routing-service:
+    build:
+      context: ./Data-science/enrutamiento_ambiental
+      dockerfile: Dockerfile
+    container_name: mdva-routing
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      MDVA_ML_URL:        http://ml-service:8081
+      GRAPH_CACHE_FILE:   /app/cache/valle_aburra.graphml
+      RAIN_MODEL_PATH:    /app/cache/rain_model.joblib
+    volumes:
+      # Persistir el grafo OSM descargado entre reinicios
+      - routing_graph_cache:/app/cache
+    depends_on:
+      ml-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 15s
+      timeout: 10s
+      retries: 8
+      start_period: 120s
+
+  # ---------------------------------------------------------------------------
   # Spring Boot Backend
   # ---------------------------------------------------------------------------
   backend:
@@ -78,10 +107,13 @@ services:
       SPRING_DATASOURCE_PASSWORD:       cambiame-db-password
       GOOGLE_MAPS_API_KEY:              REEMPLAZAR_GOOGLE_MAPS_API_KEY
       ML_SERVICE_URL:                   http://ml-service:8081
+      ROUTING_SERVICE_URL:              http://routing-service:8000
     depends_on:
       postgres:
         condition: service_healthy
       ml-service:
+        condition: service_healthy
+      routing-service:
         condition: service_healthy
 
   # ---------------------------------------------------------------------------
@@ -100,3 +132,4 @@ services:
 
 volumes:
   postgres_data:
+  routing_graph_cache:

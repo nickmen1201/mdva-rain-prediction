@@ -1,0 +1,10 @@
+fastapi[standard]
+uvicorn
+osmnx
+networkx
+pydantic
+scikit-learn
+pandas
+joblib
+requests
+shapely

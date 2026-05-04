@@ -29,4 +29,8 @@ public class TripRequestDTO {
     @Valid
     @NotNull(message = "El destino es obligatorio")
     private LocationPointDTO destino;
+
+    /** Paradas intermedias opcionales (Sprint 5.3) */
+    @Valid
+    private java.util.List<LocationPointDTO> paradas;
 }

@@ -33,3 +33,17 @@ export const getViajeById = (id) =>
 
 export const getHistorial = (idUsuario) =>
   api.get(`/api/viajes/usuario/${idUsuario}`).then((r) => r.data);
+
+// ── Sprint 5.2A: Active monitoring ──────────────────────────────────────────
+export const reportarPosicion = (idViaje, latActual, lngActual) =>
+  api.post(`/api/viajes/${idViaje}/posicion`, { latActual, lngActual }).then((r) => r.data);
+
+export const obtenerAlertas = (idViaje) =>
+  api.get(`/api/viajes/${idViaje}/alertas`).then((r) => r.data);
+
+export const marcarAlertaLeida = (idViaje, idAlerta) =>
+  api.patch(`/api/viajes/${idViaje}/alertas/${idAlerta}/leer`).then((r) => r.data);
+
+// ── Sprint 5.2B: Weather grid heatmap ───────────────────────────────────────
+export const predictWeatherGrid = (puntos) =>
+  api.post('/api/weather/predict-grid', { puntos }).then((r) => r.data);

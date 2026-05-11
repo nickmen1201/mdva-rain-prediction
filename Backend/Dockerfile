@@ -35,6 +35,9 @@ FROM eclipse-temurin:21-jre-alpine AS runtime
 
 WORKDIR /app
 
+# wget para el healthcheck (alpine no lo trae)
+RUN apk add --no-cache wget
+
 # Copiar el JAR generado
 COPY --from=builder /workspace/build/libs/*.jar app.jar
 
@@ -43,5 +46,9 @@ EXPOSE 8080
 
 # Variables de entorno con defaults (sobreescritas por docker-compose)
 ENV SPRING_PROFILES_ACTIVE=dev
+
+# Healthcheck para orquestadores (Docker Swarm, k8s probe-like, mini-server LB)
+HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \
+    CMD wget --no-verbose --tries=1 --spider http://localhost:8080/api/health || exit 1
 
 ENTRYPOINT ["java", "-jar", "app.jar"]

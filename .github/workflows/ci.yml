@@ -111,3 +111,40 @@ jobs:
 
       - name: Compile and check
         run: ./gradlew compileJava compileTestJava
+
+  frontend:
+    name: Frontend Build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: Frontend
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: Frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Vite production build
+        run: npm run build
+        env:
+          # Google Maps key no es necesaria en build time (Vite no la valida);
+          # el valor real se inyecta en runtime via Docker env.
+          VITE_GOOGLE_MAPS_KEY: build-placeholder
+          VITE_API_URL: http://localhost:8080
+
+      - name: Upload frontend dist
+        uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: frontend-dist
+          path: Frontend/dist
+          retention-days: 7

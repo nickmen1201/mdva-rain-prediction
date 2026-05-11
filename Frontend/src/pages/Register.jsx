@@ -28,7 +28,7 @@ export default function Register() {
       const res = await register(payload);
       navigate('/login', { state: { message: 'Registro exitoso, ya puedes iniciar sesión' } });
     } catch (err) {
-      setError(err.response?.data?.message || 'Registration failed.');
+      setError(err.response?.data?.detail || err.response?.data?.message || 'Registration failed.');
     }
   };
 

@@ -19,7 +19,7 @@ export default function Login() {
       // Redirect to home
       navigate('/');
     } catch (err) {
-      setError(err.response?.data?.message || 'Login failed, please check your credentials.');
+      setError(err.response?.data?.detail || err.response?.data?.message || 'Login failed, please check your credentials.');
     }
   };
 

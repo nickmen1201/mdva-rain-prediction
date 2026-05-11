@@ -44,6 +44,14 @@ export const obtenerAlertas = (idViaje) =>
 export const marcarAlertaLeida = (idViaje, idAlerta) =>
   api.patch(`/api/viajes/${idViaje}/alertas/${idAlerta}/leer`).then((r) => r.data);
 
+// Recalcula alerta sobre el origen del viaje sin recomputar la ruta.
+export const obtenerAlertaActual = (idViaje) =>
+  api.get(`/api/viajes/${idViaje}/alerta-actual`).then((r) => r.data);
+
 // ── Sprint 5.2B: Weather grid heatmap ───────────────────────────────────────
 export const predictWeatherGrid = (puntos) =>
   api.post('/api/weather/predict-grid', { puntos }).then((r) => r.data);
+
+// ── Predicción horaria (punto 5 feedback) ───────────────────────────────────
+export const getWeatherForecast = (latitude, longitude, hours = 6) =>
+  api.get('/api/weather/forecast', { params: { latitude, longitude, hours } }).then((r) => r.data);

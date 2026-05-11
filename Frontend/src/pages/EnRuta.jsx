@@ -5,6 +5,7 @@ import { getViajeById, finalizarViaje, reportarPosicion, planificarViaje } from 
 import NavigationHeader from '../components/NavigationHeader';
 import NavigationPanel from '../components/NavigationPanel';
 import RecomendacionBanner from '../components/RecomendacionBanner';
+import HeatmapClima from '../components/HeatmapClima';
 import {
   calcularPasoActivo,
   calcularDistanciaRestante,
@@ -47,7 +48,24 @@ function CapaRuta({ viaje, posicion, heading, pasoActivo, centering, theme, para
     };
 
     makeMarker({ lat: viaje.origen.lat,  lng: viaje.origen.lng  }, viaje.origen.displayName  ?? 'Origen',  '#4af0a0', 8);
-    paradas?.forEach(p => makeMarker({ lat: p.lat, lng: p.lng }, p.displayName ?? 'Parada', '#c084fc', 6));
+    paradas?.forEach((p, i) => {
+      const m = new window.google.maps.Marker({
+        position: { lat: p.lat, lng: p.lng },
+        map,
+        title: p.displayName ?? `Parada ${i + 1}`,
+        zIndex: 6,
+        label: { text: String(i + 1), color: '#0a0c10', fontWeight: 'bold', fontSize: '11px' },
+        icon: {
+          path: window.google.maps.SymbolPath.CIRCLE,
+          scale: 11,
+          fillColor: '#c084fc',
+          fillOpacity: 1,
+          strokeColor: '#0a0c10',
+          strokeWeight: 2,
+        },
+      });
+      markers.push(m);
+    });
     makeMarker({ lat: viaje.destino.lat, lng: viaje.destino.lng }, viaje.destino.displayName ?? 'Destino', '#f0a04a', 8);
 
     return () => markers.forEach(m => m.setMap(null));
@@ -126,16 +144,15 @@ function CapaRuta({ viaje, posicion, heading, pasoActivo, centering, theme, para
       });
     }
 
-    // Navigation Mode: "Waze/Google Maps" style closeup
+    // Navigation Mode: "Waze/Google Maps" style closeup.
+    // panTo anima el desplazamiento; setCenter brincaba en cada update GPS.
+    // Cuando centering=false, dejamos el último tilt/heading para no causar
+    // un salto brusco al pasar a modo "browse manual".
     if (centering) {
-      map.setCenter(posicion);
+      map.panTo(posicion);
       map.setZoom(19);
       map.setTilt(45);
       map.setHeading(heading ?? 0);
-    } else {
-        // Reset tilt if centering is disabled? Optional, let's keep it 0 for manual browsing
-        map.setTilt(0);
-        map.setHeading(0);
     }
   }, [map, posicion, heading, centering]);
 
@@ -160,6 +177,7 @@ export default function EnRuta() {
   const [alertaActiva,  setAlertaActiva]  = useState(null);
   const [centering,     setCentering]     = useState(true);
   const [theme,         setTheme]         = useState('dark');
+  const [heatmapOn,     setHeatmapOn]     = useState(false);
   
   // Pending stops for trip chaining
   const [pendingStops,  setPendingStops]  = useState(state?.pendingStops ?? []);
@@ -212,8 +230,13 @@ export default function EnRuta() {
         posicionRef.current = pos;
 
         if (coords.heading != null && !isNaN(coords.heading)) {
-          lastHeading.current = coords.heading;
-          setHeading(coords.heading);
+          // Low-pass filter para amortiguar el tembleque del heading bajo ruido GPS.
+          // diff usa el camino angular más corto para evitar saltos al cruzar 0/360.
+          const target = coords.heading;
+          const diff = ((target - lastHeading.current + 540) % 360) - 180;
+          const smoothed = (lastHeading.current + diff * 0.25 + 360) % 360;
+          lastHeading.current = smoothed;
+          setHeading(smoothed);
         } else {
           setHeading(lastHeading.current);
         }
@@ -355,6 +378,14 @@ export default function EnRuta() {
             paradas={paradas}
           />
         )}
+        {viaje && heatmapOn && (
+          <HeatmapClima
+            centro={centro}
+            size={5}
+            spacing={0.01}
+            visible={true}
+          />
+        )}
       </Map>
 
       <NavigationHeader
@@ -389,6 +420,8 @@ export default function EnRuta() {
         <button
           onClick={() => setCentering(true)}
           className={`btn-icon nav-hud ${centering ? 'nav-hud-accent' : ''}`}
+          aria-label="Activar modo navegación (centrar y seguir GPS)"
+          aria-pressed={centering}
           title="Modo Navegación"
           style={{ fontSize: '1.1rem' }}
         >
@@ -397,9 +430,20 @@ export default function EnRuta() {
         <button
           onClick={() => setPanelOpen(v => !v)}
           className="btn-icon nav-hud"
+          aria-label="Ver lista de pasos del viaje"
+          aria-expanded={panelOpen}
           title="Ver pasos"
         >
           ☰
+        </button>
+        <button
+          onClick={() => setHeatmapOn(v => !v)}
+          className={`btn-icon nav-hud ${heatmapOn ? 'nav-hud-accent' : ''}`}
+          aria-label="Mostrar/ocultar capa de lluvia sobre el mapa"
+          aria-pressed={heatmapOn}
+          title={heatmapOn ? 'Ocultar capa de lluvia' : 'Mostrar capa de lluvia'}
+        >
+          {heatmapOn ? '☔' : '🌤'}
         </button>
       </div>
 

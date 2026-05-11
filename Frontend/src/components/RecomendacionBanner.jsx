@@ -8,20 +8,25 @@ const CONFIG = {
 };
 
 export default function RecomendacionBanner({ alerta, onCerrar }) {
-  if (!alerta) return null;
+  // Identificador estable para no re-disparar vibración / autoDismiss en cada
+  // re-render con el mismo objeto (el polling crea uno nuevo cada vez).
+  const alertaId = alerta?.idAlerta ?? null;
+  const nivel    = alerta?.nivelSeveridad ?? null;
+  const cfg      = CONFIG[nivel] ?? CONFIG.INFORMATIVA;
 
-  const cfg = CONFIG[alerta.nivelSeveridad] ?? CONFIG.INFORMATIVA;
-
-  // Vibrate on crisis
+  // Hooks SIEMPRE antes de cualquier return para cumplir las rules of hooks.
   useEffect(() => {
-    if (alerta.nivelSeveridad === 'CRISIS' && navigator.vibrate) {
+    if (!alerta) return;
+    if (nivel === 'CRISIS' && navigator.vibrate) {
       navigator.vibrate([600, 200, 600, 200, 600]);
     }
     if (cfg.autoDismiss) {
       const t = setTimeout(onCerrar, cfg.autoDismiss);
       return () => clearTimeout(t);
     }
-  }, [alerta, cfg.autoDismiss, onCerrar]);
+  }, [alertaId, nivel, cfg.autoDismiss, onCerrar, alerta]);
+
+  if (!alerta) return null;
 
   // ── INFORMATIVA: floating toast ──────────────────────────────────────────
   if (cfg.cls === 'toast') {
@@ -29,7 +34,7 @@ export default function RecomendacionBanner({ alerta, onCerrar }) {
       <div className="recomendacion-toast" style={{ borderColor: cfg.border, color: cfg.color }}>
         <span>{cfg.icon}</span>
         <span>{alerta.mensaje}</span>
-        <button onClick={onCerrar} style={{ background: 'none', border: 'none', color: cfg.color, cursor: 'pointer', marginLeft: '0.5rem', fontSize: '1rem' }}>✕</button>
+        <button onClick={onCerrar} aria-label="Cerrar alerta" style={{ background: 'none', border: 'none', color: cfg.color, cursor: 'pointer', marginLeft: '0.5rem', fontSize: '1rem' }}>✕</button>
       </div>
     );
   }

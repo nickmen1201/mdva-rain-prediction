@@ -8,11 +8,18 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
+import ti.mdva.model.dto.HourlyForecastDTO;
 import ti.mdva.model.dto.RainPredictionDTO;
 import ti.mdva.service.WeatherMLService;
 
 import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
+import java.time.ZoneId;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Implementación de WeatherMLService.
@@ -37,21 +44,79 @@ public class WeatherMLServiceImpl implements WeatherMLService {
         "&location.longitude=%f" +
         "&unitsSystem=METRIC";
 
+    /**
+     * Open-Meteo Hourly Forecast (gratis, sin API key).
+     * Retorna hasta 24 horas adelante con temperatura, humedad, nubosidad y viento.
+     * Docs: https://open-meteo.com/en/docs
+     */
+    private static final String OPEN_METEO_FORECAST_URL =
+        "https://api.open-meteo.com/v1/forecast" +
+        "?latitude=%f" +
+        "&longitude=%f" +
+        "&hourly=temperature_2m,relative_humidity_2m,cloud_cover,wind_speed_10m" +
+        "&wind_speed_unit=ms" +
+        "&forecast_days=2" +
+        "&timezone=auto";
+
     private final RestTemplate restTemplate;
     private final String mlServiceUrl;
     private final String googleApiKey;
 
+    /**
+     * Caché simple en memoria para reducir llamadas a Google Weather (riesgo
+     * identificado en Sprint 4: costos por sobrepasar free tier). Clave: lat/lng
+     * redondeado a 4 decimales (~11m de precisión). TTL: 60s, suficiente para
+     * que múltiples puntos del heatmap o updates GPS reusen la misma respuesta.
+     */
+    private static final long CACHE_TTL_MS = 60_000L;
+    private final ConcurrentHashMap<String, CachedPrediction> predictionCache = new ConcurrentHashMap<>();
+    private record CachedPrediction(RainPredictionDTO prediction, long timestamp) {}
+
+    /**
+     * Valor default declarado en application.yml. En perfil 'prod' debe sobreescribirse
+     * vía variable de entorno GOOGLE_MAPS_API_KEY — el arranque falla si no se hace.
+     */
+    static final String DEFAULT_DEV_GOOGLE_KEY = "REEMPLAZAR";
+
     public WeatherMLServiceImpl(
-            @Value("${ml.service.url}")      String mlServiceUrl,
-            @Value("${google.maps.api-key}") String googleApiKey
+            @Value("${ml.service.url}")              String mlServiceUrl,
+            @Value("${google.maps.api-key}")         String googleApiKey,
+            @Value("${spring.profiles.active:}")     String activeProfile
     ) {
+        if (isProdProfile(activeProfile) && isInsecureKey(googleApiKey)) {
+            throw new IllegalStateException(
+                "GOOGLE_MAPS_API_KEY no puede ser el default ni estar vacía en perfil 'prod'. " +
+                "Configura la variable de entorno GOOGLE_MAPS_API_KEY antes de arrancar."
+            );
+        }
         this.restTemplate = new RestTemplate();
         this.mlServiceUrl = mlServiceUrl;
         this.googleApiKey = googleApiKey;
     }
 
+    private static boolean isProdProfile(String activeProfile) {
+        if (activeProfile == null || activeProfile.isBlank()) return false;
+        for (String p : activeProfile.split(",")) {
+            if ("prod".equalsIgnoreCase(p.trim())) return true;
+        }
+        return false;
+    }
+
+    private static boolean isInsecureKey(String key) {
+        return key == null || key.isBlank() || DEFAULT_DEV_GOOGLE_KEY.equals(key);
+    }
+
     @Override
     public RainPredictionDTO predictRainForLocation(double lat, double lng) {
+
+        // ── Paso 0: Cache lookup ──────────────────────────────────────────────
+        String cacheKey = String.format(java.util.Locale.US, "%.4f,%.4f", lat, lng);
+        long now = System.currentTimeMillis();
+        CachedPrediction cached = predictionCache.get(cacheKey);
+        if (cached != null && (now - cached.timestamp()) < CACHE_TTL_MS) {
+            log.debug("Cache HIT para {} (edad {}ms)", cacheKey, now - cached.timestamp());
+            return cached.prediction();
+        }
 
         // ── Paso 1: Condiciones actuales desde Google Weather API ─────────────
         String weatherUrl = String.format(GOOGLE_WEATHER_URL, googleApiKey, lat, lng);
@@ -69,9 +134,9 @@ public class WeatherMLServiceImpl implements WeatherMLService {
         double windMs      = Math.round((windKmh / 3.6) * 100.0) / 100.0;
         double rainProbPct = weather.path("precipitation").path("probability").path("percent").asDouble();
 
-        LocalDateTime now         = LocalDateTime.now();
-        int           currentHour = now.getHour();
-        int           currentMonth= now.getMonthValue();
+        LocalDateTime ahora       = LocalDateTime.now();
+        int           currentHour = ahora.getHour();
+        int           currentMonth= ahora.getMonthValue();
 
         log.debug("Google Weather [lat={}, lng={}]: temp={}C hum={}% nub={}% viento={}m/s lluvia={}%",
                 lat, lng, tempC, humidityPct, cloudPct, windMs, rainProbPct);
@@ -95,25 +160,44 @@ public class WeatherMLServiceImpl implements WeatherMLService {
         }
 
         // ── Paso 3: Consolidar resultado ──────────────────────────────────────
-        // Fallback inicial: usar probabilidad de lluvia directa de Google
-        double  probRf  = rainProbPct / 100.0;
-        double  probRl  = rainProbPct / 100.0;
-        boolean anyRain = rainProbPct > 40;
+        // Decisión Sprint 5: el modelo propio (RF) es la verdad para la decisión
+        // de "llueve / no llueve". Si el ML no responde con RF, fail-fast en vez
+        // de degradar silenciosamente a Google Weather (que opacaba el modelo).
+        Double probRf = null;
+        Double probRl = null;
 
         for (JsonNode pred : mlResponse.getBody()) {
-            String  modelo = pred.path("modelo").asText();
-            double  prob   = pred.path("probabilidad_lluvia").asDouble();
-            boolean llueve = pred.path("llueve").asBoolean();
-            anyRain = anyRain || llueve;
+            String modelo = pred.path("modelo").asText();
+            double prob   = pred.path("probabilidad_lluvia").asDouble();
 
             if ("random_forest".equals(modelo))       probRf = prob;
             if ("regresion_logistica".equals(modelo)) probRl = prob;
         }
 
-        log.debug("ML result: llueve={} RF={} RL={}", anyRain, probRf, probRl);
+        // Decisión Sprint 5: el modelo propio (RF) es la verdad. Si el container
+        // no tiene RF cargado (random_forest.pkl está gitignored por tamaño),
+        // degradamos a RL como fallback CLARAMENTE LOGUEADO. Si tampoco hay RL,
+        // fail-fast (no degradamos a Google).
+        if (probRf == null) {
+            if (probRl != null) {
+                log.warn("Random Forest no disponible (¿modelo no cargado?). Usando Logistic Regression como fallback. Coordinar con DS para que random_forest.pkl esté en el container.");
+                probRf = probRl;
+            } else {
+                log.error("Ningún modelo ML respondió. Body: {}",
+                        java.util.Arrays.toString(mlResponse.getBody()));
+                throw new RuntimeException("Predicción no disponible: ningún modelo ML respondió");
+            }
+        }
 
-        return RainPredictionDTO.builder()
-                .llueve(anyRain)
+        // Boolean único derivado del RF (el modelo de mayor AUC), no de OR entre
+        // modelos. Antes "anyRain || llueve" causaba inconsistencia visual:
+        // app podía mostrar "30% de lluvia" + "va a llover" simultáneamente.
+        boolean llueve = probRf >= 0.5;
+
+        log.debug("ML result: llueve={} RF={} RL={}", llueve, probRf, probRl);
+
+        RainPredictionDTO resultado = RainPredictionDTO.builder()
+                .llueve(llueve)
                 .probabilidadRf(probRf)
                 .probabilidadRl(probRl)
                 .temperaturaC(tempC)
@@ -121,11 +205,122 @@ public class WeatherMLServiceImpl implements WeatherMLService {
                 .coberturaAnubosaPct(cloudPct)
                 .velocidadVientoMs(windMs)
                 .build();
+
+        predictionCache.put(cacheKey, new CachedPrediction(resultado, now));
+        return resultado;
+    }
+
+    @Override
+    public List<HourlyForecastDTO> getHourlyForecast(double lat, double lng, int horas) {
+        if (horas < 1) horas = 1;
+        if (horas > 24) horas = 24;
+
+        // ── Paso 1: Open-Meteo Hourly Forecast ────────────────────────────────
+        String url = String.format(java.util.Locale.US, OPEN_METEO_FORECAST_URL, lat, lng);
+        JsonNode resp = restTemplate.getForObject(url, JsonNode.class);
+
+        if (resp == null || !resp.has("hourly")) {
+            log.error("Open-Meteo no devolvió hourly forecast para lat={}, lng={}", lat, lng);
+            throw new RuntimeException("No se pudo obtener forecast horario");
+        }
+
+        JsonNode hourly = resp.path("hourly");
+        JsonNode times  = hourly.path("time");
+        JsonNode temps  = hourly.path("temperature_2m");
+        JsonNode hums   = hourly.path("relative_humidity_2m");
+        JsonNode clouds = hourly.path("cloud_cover");
+        JsonNode winds  = hourly.path("wind_speed_10m");
+
+        // ── Paso 2: Encontrar índice de la hora actual y tomar próximas N ────
+        OffsetDateTime ahora = OffsetDateTime.now(ZoneId.systemDefault());
+        int startIdx = 0;
+        for (int i = 0; i < times.size(); i++) {
+            // Open-Meteo devuelve "2026-05-10T14:00" sin offset; lo interpretamos como local
+            LocalDateTime t = LocalDateTime.parse(times.path(i).asText());
+            if (!t.atZone(ZoneId.systemDefault()).toOffsetDateTime().isBefore(ahora.minusMinutes(30))) {
+                startIdx = i;
+                break;
+            }
+        }
+        int endIdx = Math.min(startIdx + horas, times.size());
+
+        // ── Paso 3: Para cada hora, predecir con el modelo ML en paralelo ─────
+        List<CompletableFuture<HourlyForecastDTO>> futures = new ArrayList<>();
+        for (int i = startIdx; i < endIdx; i++) {
+            final int idx = i;
+            futures.add(CompletableFuture.supplyAsync(() -> {
+                LocalDateTime t  = LocalDateTime.parse(times.path(idx).asText());
+                double temp      = temps.path(idx).asDouble();
+                double humedad   = hums.path(idx).asDouble();
+                double nubosidad = clouds.path(idx).asDouble();
+                double viento    = winds.path(idx).asDouble();
+
+                Map<String, Object> mlPayload = Map.of(
+                    "temperatura_c",         temp,
+                    "humedad_relativa_pct",  humedad,
+                    "cobertura_nubosa_pct",  nubosidad,
+                    "velocidad_viento_ms",   viento,
+                    "hora",                  t.getHour(),
+                    "mes",                   t.getMonthValue()
+                );
+
+                // Usamos /predecir/ambos en vez de /predecir/random_forest porque el
+                // RF no siempre está disponible en el container (models/random_forest.pkl
+                // está en .gitignore por tamaño >100MB). /predecir/ambos itera sobre los
+                // modelos cargados y devuelve los disponibles. Preferimos RF; si no, RL.
+                String mlEndpoint = mlServiceUrl + "/predecir/ambos";
+                Double probRf = 0.0;
+                try {
+                    JsonNode[] preds = restTemplate.postForObject(mlEndpoint, mlPayload, JsonNode[].class);
+                    if (preds == null || preds.length == 0) {
+                        log.warn("ML devolvió vacío para hora {}", t);
+                    } else {
+                        // Prefiere random_forest, sino el primero disponible
+                        Double probRfFound = null;
+                        Double probAny = null;
+                        for (JsonNode pred : preds) {
+                            double p = pred.path("probabilidad_lluvia").asDouble(0.0);
+                            if (probAny == null) probAny = p;
+                            if ("random_forest".equals(pred.path("modelo").asText())) {
+                                probRfFound = p;
+                            }
+                        }
+                        probRf = probRfFound != null ? probRfFound : (probAny != null ? probAny : 0.0);
+                        log.debug("Forecast hora {}: probRf={} (modelos={}, temp={} hum={})",
+                                t, probRf, preds.length, temp, humedad);
+                    }
+                } catch (Exception e) {
+                    log.warn("ML falló para hora {} con payload {}: {}", t, mlPayload, e.getMessage());
+                }
+
+                return HourlyForecastDTO.builder()
+                    .timestamp(t.atZone(ZoneId.systemDefault()).toOffsetDateTime())
+                    .hora(t.getHour())
+                    .probabilidadRf(probRf)
+                    .temperaturaC(temp)
+                    .humedadPct(humedad)
+                    .coberturaAnubosaPct(nubosidad)
+                    .velocidadVientoMs(viento)
+                    .build();
+            }));
+        }
+
+        return futures.stream()
+            .map(CompletableFuture::join)
+            .toList();
     }
 
     /**
      * Infiere cobertura nubosa (%) desde el tipo de condición de Google Weather.
      * currentConditions no expone cloudCover directamente, solo en forecast/hours.
+     *
+     * TODO(KR2): el modelo se entrenó con cobertura nubosa CONTINUA (Open-Meteo /
+     * SIATA). Esta inferencia categórica introduce ruido sistemático en el feature
+     * y puede sesgar la predicción en producción frente a las métricas reportadas
+     * (F1=0.78). Dos caminos para resolverlo:
+     *   1. Llamar a /forecast.hours:lookup de Google Weather (expone cloudCover real)
+     *   2. Eliminar cobertura nubosa del feature input y reentrenar
+     * Coordinar con el equipo de Data Science antes de cambiar.
      */
     private double inferCloudCover(JsonNode weather) {
         String type = weather.path("weatherCondition").path("type").asText("");

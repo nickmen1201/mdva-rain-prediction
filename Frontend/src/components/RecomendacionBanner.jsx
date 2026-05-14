@@ -8,12 +8,11 @@ const CONFIG = {
 };
 
 export default function RecomendacionBanner({ alerta, onCerrar }) {
-  if (!alerta) return null;
-
-  const cfg = CONFIG[alerta.nivelSeveridad] ?? CONFIG.INFORMATIVA;
+  const cfg = alerta ? (CONFIG[alerta.nivelSeveridad] ?? CONFIG.INFORMATIVA) : CONFIG.INFORMATIVA;
 
   // Vibrate on crisis
   useEffect(() => {
+    if (!alerta) return undefined;
     if (alerta.nivelSeveridad === 'CRISIS' && navigator.vibrate) {
       navigator.vibrate([600, 200, 600, 200, 600]);
     }
@@ -21,7 +20,10 @@ export default function RecomendacionBanner({ alerta, onCerrar }) {
       const t = setTimeout(onCerrar, cfg.autoDismiss);
       return () => clearTimeout(t);
     }
+    return undefined;
   }, [alerta, cfg.autoDismiss, onCerrar]);
+
+  if (!alerta) return null;
 
   // ── INFORMATIVA: floating toast ──────────────────────────────────────────
   if (cfg.cls === 'toast') {

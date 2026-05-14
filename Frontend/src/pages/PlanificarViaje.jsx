@@ -11,6 +11,7 @@ export default function PlanificarViaje() {
   const [origen, setOrigen] = useState({ lat: null, lng: null, displayName: '' });
   const [destino, setDestino] = useState({ lat: null, lng: null, displayName: '' });
   const [paradas, setParadas] = useState([]); // [{ lat, lng, displayName }]
+  const [modoParadas, setModoParadas] = useState('ORDEN_INGRESADO');
   
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -94,7 +95,8 @@ export default function PlanificarViaje() {
       idVehiculo: idVehiculo || null,
       origen: { lat: origen.lat, lng: origen.lng, displayName: origen.displayName },
       destino: { lat: destino.lat, lng: destino.lng, displayName: destino.displayName },
-      paradas: validParadas.map(p => ({ lat: p.lat, lng: p.lng, displayName: p.displayName }))
+      paradas: validParadas.map(p => ({ lat: p.lat, lng: p.lng, displayName: p.displayName })),
+      modoParadas: validParadas.length > 0 ? modoParadas : 'ORDEN_INGRESADO'
     };
 
     try {
@@ -102,7 +104,8 @@ export default function PlanificarViaje() {
       navigate(`/viaje/${response.idViaje}`, {
         state: {
           viaje: response,
-          paradas: validParadas
+          paradas: response.paradasOrdenadas?.length ? response.paradasOrdenadas : validParadas,
+          modoParadas: response.modoParadas ?? payload.modoParadas
         }
       });
     } catch (err) {
@@ -148,7 +151,7 @@ export default function PlanificarViaje() {
                     if (originInputRef.current) originInputRef.current.value = "Mi ubicación actual";
                     setLoading(false);
                   },
-                  (err) => {
+                  () => {
                     setError("No se pudo obtener tu ubicación. Verifica los permisos de GPS.");
                     setLoading(false);
                   }
@@ -174,7 +177,7 @@ export default function PlanificarViaje() {
                   <label style={{ margin: 0 }}>Parada {i + 1}</label>
                   <button type="button" onClick={() => removeParada(i)} style={{ background: 'none', border: 'none', color: 'var(--danger)', cursor: 'pointer', fontSize: '0.8rem' }}>✕ Quitar</button>
                 </div>
-                <input ref={paradasRefs.current[i]} type="text" placeholder="Ej. Centro Comercial" />
+                <input ref={paradasRefs.current[i]} type="text" placeholder="Ej. Centro Comercial Santafé" />
                 {parada.lat && <span style={{ fontSize: '0.82rem', color: 'var(--accent)', marginTop: '0.5rem', display: 'block' }}>✓ Parada fijada: {parada.displayName}</span>}
               </div>
             );
@@ -185,6 +188,30 @@ export default function PlanificarViaje() {
               + Añadir parada intermedia
             </button>
           </div>
+
+          {paradas.length > 0 && (
+            <div className="field" style={{ gridColumn: '1 / -1', textAlign: 'left' }}>
+              <label>Orden de paradas</label>
+              <div className="route-mode-options">
+                <button
+                  type="button"
+                  className={`route-mode-option${modoParadas === 'ORDEN_INGRESADO' ? ' active' : ''}`}
+                  onClick={() => setModoParadas('ORDEN_INGRESADO')}
+                >
+                  <strong>Orden establecido</strong>
+                  <span>Hacer las paradas tal como las ingresaste.</span>
+                </button>
+                <button
+                  type="button"
+                  className={`route-mode-option${modoParadas === 'OPTIMIZAR_RUTA' ? ' active' : ''}`}
+                  onClick={() => setModoParadas('OPTIMIZAR_RUTA')}
+                >
+                  <strong>Optimizar ruta</strong>
+                  <span>Google sugiere el mejor orden para reducir vueltas.</span>
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* Destino */}
           <div className="field-section">Destino</div>

@@ -33,4 +33,12 @@ public class TripRequestDTO {
     /** Paradas intermedias opcionales (Sprint 5.3) */
     @Valid
     private java.util.List<LocationPointDTO> paradas;
+
+    /** ORDEN_INGRESADO respeta la lista; OPTIMIZAR_RUTA permite que Google sugiera el orden. */
+    private ModoParadas modoParadas;
+
+    public enum ModoParadas {
+        ORDEN_INGRESADO,
+        OPTIMIZAR_RUTA
+    }
 }

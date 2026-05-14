@@ -100,8 +100,14 @@ public class ViajeUseCase {
                     .toList();
         }
 
-        // 3. Ruta óptima (SIEMPRE Google Maps para tráfico en tiempo real)
-        GoogleMapsService.RouteResult route = googleMapsService.getOptimalRoute(origen, destino, waypoints);
+        TripRequestDTO.ModoParadas modoParadas = request.getModoParadas() != null
+                ? request.getModoParadas()
+                : TripRequestDTO.ModoParadas.ORDEN_INGRESADO;
+        boolean optimizarParadas = modoParadas == TripRequestDTO.ModoParadas.OPTIMIZAR_RUTA;
+
+        // 3. Ruta con Google Maps para tráfico en tiempo real y waypoints
+        GoogleMapsService.RouteResult route = googleMapsService.getOptimalRoute(origen, destino, waypoints, optimizarParadas);
+        List<LocationPointDTO> paradasOrdenadas = ordenarWaypoints(waypoints, route.waypointOrder());
         int tiempoBaseMin = (int) Math.ceil(route.durationSeconds() / 60.0);
 
         log.debug("Ruta: {}m, {}min, {} pasos", route.distanceMeters(), tiempoBaseMin, route.steps().size());
@@ -142,6 +148,8 @@ public class ViajeUseCase {
         TripResponseDTO.TripResponseDTOBuilder builder = TripResponseDTO.builder()
                 .origen(origen)
                 .destino(destino)
+                .paradasOrdenadas(paradasOrdenadas)
+                .modoParadas(modoParadas)
                 .tiempoBaseMin(tiempoBaseMin)
                 .distanciaMetros(route.distanceMeters())
                 .overviewPolyline(route.overviewPolyline())
@@ -173,8 +181,8 @@ public class ViajeUseCase {
         );
 
         // 5.2 Guardar paradas (Sprint 5.3)
-        if (waypoints != null && !waypoints.isEmpty()) {
-            paradaRepo.saveAll(saved.getIdViaje(), waypoints);
+        if (paradasOrdenadas != null && !paradasOrdenadas.isEmpty()) {
+            paradaRepo.saveAll(saved.getIdViaje(), paradasOrdenadas);
         }
 
         // 6. Retornar DTO completo con el ID generado por la BD
@@ -302,6 +310,15 @@ public class ViajeUseCase {
         if (prob < 0.55) return 2;
         if (prob < 0.70) return 5;
         return 10;
+    }
+
+    private List<LocationPointDTO> ordenarWaypoints(List<LocationPointDTO> waypoints, List<Integer> waypointOrder) {
+        if (waypoints == null || waypoints.isEmpty()) return List.of();
+        if (waypointOrder == null || waypointOrder.isEmpty()) return waypoints;
+        return waypointOrder.stream()
+                .filter(i -> i >= 0 && i < waypoints.size())
+                .map(waypoints::get)
+                .toList();
     }
 
     private boolean puntosCercanos(LocationPointDTO a, LocationPointDTO b) {

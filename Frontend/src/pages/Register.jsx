@@ -25,7 +25,7 @@ export default function Register() {
         ...formData,
         idBarrio: parseInt(formData.idBarrio) || null
       };
-      const res = await register(payload);
+      await register(payload);
       navigate('/login', { state: { message: 'Registro exitoso, ya puedes iniciar sesión' } });
     } catch (err) {
       setError(err.response?.data?.message || 'Registration failed.');

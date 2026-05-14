@@ -83,7 +83,7 @@ public class GoogleMapsServiceImpl implements GoogleMapsService {
     // ── Ruta óptima ───────────────────────────────────────────────────────────
 
     @Override
-    public RouteResult getOptimalRoute(LocationPointDTO origin, LocationPointDTO destination, List<LocationPointDTO> waypoints) {
+    public RouteResult getOptimalRoute(LocationPointDTO origin, LocationPointDTO destination, List<LocationPointDTO> waypoints, boolean optimizeWaypoints) {
         String originParam      = origin.getLat()      + "," + origin.getLng();
         String destinationParam = destination.getLat() + "," + destination.getLng();
 
@@ -112,7 +112,8 @@ public class GoogleMapsServiceImpl implements GoogleMapsService {
 
         String url = builder.toUriString();
         if (!wpStrings.isEmpty()) {
-            url += "&waypoints=optimize:true%7C" + String.join("%7C", wpStrings);
+            String optimizePrefix = optimizeWaypoints ? "optimize:true%7C" : "";
+            url += "&waypoints=" + optimizePrefix + String.join("%7C", wpStrings);
         }
 
         JsonNode response = restTemplate.getForObject(java.net.URI.create(url), JsonNode.class);
@@ -142,10 +143,11 @@ public class GoogleMapsServiceImpl implements GoogleMapsService {
         }
 
         String overviewPolyline = routeNode.path("overview_polyline").path("points").asText();
+        List<Integer> waypointOrder = parseWaypointOrder(routeNode.path("waypoint_order"));
 
         log.debug("Ruta calculada: {}m, {}s, {} pasos", totalDistanceMeters, totalDurationSeconds, allSteps.size());
 
-        return new RouteResult(totalDurationSeconds, totalDistanceMeters, overviewPolyline, allSteps);
+        return new RouteResult(totalDurationSeconds, totalDistanceMeters, overviewPolyline, allSteps, waypointOrder);
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
@@ -170,6 +172,15 @@ public class GoogleMapsServiceImpl implements GoogleMapsService {
                     .endLat(step.path("end_location").path("lat").asDouble())
                     .endLng(step.path("end_location").path("lng").asDouble())
                     .build());
+        }
+        return result;
+    }
+
+    private List<Integer> parseWaypointOrder(JsonNode orderNode) {
+        List<Integer> result = new ArrayList<>();
+        if (orderNode == null || !orderNode.isArray()) return result;
+        for (JsonNode item : orderNode) {
+            result.add(item.asInt());
         }
         return result;
     }

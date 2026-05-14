@@ -45,5 +45,5 @@ export const marcarAlertaLeida = (idViaje, idAlerta) =>
   api.patch(`/api/viajes/${idViaje}/alertas/${idAlerta}/leer`).then((r) => r.data);
 
 // ── Sprint 5.2B: Weather grid heatmap ───────────────────────────────────────
-export const predictWeatherGrid = (puntos) =>
-  api.post('/api/weather/predict-grid', { puntos }).then((r) => r.data);
+export const predictWeatherGrid = (puntos, config = {}) =>
+  api.post('/api/weather/predict-grid', { puntos }, config).then((r) => r.data);

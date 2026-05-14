@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, useLocation, useNavigate, Link } from 'react-router-dom';
-import { getViajeById, finalizarViaje } from '../api/client';
+import { getViajeById, finalizarViaje, planificarViaje } from '../api/client';
 import MapaRuta from '../components/MapaRuta';
 import { haversine } from '../utils/navUtils';
 
@@ -39,11 +39,13 @@ export default function ResultadoViaje() {
   const [viaje,      setViaje]      = useState(location.state?.viaje ?? null);
   const [loading,    setLoading]    = useState(!viaje);
   const [finalizing, setFinalizing] = useState(false);
+  const [starting,   setStarting]   = useState(false);
   const [error,      setError]      = useState(null);
   const [gpsCheck,   setGpsCheck]   = useState('checking');
   const [distOrigen, setDistOrigen] = useState(null);
 
-  const paradas = location.state?.paradas ?? [];
+  const paradas = viaje?.paradasOrdenadas ?? location.state?.paradas ?? [];
+  const modoParadas = viaje?.modoParadas ?? location.state?.modoParadas ?? 'ORDEN_INGRESADO';
 
   useEffect(() => {
     if (viaje) return;
@@ -54,8 +56,10 @@ export default function ResultadoViaje() {
   }, [id, viaje]);
 
   useEffect(() => {
-    if (!viaje?.origen?.lat) { setGpsCheck('unavailable'); return; }
-    if (!navigator.geolocation) { setGpsCheck('unavailable'); return; }
+    if (!viaje?.origen?.lat || !navigator.geolocation) {
+      const timer = setTimeout(() => setGpsCheck('unavailable'), 0);
+      return () => clearTimeout(timer);
+    }
     navigator.geolocation.getCurrentPosition(
       ({ coords }) => {
         const dist = haversine(coords.latitude, coords.longitude, viaje.origen.lat, viaje.origen.lng);
@@ -65,6 +69,7 @@ export default function ResultadoViaje() {
       () => setGpsCheck('unavailable'),
       { enableHighAccuracy: false, timeout: 6000, maximumAge: 60000 }
     );
+    return undefined;
   }, [viaje]);
 
   const handleFinalizar = async () => {
@@ -79,6 +84,45 @@ export default function ResultadoViaje() {
       }
     }
     navigate('/historial/1');
+  };
+
+  const handleIniciarNavegacion = async () => {
+    if (!paradas.length) {
+      navigate(`/viaje/${id}/en-ruta`, { state: { viaje, paradas: [] } });
+      return;
+    }
+
+    setStarting(true);
+    setError(null);
+    try {
+      const primeraParada = paradas[0];
+      const cola = [...paradas.slice(1), viaje.destino];
+      const primerTramo = await planificarViaje({
+        idVehiculo: viaje.idVehiculo ?? null,
+        origen: viaje.origen,
+        destino: primeraParada,
+        paradas: [],
+        modoParadas: 'ORDEN_INGRESADO',
+      });
+
+      navigate(`/viaje/${primerTramo.idViaje}/en-ruta`, {
+        state: {
+          viaje: primerTramo,
+          pendingStops: cola,
+          paradas,
+          itinerary: [viaje.origen, ...paradas, viaje.destino],
+          parentViajeId: viaje.idViaje,
+        },
+      });
+    } catch (err) {
+      const msg = err.response?.data?.detail
+        ?? err.response?.data?.message
+        ?? err.message
+        ?? 'No se pudo iniciar la navegación por paradas.';
+      setError(msg);
+    } finally {
+      setStarting(false);
+    }
   };
 
   if (loading) return <div style={{ padding: '3rem', color: 'var(--muted)', fontFamily: 'DM Mono' }}>Cargando viaje...</div>;
@@ -212,6 +256,24 @@ export default function ResultadoViaje() {
         />
       )}
 
+      {paradas.length > 0 && (
+        <div className="card fade-up-3" style={{ marginTop: '1rem' }}>
+          <div className="section-heading">
+            Itinerario · {modoParadas === 'OPTIMIZAR_RUTA' ? 'orden optimizado' : 'orden establecido'}
+          </div>
+          <ol className="itinerary-list">
+            <li><span>Origen</span><strong>{viaje.origen?.displayName ?? 'Origen'}</strong></li>
+            {paradas.map((parada, index) => (
+              <li key={`${parada.lat}-${parada.lng}-${index}`}>
+                <span>Parada {index + 1}</span>
+                <strong>{parada.displayName ?? `Parada ${index + 1}`}</strong>
+              </li>
+            ))}
+            <li><span>Destino final</span><strong>{viaje.destino?.displayName ?? 'Destino'}</strong></li>
+          </ol>
+        </div>
+      )}
+
       {/* ── Ruta ajustada ── */}
       {viaje.sugerirRutaAlterna && (
         <div className="card fade-up-3" style={{ marginTop: '1rem', borderColor: 'rgba(240,160,74,0.35)' }}>
@@ -231,8 +293,8 @@ export default function ResultadoViaje() {
         <button
           className="btn btn-primary"
           style={{ marginTop: 0 }}
-          disabled={gpsCheck === 'checking' || gpsCheck === 'far'}
-          onClick={() => navigate(`/viaje/${id}/en-ruta`, { state: { viaje, paradas } })}
+          disabled={starting || gpsCheck === 'checking' || gpsCheck === 'far'}
+          onClick={handleIniciarNavegacion}
         >
           {gpsCheck === 'checking'
             ? <><span className="spinner" /> Verificando ubicación...</>

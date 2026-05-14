@@ -31,7 +31,7 @@ public interface GoogleMapsService {
      * @param waypoints   lista opcional de paradas intermedias
      * @return RouteResult con duración, distancia, polyline y pasos
      */
-    RouteResult getOptimalRoute(LocationPointDTO origin, LocationPointDTO destination, List<LocationPointDTO> waypoints);
+    RouteResult getOptimalRoute(LocationPointDTO origin, LocationPointDTO destination, List<LocationPointDTO> waypoints, boolean optimizeWaypoints);
 
     /**
      * Resultado de una consulta a Directions API.
@@ -40,6 +40,7 @@ public interface GoogleMapsService {
             int durationSeconds,
             int distanceMeters,
             String overviewPolyline,
-            List<RouteStepDTO> steps
+            List<RouteStepDTO> steps,
+            List<Integer> waypointOrder
     ) {}
 }

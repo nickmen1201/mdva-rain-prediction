@@ -5,6 +5,11 @@ import { getViajeById, finalizarViaje, reportarPosicion, planificarViaje } from 
 import NavigationHeader from '../components/NavigationHeader';
 import NavigationPanel from '../components/NavigationPanel';
 import RecomendacionBanner from '../components/RecomendacionBanner';
+import CenterButton from '../components/CenterButton';
+import WeatherHeatmapLayer from '../components/WeatherHeatmapLayer';
+import WeatherHeatmapToggle from '../components/WeatherHeatmapToggle';
+import useNavigationCamera from '../hooks/useNavigationCamera';
+import useWeatherGrid from '../hooks/useWeatherGrid';
 import {
   calcularPasoActivo,
   calcularDistanciaRestante,
@@ -13,9 +18,32 @@ import {
 
 // ── SVG arrow marker path ─────────────────────────────────────────────────────
 const NAV_ARROW_PATH = 'M 0,-14 L 6,8 L 0,4 L -6,8 Z';
+const RAIN_HEATMAP_STORAGE_KEY = 'mdva-rain-heatmap-enabled';
+
+function getClimateStatus(alertaNivel, alertaActiva, prediccion) {
+  const nivel = alertaActiva?.nivelSeveridad ?? alertaNivel ?? 'VERDE';
+  const prob = prediccion?.probabilidadRf;
+
+  if (nivel === 'CRISIS') return { label: 'RIESGO CRÍTICO', cls: 'danger' };
+  if (nivel === 'PELIGRO' || nivel === 'ROJO') return { label: 'LLUVIA FUERTE', cls: 'danger' };
+  if (nivel === 'PRECAUCION' || nivel === 'AMARILLO') return { label: 'PRECAUCIÓN', cls: 'warn' };
+  if (prob != null && prob >= 0.55) return { label: 'LLUVIA POSIBLE', cls: 'warn' };
+  if (prob != null && prob < 0.25) return { label: 'CLIMA FAVORABLE', cls: 'clear' };
+  return { label: 'ESTABLE', cls: 'clear' };
+}
+
+function bearingBetween(a, b) {
+  const startLat = a.lat * Math.PI / 180;
+  const endLat = b.lat * Math.PI / 180;
+  const deltaLng = (b.lng - a.lng) * Math.PI / 180;
+  const y = Math.sin(deltaLng) * Math.cos(endLat);
+  const x = Math.cos(startLat) * Math.sin(endLat)
+    - Math.sin(startLat) * Math.cos(endLat) * Math.cos(deltaLng);
+  return (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
+}
 
 // ── Subcomponent: draws route, animated GPS marker ────────────────────────────
-function CapaRuta({ viaje, posicion, heading, pasoActivo, centering, theme, paradas }) {
+function CapaRuta({ viaje, posicion, heading, pasoActivo, theme, paradas }) {
   const map = useMap();
   const marcadorRef  = useRef(null);
   const polylineRef  = useRef(null);
@@ -126,19 +154,13 @@ function CapaRuta({ viaje, posicion, heading, pasoActivo, centering, theme, para
       });
     }
 
-    // Navigation Mode: "Waze/Google Maps" style closeup
-    if (centering) {
-      map.setCenter(posicion);
-      map.setZoom(19);
-      map.setTilt(45);
-      map.setHeading(heading ?? 0);
-    } else {
-        // Reset tilt if centering is disabled? Optional, let's keep it 0 for manual browsing
-        map.setTilt(0);
-        map.setHeading(0);
-    }
-  }, [map, posicion, heading, centering]);
+  }, [map, posicion, heading]);
 
+  return null;
+}
+
+function NavigationCamera({ enabled, position, heading, recenterTick }) {
+  useNavigationCamera({ enabled, position, heading, recenterTick, zoom: 19, tilt: 45 });
   return null;
 }
 
@@ -160,15 +182,25 @@ export default function EnRuta() {
   const [alertaActiva,  setAlertaActiva]  = useState(null);
   const [centering,     setCentering]     = useState(true);
   const [theme,         setTheme]         = useState('dark');
+  const [transitioning, setTransitioning] = useState(false);
+  const [arrivalPromptOpen, setArrivalPromptOpen] = useState(false);
+  const [finishPromptOpen, setFinishPromptOpen] = useState(false);
+  const [recenterTick, setRecenterTick] = useState(0);
+  const [heatmapEnabled, setHeatmapEnabled] = useState(
+    () => localStorage.getItem(RAIN_HEATMAP_STORAGE_KEY) !== 'false',
+  );
   
   // Pending stops for trip chaining
-  const [pendingStops,  setPendingStops]  = useState(state?.pendingStops ?? []);
+  const [pendingStops]  = useState(state?.pendingStops ?? []);
 
   // Paradas intermedias para marcadores en mapa (estables, no cambian)
   const [paradas] = useState(state?.paradas ?? []);
+  const itinerary = state?.itinerary ?? null;
+  const parentViajeId = state?.parentViajeId ?? null;
 
   const watchId      = useRef(null);
   const lastHeading  = useRef(0);
+  const lastGpsPoint = useRef(null);
   const posicionRef  = useRef(null);
   const pollingTimer = useRef(null);
   const transitionRef = useRef(false);
@@ -197,23 +229,36 @@ export default function EnRuta() {
   // Initial ETA
   useEffect(() => {
     if (viaje?.tiempoEstimadoMin) {
-      setEta(Date.now() + viaje.tiempoEstimadoMin * 60_000);
+      const timer = window.setTimeout(() => {
+        setEta(Date.now() + viaje.tiempoEstimadoMin * 60_000);
+      }, 0);
+      return () => window.clearTimeout(timer);
     }
+    return undefined;
   }, [viaje]);
 
   // GPS watch
   useEffect(() => {
-    if (!navigator.geolocation) { setError('Este navegador no soporta GPS.'); return; }
+    if (!navigator.geolocation) {
+      const timer = window.setTimeout(() => setError('Este navegador no soporta GPS.'), 0);
+      return () => window.clearTimeout(timer);
+    }
 
     watchId.current = navigator.geolocation.watchPosition(
       ({ coords }) => {
         const pos = { lat: coords.latitude, lng: coords.longitude };
+        const previous = lastGpsPoint.current;
         setPosicion(pos);
         posicionRef.current = pos;
+        lastGpsPoint.current = pos;
 
         if (coords.heading != null && !isNaN(coords.heading)) {
           lastHeading.current = coords.heading;
           setHeading(coords.heading);
+        } else if (previous && haversine(previous.lat, previous.lng, pos.lat, pos.lng) > 5) {
+          const calculatedHeading = bearingBetween(previous, pos);
+          lastHeading.current = calculatedHeading;
+          setHeading(calculatedHeading);
         } else {
           setHeading(lastHeading.current);
         }
@@ -230,20 +275,8 @@ export default function EnRuta() {
   }, []);
 
   // ── Auto-Chaining Logic: Detect stop arrival ─────────────────────────────
-  useEffect(() => {
-    if (!posicion || !viaje || transitionRef.current || finalizando) return;
-
-    // Check distance to current leg's destination
-    const distToDest = haversine(posicion.lat, posicion.lng, viaje.destino.lat, viaje.destino.lng);
-    
-    // If within 50m of current stop and we have pending stops
-    if (distToDest < 50 && pendingStops.length > 0) {
-      transitionRef.current = true;
-      handleAutoNextLeg();
-    }
-  }, [posicion, viaje, pendingStops, finalizando]);
-
-  const handleAutoNextLeg = async () => {
+  const handleAutoNextLeg = useCallback(async () => {
+    if (!posicion || !viaje) return;
     try {
       // 1. Finish current leg
       await finalizarViaje(id);
@@ -267,30 +300,59 @@ export default function EnRuta() {
         replace: true,
         state: {
           viaje: nextViaje,
-          pendingStops: remaining
+          pendingStops: remaining,
+          paradas,
+          itinerary,
+          parentViajeId,
         }
       });
       
       // Reset flags after small delay
-      setTimeout(() => { transitionRef.current = false; }, 2000);
+      setTimeout(() => {
+        transitionRef.current = false;
+        setTransitioning(false);
+      }, 2000);
       
     } catch (err) {
       console.error("Chaining failed:", err);
       transitionRef.current = false;
+      setTransitioning(false);
     }
+  }, [id, itinerary, navigate, paradas, parentViajeId, pendingStops, posicion, viaje]);
+
+  // Auto-Chaining Logic: Detect stop arrival
+  useEffect(() => {
+    if (!posicion || !viaje || transitionRef.current || finalizando) return;
+
+    const distToDest = haversine(posicion.lat, posicion.lng, viaje.destino.lat, viaje.destino.lng);
+
+    if (distToDest < 50 && pendingStops.length > 0) {
+      transitionRef.current = true;
+      window.setTimeout(() => setArrivalPromptOpen(true), 0);
+    }
+  }, [posicion, viaje, pendingStops, finalizando, handleAutoNextLeg]);
+
+  const handleContinuarCola = () => {
+    setArrivalPromptOpen(false);
+    setFinishPromptOpen(false);
+    setTransitioning(true);
+    handleAutoNextLeg();
   };
 
   // Step & ETA update
   useEffect(() => {
     if (!posicion || !viaje?.pasos?.length) return;
-    const idx = calcularPasoActivo(viaje.pasos, posicion);
-    setPasoActivo(idx);
-    const rem = calcularDistanciaRestante(viaje.pasos, idx, posicion);
-    setDistRestante(rem);
-    if (viaje?.distanciaMetros && viaje?.tiempoEstimadoMin && rem != null) {
-      const speed = viaje.distanciaMetros / (viaje.tiempoEstimadoMin * 60);
-      if (speed > 0) setEta(Date.now() + (rem / speed) * 1000);
-    }
+    const timer = window.setTimeout(() => {
+      const idx = calcularPasoActivo(viaje.pasos, posicion);
+      setPasoActivo(idx);
+      const rem = calcularDistanciaRestante(viaje.pasos, idx, posicion);
+      setDistRestante(rem);
+      if (viaje?.distanciaMetros && viaje?.tiempoEstimadoMin && rem != null) {
+        const speed = viaje.distanciaMetros / (viaje.tiempoEstimadoMin * 60);
+        if (speed > 0) setEta(Date.now() + (rem / speed) * 1000);
+      }
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, [posicion, viaje]);
 
   // Polling
@@ -300,7 +362,9 @@ export default function EnRuta() {
     try {
       const res = await reportarPosicion(id, pos.lat, pos.lng);
       if (res?.alertaNueva) setAlertaActiva(res.alertaNueva);
-    } catch {}
+    } catch (err) {
+      console.warn('No se pudo reportar la posicion actual.', err);
+    }
   }, [id]);
 
   useEffect(() => {
@@ -313,9 +377,15 @@ export default function EnRuta() {
   }, [viaje, alertaActiva, doPolling]);
 
   const handleFinalizar = async () => {
+    setArrivalPromptOpen(false);
+    setFinishPromptOpen(true);
+  };
+
+  const handleConfirmarFinalizarTodo = async () => {
     setFinalizando(true);
+    let finalizado = null;
     try {
-      await finalizarViaje(id);
+      finalizado = await finalizarViaje(id);
     } catch (err) {
       if (err.response?.status !== 409) {
         setError('Error al finalizar el viaje.');
@@ -323,14 +393,56 @@ export default function EnRuta() {
         return;
       }
     }
-    navigate(`/viaje/${id}`);
+    const finishedAt = finalizado?.horaFin ?? new Date().toISOString();
+    navigate('/', {
+      replace: true,
+      state: {
+        tripSummary: {
+          ...viaje,
+          ...finalizado,
+          idViaje: viaje?.idViaje ?? finalizado?.idViaje ?? Number(id),
+          origen: viaje?.origen,
+          destino: viaje?.destino,
+          prediccionLluvia: viaje?.prediccionLluvia,
+          alertaNivel: viaje?.alertaNivel,
+          distanciaMetros: viaje?.distanciaMetros ?? finalizado?.distanciaMetros,
+          tiempoEstimadoMin: viaje?.tiempoEstimadoMin ?? finalizado?.tiempoEstimadoMin,
+          horaInicio: viaje?.horaInicio ?? finalizado?.horaInicio,
+          horaFin: finishedAt,
+          pendingStopsCount: pendingStops.length,
+          completedStops: itinerary?.length ? itinerary : [viaje?.origen, ...paradas, viaje?.destino].filter(Boolean),
+        },
+      }
+    });
   };
 
   const alertaNivel   = viaje?.alertaNivel ?? 'VERDE';
+  const climateStatus = getClimateStatus(alertaNivel, alertaActiva, viaje?.prediccionLluvia);
   const centro        = viaje?.origen && viaje?.destino
     ? { lat: (viaje.origen.lat + viaje.destino.lat) / 2, lng: (viaje.origen.lng + viaje.destino.lng) / 2 }
     : { lat: 6.2442, lng: -75.5812 };
   const pasoActualData = viaje?.pasos?.[pasoActivo] ?? null;
+  const heatmapCenter = posicion ?? centro;
+  const { points: heatmapPoints, loading: heatmapLoading, error: heatmapError } = useWeatherGrid({
+    enabled: heatmapEnabled,
+    center: heatmapCenter,
+    gridSize: 9,
+    spacingKm: 0.48,
+    minMoveMeters: posicion ? 700 : 0,
+  });
+
+  const toggleHeatmap = () => {
+    setHeatmapEnabled((current) => {
+      const next = !current;
+      localStorage.setItem(RAIN_HEATMAP_STORAGE_KEY, String(next));
+      return next;
+    });
+  }
+
+  const handleCenterMap = () => {
+    setCentering(true);
+    setRecenterTick((value) => value + 1);
+  };
 
   return (
     <div style={{ position: 'relative', height: '100%', width: '100%' }}>
@@ -340,17 +452,27 @@ export default function EnRuta() {
         mapId="mdva-nav-map"
         colorScheme={theme.toUpperCase()}
         gestureHandling="greedy"
+        renderingType="VECTOR"
         disableDefaultUI
         style={{ width: '100%', height: '100%' }}
         onDragStart={() => setCentering(false)}
       >
+        <WeatherHeatmapLayer
+          points={heatmapPoints}
+          visible={heatmapEnabled && !heatmapError}
+        />
+        <NavigationCamera
+          enabled={centering}
+          position={posicion}
+          heading={heading}
+          recenterTick={recenterTick}
+        />
         {viaje && (
           <CapaRuta
             viaje={viaje}
             posicion={posicion}
             heading={heading}
             pasoActivo={pasoActivo}
-            centering={centering}
             theme={theme}
             paradas={paradas}
           />
@@ -386,25 +508,89 @@ export default function EnRuta() {
         transition: 'right 0.3s',
         zIndex: 11,
       }}>
-        <button
-          onClick={() => setCentering(true)}
-          className={`btn-icon nav-hud ${centering ? 'nav-hud-accent' : ''}`}
-          title="Modo Navegación"
-          style={{ fontSize: '1.1rem' }}
-        >
-          ◉
-        </button>
+        <CenterButton active={centering} onClick={handleCenterMap} />
+        <WeatherHeatmapToggle
+          enabled={heatmapEnabled}
+          loading={heatmapLoading}
+          onToggle={toggleHeatmap}
+        />
         <button
           onClick={() => setPanelOpen(v => !v)}
-          className="btn-icon nav-hud"
+          className="map-control-button"
           title="Ver pasos"
         >
           ☰
         </button>
       </div>
 
+      {heatmapEnabled && heatmapError && (
+        <div className="map-toast map-toast-warning">
+          {heatmapError}
+        </div>
+      )}
+
+      {arrivalPromptOpen && pendingStops.length > 0 && (
+        <div className="arrival-modal-overlay">
+          <div className="arrival-modal-card">
+            <div className="section-heading">Parada alcanzada</div>
+            <h2>¿Continuar con la cola?</h2>
+            <p>
+              Llegaste a {viaje?.destino?.displayName ?? 'la parada actual'}.
+              El siguiente destino es {pendingStops[0]?.displayName ?? 'la siguiente parada'}.
+            </p>
+            <div className="arrival-actions">
+              <button className="btn btn-primary" onClick={handleContinuarCola} disabled={transitioning}>
+                Ir a {pendingStops[0]?.displayName ?? 'siguiente parada'}
+              </button>
+              <button className="btn btn-danger" onClick={handleFinalizar} disabled={finalizando}>
+                Finalizar viaje
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {finishPromptOpen && (
+        <div className="arrival-modal-overlay">
+          <div className="arrival-modal-card">
+            <div className="section-heading">
+              {pendingStops.length > 0 ? 'Viaje con paradas pendientes' : 'Finalizar viaje'}
+            </div>
+            <h2>¿Detener o continuar?</h2>
+            {pendingStops.length === 0 && (
+              <p>
+                Vas a cerrar este trayecto y volver al mapa principal. Te mostraremos un resumen del viaje finalizado.
+              </p>
+            )}
+            <p style={{ display: pendingStops.length > 0 ? 'block' : 'none' }}>
+              Aún tienes {pendingStops.length} destino{pendingStops.length === 1 ? '' : 's'} en cola.
+              El siguiente es {pendingStops[0]?.displayName ?? 'la siguiente parada'}.
+            </p>
+            <div className="queue-preview" style={{ display: pendingStops.length > 0 ? 'grid' : 'none' }}>
+              {[viaje?.destino, ...pendingStops].filter(Boolean).map((stop, index) => (
+                <div key={`${stop.lat}-${stop.lng}-${index}`} className={index === 0 ? 'done' : ''}>
+                  <span>{index === 0 ? 'Actual' : `Siguiente ${index}`}</span>
+                  <strong>{stop.displayName ?? 'Destino sin nombre'}</strong>
+                </div>
+              ))}
+            </div>
+            <div className="arrival-actions">
+              <button className="btn btn-primary" onClick={handleContinuarCola} disabled={transitioning} style={{ display: pendingStops.length > 0 ? 'inline-flex' : 'none' }}>
+                Iniciar siguiente en cola
+              </button>
+              <button className="btn btn-danger" onClick={handleConfirmarFinalizarTodo} disabled={finalizando}>
+                {finalizando ? <><span className="spinner" /> Finalizando...</> : 'Confirmar finalización'}
+              </button>
+              <button className="btn btn-secondary" onClick={() => setFinishPromptOpen(false)}>
+                Volver al mapa
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Chaining notification */}
-      {transitionRef.current && (
+      {transitioning && (
         <div className="alerta-badge alerta-VERDE" style={{ position: 'absolute', top: '5.5rem', left: '50%', transform: 'translateX(-50%)', zIndex: 30 }}>
           Reanudando siguiente tramo...
         </div>
@@ -428,7 +614,7 @@ export default function EnRuta() {
           </div>
           <div style={{ marginTop: '0.25rem', display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
             <span className="nav-hud-accent" style={{ fontSize: '0.75rem' }}>● GPS ACTIVO</span>
-            <span className={`alerta-badge alerta-${alertaNivel}`}>{alertaNivel}</span>
+            <span className={`climate-chip ${climateStatus.cls}`}>{climateStatus.label}</span>
           </div>
         </div>
 

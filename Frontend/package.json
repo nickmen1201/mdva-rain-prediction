@@ -10,8 +10,11 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@deck.gl/aggregation-layers": "^9.2.2",
+    "@deck.gl/google-maps": "^9.2.2",
     "@vis.gl/react-google-maps": "^1.8.2",
     "axios": "^1.14.0",
+    "deck.gl": "^9.2.2",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
     "react-router-dom": "^7.14.0"

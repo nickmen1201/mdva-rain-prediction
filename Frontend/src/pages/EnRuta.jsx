@@ -75,7 +75,24 @@ function CapaRuta({ viaje, posicion, heading, pasoActivo, theme, paradas }) {
     };
 
     makeMarker({ lat: viaje.origen.lat,  lng: viaje.origen.lng  }, viaje.origen.displayName  ?? 'Origen',  '#4af0a0', 8);
-    paradas?.forEach(p => makeMarker({ lat: p.lat, lng: p.lng }, p.displayName ?? 'Parada', '#c084fc', 6));
+    paradas?.forEach((p, i) => {
+      const m = new window.google.maps.Marker({
+        position: { lat: p.lat, lng: p.lng },
+        map,
+        title: p.displayName ?? `Parada ${i + 1}`,
+        zIndex: 6,
+        label: { text: String(i + 1), color: '#0a0c10', fontWeight: 'bold', fontSize: '11px' },
+        icon: {
+          path: window.google.maps.SymbolPath.CIRCLE,
+          scale: 11,
+          fillColor: '#c084fc',
+          fillOpacity: 1,
+          strokeColor: '#0a0c10',
+          strokeWeight: 2,
+        },
+      });
+      markers.push(m);
+    });
     makeMarker({ lat: viaje.destino.lat, lng: viaje.destino.lng }, viaje.destino.displayName ?? 'Destino', '#f0a04a', 8);
 
     return () => markers.forEach(m => m.setMap(null));
@@ -182,13 +199,13 @@ export default function EnRuta() {
   const [alertaActiva,  setAlertaActiva]  = useState(null);
   const [centering,     setCentering]     = useState(true);
   const [theme,         setTheme]         = useState('dark');
-  const [transitioning, setTransitioning] = useState(false);
-  const [arrivalPromptOpen, setArrivalPromptOpen] = useState(false);
-  const [finishPromptOpen, setFinishPromptOpen] = useState(false);
-  const [recenterTick, setRecenterTick] = useState(0);
   const [heatmapEnabled, setHeatmapEnabled] = useState(
     () => localStorage.getItem(RAIN_HEATMAP_STORAGE_KEY) !== 'false',
   );
+  const [recenterTick,    setRecenterTick]    = useState(0);
+  const [transitioning,   setTransitioning]   = useState(false);
+  const [arrivalPromptOpen, setArrivalPromptOpen] = useState(false);
+  const [finishPromptOpen,  setFinishPromptOpen]  = useState(false);
   
   // Pending stops for trip chaining
   const [pendingStops]  = useState(state?.pendingStops ?? []);
@@ -253,12 +270,13 @@ export default function EnRuta() {
         lastGpsPoint.current = pos;
 
         if (coords.heading != null && !isNaN(coords.heading)) {
-          lastHeading.current = coords.heading;
-          setHeading(coords.heading);
-        } else if (previous && haversine(previous.lat, previous.lng, pos.lat, pos.lng) > 5) {
-          const calculatedHeading = bearingBetween(previous, pos);
-          lastHeading.current = calculatedHeading;
-          setHeading(calculatedHeading);
+          // Low-pass filter para amortiguar el tembleque del heading bajo ruido GPS.
+          // diff usa el camino angular más corto para evitar saltos al cruzar 0/360.
+          const target = coords.heading;
+          const diff = ((target - lastHeading.current + 540) % 360) - 180;
+          const smoothed = (lastHeading.current + diff * 0.25 + 360) % 360;
+          lastHeading.current = smoothed;
+          setHeading(smoothed);
         } else {
           setHeading(lastHeading.current);
         }
@@ -509,18 +527,20 @@ export default function EnRuta() {
         zIndex: 11,
       }}>
         <CenterButton active={centering} onClick={handleCenterMap} />
+        <button
+          onClick={() => setPanelOpen(v => !v)}
+          className="btn-icon nav-hud"
+          aria-label="Ver lista de pasos del viaje"
+          aria-expanded={panelOpen}
+          title="Ver pasos"
+        >
+          ☰
+        </button>
         <WeatherHeatmapToggle
           enabled={heatmapEnabled}
           loading={heatmapLoading}
           onToggle={toggleHeatmap}
         />
-        <button
-          onClick={() => setPanelOpen(v => !v)}
-          className="map-control-button"
-          title="Ver pasos"
-        >
-          ☰
-        </button>
       </div>
 
       {heatmapEnabled && heatmapError && (

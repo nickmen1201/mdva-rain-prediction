@@ -184,19 +184,17 @@ def monitorear_trayecto(req: MonitoreoRequest):
     # 2. Calcular delta
     delta = prob_actual - req.snapshot.probabilidad_rf_inicio
     
-    # 3. Calcular latencia (simulada basada en el timestamp de weather de inicio)
-    # En producción real, este timestamp vendría de la respuesta actual de la API del clima
+    # 3. Calcular latencia: cuánto tiempo lleva el dato meteorológico inicial
+    # respecto a la posición actual del trayecto. Si supera el umbral, la
+    # confianza en la comparación baja y la regla del Sprint 5.2A "sube un nivel".
     try:
         ts_weather = datetime.fromisoformat(req.snapshot.timestamp_dato_weather.replace('Z', '+00:00'))
         ahora = datetime.now(timezone.utc)
         minutos_latencia = int((ahora - ts_weather).total_seconds() / 60)
-        # Asumimos latencia si el dato tiene más de 15 minutos de antigüedad
-        # Nota: en una impl real, enviaríamos el timestamp actual de weather
-        # Aquí forzamos 0 para probar si la API del clima reportó algo fresco
-        minutos_latencia = max(0, minutos_latencia - 5) # Pequeño buffer
-    except:
+        minutos_latencia = max(0, minutos_latencia)
+    except Exception:
         minutos_latencia = 0
-        
+
     con_latencia = minutos_latencia > 15
     
     # 4. Determinar nivel de cambio

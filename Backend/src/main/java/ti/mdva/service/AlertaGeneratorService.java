@@ -64,7 +64,7 @@ public class AlertaGeneratorService {
             case "SIGNIFICATIVO" -> {
                 boolean probable = probRfActual > 0.6;
                 yield AlertaViajeDTO.builder()
-                    .tipoAlerta(probable ? "CONDICION_CLIMATICA" : "CONDICION_CLIMATICA")
+                    .tipoAlerta(probable ? "FENOMENO_PROBABLE" : "CONDICION_CLIMATICA")
                     .nivelSeveridad("PELIGRO")
                     .accionSugerida(probable ? "FENOMENO_POSIBLE" : "NUEVA_RUTA")
                     .mensaje(probable

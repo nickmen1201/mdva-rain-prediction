@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.*;
 
 import ti.mdva.jooq.tables.pojos.Viajes;
 import ti.mdva.model.dto.AlertaActualDTO;
+import ti.mdva.model.dto.ParadaDTO;
 import ti.mdva.model.dto.TripRequestDTO;
 import ti.mdva.model.dto.TripResponseDTO;
 import ti.mdva.usecases.ViajeUseCase;
@@ -76,6 +77,43 @@ public class ViajeController {
         return viajeUseCase.findById(id)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
+    }
+
+    @GetMapping("/{id}/paradas")
+    @Operation(
+        summary = "Listar paradas del viaje (Sprint 5.3)",
+        description = "Retorna las paradas intermedias en orden. Lista vacía si es viaje directo. " +
+                      "Solo el dueño del viaje puede consultarlo."
+    )
+    public ResponseEntity<List<ParadaDTO>> listarParadas(@PathVariable Integer id, Principal principal) {
+        if (principal == null) {
+            return ResponseEntity.status(401).build();
+        }
+        Usuarios usuario = usuarioRepository.findByUsername(principal.getName())
+                .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado"));
+
+        return ResponseEntity.ok(viajeUseCase.obtenerParadas(id, usuario.getId().intValue()));
+    }
+
+    @PatchMapping("/{id}/paradas/{orden}/finalizar")
+    @Operation(
+        summary = "Marcar una parada como finalizada (Sprint 5.3 + V6)",
+        description = "Idempotente: si ya estaba finalizada, conserva la primera hora_llegada_real. " +
+                      "Solo el dueño del viaje puede llamarlo."
+    )
+    public ResponseEntity<Void> finalizarParada(
+            @PathVariable Integer id,
+            @PathVariable Integer orden,
+            Principal principal
+    ) {
+        if (principal == null) {
+            return ResponseEntity.status(401).build();
+        }
+        Usuarios usuario = usuarioRepository.findByUsername(principal.getName())
+                .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado"));
+
+        viajeUseCase.finalizarParada(id, orden, usuario.getId().intValue());
+        return ResponseEntity.ok().build();
     }
 
     @GetMapping("/{id}/alerta-actual")

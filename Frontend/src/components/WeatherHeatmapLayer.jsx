@@ -13,7 +13,7 @@ const COLOR_RANGE = [
   { stop: 1.00, color: [218, 60, 91] },
 ];
 
-const RASTER_SIZE = 512;
+const RASTER_SIZE = 256;
 
 function clamp(value, min = 0, max = 1) {
   return Math.max(min, Math.min(max, value));

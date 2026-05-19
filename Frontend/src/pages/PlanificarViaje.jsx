@@ -353,7 +353,7 @@ export default function PlanificarViaje() {
 
           <div className="field" style={{ gridColumn: '1 / -1' }}>
             <label>Tipo de vehiculo</label>
-            <div className="route-mode-options" style={{ gridTemplateColumns: 'repeat(3, minmax(0, 1fr))' }}>
+            <div className="route-mode-options vehicle-mode-options">
               {[
                 { id: 'CARRO',     label: 'Carro',     desc: 'Todos los tuneles y autopistas habilitados' },
                 { id: 'MOTO',      label: 'Moto',       desc: 'Evita el Tunel de Oriente (restringido)' },

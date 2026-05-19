@@ -400,6 +400,10 @@ html[data-theme="light"] .city-map-cta-copy {
   gap: 0.75rem;
 }
 
+.vehicle-mode-options {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
 .route-mode-option {
   background: var(--bg-elevated);
   border: 1px solid var(--border);
@@ -601,6 +605,10 @@ html[data-theme="light"] .city-map-cta-copy {
 
 @media (max-width: 700px) {
   .route-mode-options {
+    grid-template-columns: 1fr;
+  }
+
+  .vehicle-mode-options {
     grid-template-columns: 1fr;
   }
 

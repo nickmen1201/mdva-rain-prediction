@@ -125,6 +125,9 @@ function buildRainRaster(points) {
 
   const bounds = getOverlayBounds(points);
   const sample = createWeightSampler(points);
+  const maxWeight = Math.max(...points.map((point) => clamp(point.weight)));
+  const visualScale = maxWeight > 0.01 ? clamp(0.34 / maxWeight, 1, 4.2) : 1;
+  const baseOpacity = maxWeight > 0.01 ? clamp(maxWeight * 1.8, 0.28, 1) : 0;
   const canvas = document.createElement('canvas');
   canvas.width = RASTER_SIZE;
   canvas.height = RASTER_SIZE;
@@ -139,16 +142,17 @@ function buildRainRaster(points) {
       const lng = bounds.west + (bounds.east - bounds.west) * u;
       const lat = bounds.north - (bounds.north - bounds.south) * v;
       const rawWeight = clamp(sample(lat, lng));
+      const visualWeight = clamp(rawWeight * visualScale);
       const texture = cloudNoise(u, v);
-      const rainShape = smoothstep(0.12, 0.72, rawWeight);
+      const rainShape = smoothstep(0.015, 0.48, visualWeight);
       const brokenCoverage = texture * 0.22 + cloudNoise(u + 0.19, v - 0.07) * 0.12;
-      const texturedWeight = clamp(rawWeight + (texture - 0.5) * 0.24 * rainShape);
-      const localThreshold = 0.16 + brokenCoverage;
-      const visibility = smoothstep(localThreshold, localThreshold + 0.18, texturedWeight);
+      const texturedWeight = clamp(visualWeight + (texture - 0.5) * 0.24 * rainShape);
+      const localThreshold = 0.018 + brokenCoverage * 0.34;
+      const visibility = smoothstep(localThreshold, localThreshold + 0.09, texturedWeight);
       const [r, g, b] = interpolateColor(texturedWeight);
       const edgeDistance = Math.min(u, 1 - u, v, 1 - v);
       const edgeFade = smoothstep(0, innerEdge, edgeDistance);
-      const alpha = Math.round((24 + texturedWeight * 178) * visibility * edgeFade);
+      const alpha = Math.round((24 + texturedWeight * 184) * visibility * edgeFade * baseOpacity);
       const index = (y * RASTER_SIZE + x) * 4;
 
       image.data[index] = r;

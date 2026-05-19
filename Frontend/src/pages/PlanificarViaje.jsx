@@ -178,9 +178,11 @@ export default function PlanificarViaje() {
             <input
               type="text"
               value={idVehiculo}
-              onChange={(e) => setIdVehiculo(e.target.value)}
+              onChange={(e) => setIdVehiculo(e.target.value.toUpperCase())}
               placeholder="Ej. ABC123"
               maxLength={10}
+              autoCapitalize="characters"
+              style={{ textTransform: 'uppercase' }}
             />
           </div>
 

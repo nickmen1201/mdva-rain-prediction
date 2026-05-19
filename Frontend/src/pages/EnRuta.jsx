@@ -9,6 +9,7 @@ import CenterButton from '../components/CenterButton';
 import WeatherHeatmapLayer from '../components/WeatherHeatmapLayer';
 import WeatherHeatmapToggle from '../components/WeatherHeatmapToggle';
 import useNavigationCamera from '../hooks/useNavigationCamera';
+import useDeviceOrientationHeading from '../hooks/useDeviceOrientationHeading';
 import useWeatherGrid from '../hooks/useWeatherGrid';
 import {
   calcularPasoActivo,
@@ -160,7 +161,7 @@ function CapaRuta({ viaje, posicion, heading, pasoActivo, theme, paradas }) {
 }
 
 function NavigationCamera({ enabled, position, heading, recenterTick }) {
-  useNavigationCamera({ enabled, position, heading, recenterTick, zoom: 19, tilt: 45 });
+  useNavigationCamera({ enabled, position, heading, recenterTick, zoom: 19, tilt: 60 });
   return null;
 }
 
@@ -189,6 +190,15 @@ export default function EnRuta() {
   const [heatmapEnabled, setHeatmapEnabled] = useState(
     () => localStorage.getItem(RAIN_HEATMAP_STORAGE_KEY) !== 'false',
   );
+  const [gyroRotationEnabled, setGyroRotationEnabled] = useState(
+    () => localStorage.getItem('mdva-gyro-rotation-enabled') !== 'false',
+  );
+  const {
+    heading: deviceHeading,
+    supported: orientationSupported,
+    permissionState: orientationPermission,
+    requestAccess: requestOrientationAccess,
+  } = useDeviceOrientationHeading();
   
   // Pending stops for trip chaining
   const [pendingStops]  = useState(state?.pendingStops ?? []);
@@ -204,6 +214,7 @@ export default function EnRuta() {
   const posicionRef  = useRef(null);
   const pollingTimer = useRef(null);
   const transitionRef = useRef(false);
+  const cameraHeading = gyroRotationEnabled ? (deviceHeading ?? heading) : heading;
 
   // Sync theme
   useEffect(() => {
@@ -437,7 +448,20 @@ export default function EnRuta() {
       localStorage.setItem(RAIN_HEATMAP_STORAGE_KEY, String(next));
       return next;
     });
-  }
+  };
+
+  const toggleGyroRotation = async () => {
+    if (!gyroRotationEnabled && orientationSupported && orientationPermission !== 'granted') {
+      const granted = await requestOrientationAccess();
+      if (!granted) return;
+    }
+
+    setGyroRotationEnabled((current) => {
+      const next = !current;
+      localStorage.setItem('mdva-gyro-rotation-enabled', String(next));
+      return next;
+    });
+  };
 
   const handleCenterMap = () => {
     setCentering(true);
@@ -464,14 +488,14 @@ export default function EnRuta() {
         <NavigationCamera
           enabled={centering}
           position={posicion}
-          heading={heading}
+          heading={cameraHeading}
           recenterTick={recenterTick}
         />
         {viaje && (
           <CapaRuta
             viaje={viaje}
             posicion={posicion}
-            heading={heading}
+            heading={cameraHeading}
             pasoActivo={pasoActivo}
             theme={theme}
             paradas={paradas}
@@ -497,18 +521,20 @@ export default function EnRuta() {
         onClose={() => setPanelOpen(false)}
       />
 
-      {/* Control Buttons */}
-      <div style={{
-        position: 'absolute',
-        top: '5.5rem',
-        right: panelOpen ? '292px' : '1rem',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '0.5rem',
-        transition: 'right 0.3s',
-        zIndex: 11,
-      }}>
+      <div className={`nav-map-controls${panelOpen ? ' panel-open' : ''}`}>
         <CenterButton active={centering} onClick={handleCenterMap} />
+        {orientationSupported && (
+          <button
+            onClick={toggleGyroRotation}
+            className={`map-control-button${gyroRotationEnabled ? ' active' : ''}`}
+            title={gyroRotationEnabled ? 'Usar rumbo por movimiento' : 'Usar giro del dispositivo'}
+            aria-label={gyroRotationEnabled ? 'Desactivar giro del dispositivo' : 'Activar giro del dispositivo'}
+            aria-pressed={gyroRotationEnabled}
+            type="button"
+          >
+            Giro
+          </button>
+        )}
         <WeatherHeatmapToggle
           enabled={heatmapEnabled}
           loading={heatmapLoading}

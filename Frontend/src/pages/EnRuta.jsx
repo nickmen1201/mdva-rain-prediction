@@ -6,10 +6,7 @@ import NavigationHeader from '../components/NavigationHeader';
 import NavigationPanel from '../components/NavigationPanel';
 import RecomendacionBanner from '../components/RecomendacionBanner';
 import CenterButton from '../components/CenterButton';
-import WeatherHeatmapLayer from '../components/WeatherHeatmapLayer';
-import WeatherHeatmapToggle from '../components/WeatherHeatmapToggle';
 import useNavigationCamera from '../hooks/useNavigationCamera';
-import useWeatherGrid from '../hooks/useWeatherGrid';
 import {
   calcularPasoActivo,
   calcularDistanciaRestante,
@@ -18,7 +15,6 @@ import {
 
 // ── SVG arrow marker path ─────────────────────────────────────────────────────
 const NAV_ARROW_PATH = 'M 0,-14 L 6,8 L 0,4 L -6,8 Z';
-const RAIN_HEATMAP_STORAGE_KEY = 'mdva-rain-heatmap-enabled';
 
 function getClimateStatus(alertaNivel, alertaActiva, prediccion) {
   const nivel = alertaActiva?.nivelSeveridad ?? alertaNivel ?? 'VERDE';
@@ -186,10 +182,6 @@ export default function EnRuta() {
   const [arrivalPromptOpen, setArrivalPromptOpen] = useState(false);
   const [finishPromptOpen, setFinishPromptOpen] = useState(false);
   const [recenterTick, setRecenterTick] = useState(0);
-  const [heatmapEnabled, setHeatmapEnabled] = useState(
-    () => localStorage.getItem(RAIN_HEATMAP_STORAGE_KEY) !== 'false',
-  );
-  
   // Pending stops for trip chaining
   const [pendingStops]  = useState(state?.pendingStops ?? []);
 
@@ -422,22 +414,6 @@ export default function EnRuta() {
     ? { lat: (viaje.origen.lat + viaje.destino.lat) / 2, lng: (viaje.origen.lng + viaje.destino.lng) / 2 }
     : { lat: 6.2442, lng: -75.5812 };
   const pasoActualData = viaje?.pasos?.[pasoActivo] ?? null;
-  const heatmapCenter = posicion ?? centro;
-  const { points: heatmapPoints, loading: heatmapLoading, error: heatmapError } = useWeatherGrid({
-    enabled: heatmapEnabled,
-    center: heatmapCenter,
-    gridSize: 9,
-    spacingKm: 0.48,
-    minMoveMeters: posicion ? 700 : 0,
-  });
-
-  const toggleHeatmap = () => {
-    setHeatmapEnabled((current) => {
-      const next = !current;
-      localStorage.setItem(RAIN_HEATMAP_STORAGE_KEY, String(next));
-      return next;
-    });
-  }
 
   const handleCenterMap = () => {
     setCentering(true);
@@ -457,10 +433,6 @@ export default function EnRuta() {
         style={{ width: '100%', height: '100%' }}
         onDragStart={() => setCentering(false)}
       >
-        <WeatherHeatmapLayer
-          points={heatmapPoints}
-          visible={heatmapEnabled && !heatmapError}
-        />
         <NavigationCamera
           enabled={centering}
           position={posicion}
@@ -509,11 +481,6 @@ export default function EnRuta() {
         zIndex: 11,
       }}>
         <CenterButton active={centering} onClick={handleCenterMap} />
-        <WeatherHeatmapToggle
-          enabled={heatmapEnabled}
-          loading={heatmapLoading}
-          onToggle={toggleHeatmap}
-        />
         <button
           onClick={() => setPanelOpen(v => !v)}
           className="map-control-button"
@@ -522,12 +489,6 @@ export default function EnRuta() {
           ☰
         </button>
       </div>
-
-      {heatmapEnabled && heatmapError && (
-        <div className="map-toast map-toast-warning">
-          {heatmapError}
-        </div>
-      )}
 
       {arrivalPromptOpen && pendingStops.length > 0 && (
         <div className="arrival-modal-overlay">

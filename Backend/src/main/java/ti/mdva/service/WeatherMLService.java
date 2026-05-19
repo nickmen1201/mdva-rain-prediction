@@ -1,6 +1,10 @@
 package ti.mdva.service;
 
 import ti.mdva.model.dto.RainPredictionDTO;
+import ti.mdva.model.dto.WeatherGridPointDTO;
+import ti.mdva.model.dto.WeatherGridResponseDTO;
+
+import java.util.List;
 
 /**
  * Puerto para la integración clima → modelo ML.
@@ -19,4 +23,9 @@ public interface WeatherMLService {
      * @return predicción con probabilidad de lluvia y variables climáticas
      */
     RainPredictionDTO predictRainForLocation(double lat, double lng);
+
+    /**
+     * Obtiene predicciones de lluvia para los puntos usados por el heatmap.
+     */
+    WeatherGridResponseDTO predictGridForArea(List<WeatherGridPointDTO> puntos);
 }

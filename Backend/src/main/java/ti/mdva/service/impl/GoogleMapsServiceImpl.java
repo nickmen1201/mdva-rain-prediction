@@ -83,23 +83,34 @@ public class GoogleMapsServiceImpl implements GoogleMapsService {
     // ── Ruta óptima ───────────────────────────────────────────────────────────
 
     @Override
-    public RouteResult getOptimalRoute(LocationPointDTO origin, LocationPointDTO destination, List<LocationPointDTO> waypoints) {
+    public RouteResult getOptimalRoute(LocationPointDTO origin, LocationPointDTO destination, List<LocationPointDTO> waypoints, boolean optimizeWaypoints, String travelMode, boolean avoidTunelOriente) {
         String originParam      = origin.getLat()      + "," + origin.getLng();
         String destinationParam = destination.getLat() + "," + destination.getLng();
 
         UriComponentsBuilder builder = UriComponentsBuilder.fromHttpUrl(DIRECTIONS_URL)
                 .queryParam("origin",      originParam)
                 .queryParam("destination", destinationParam)
-                .queryParam("mode",        "driving")
-                .queryParam("departure_time", "now")       // tráfico en tiempo real
+                .queryParam("mode",        travelMode)
                 .queryParam("language",    "es")
                 .queryParam("region",      "CO")
                 .queryParam("key",         apiKey);
+
+        // departure_time solo es válido para driving; bicycling/walking lo rechazan con ZERO_RESULTS
+        if ("driving".equals(travelMode)) {
+            builder.queryParam("departure_time", "now");
+        }
+
+        // El Túnel de Oriente es un peaje: avoid=tolls hace que Google lo evite de forma nativa.
+        if (avoidTunelOriente) {
+            builder.queryParam("avoid", "tolls");
+            log.info("Moto: solicitando ruta sin peajes (evita Tunel de Oriente)");
+        }
 
         // Waypoints se construyen fuera del builder para evitar doble codificación de '|'.
         // UriComponentsBuilder convierte '|' → '%7C', y luego RestTemplate re-codifica
         // '%' → '%25', produciendo '%257C' que Google Maps no reconoce.
         List<String> wpStrings = new ArrayList<>();
+
         if (waypoints != null && !waypoints.isEmpty()) {
             for (LocationPointDTO wp : waypoints) {
                 if (wp.getLat() != null && wp.getLng() != null) {
@@ -112,7 +123,8 @@ public class GoogleMapsServiceImpl implements GoogleMapsService {
 
         String url = builder.toUriString();
         if (!wpStrings.isEmpty()) {
-            url += "&waypoints=optimize:true%7C" + String.join("%7C", wpStrings);
+            String optimizePrefix = optimizeWaypoints ? "optimize:true%7C" : "";
+            url += "&waypoints=" + optimizePrefix + String.join("%7C", wpStrings);
         }
 
         JsonNode response = restTemplate.getForObject(java.net.URI.create(url), JsonNode.class);
@@ -142,10 +154,11 @@ public class GoogleMapsServiceImpl implements GoogleMapsService {
         }
 
         String overviewPolyline = routeNode.path("overview_polyline").path("points").asText();
+        List<Integer> waypointOrder = parseWaypointOrder(routeNode.path("waypoint_order"));
 
         log.debug("Ruta calculada: {}m, {}s, {} pasos", totalDistanceMeters, totalDurationSeconds, allSteps.size());
 
-        return new RouteResult(totalDurationSeconds, totalDistanceMeters, overviewPolyline, allSteps);
+        return new RouteResult(totalDurationSeconds, totalDistanceMeters, overviewPolyline, allSteps, waypointOrder);
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
@@ -170,6 +183,15 @@ public class GoogleMapsServiceImpl implements GoogleMapsService {
                     .endLat(step.path("end_location").path("lat").asDouble())
                     .endLng(step.path("end_location").path("lng").asDouble())
                     .build());
+        }
+        return result;
+    }
+
+    private List<Integer> parseWaypointOrder(JsonNode orderNode) {
+        List<Integer> result = new ArrayList<>();
+        if (orderNode == null || !orderNode.isArray()) return result;
+        for (JsonNode item : orderNode) {
+            result.add(item.asInt());
         }
         return result;
     }

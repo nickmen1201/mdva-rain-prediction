@@ -9,10 +9,17 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
 import ti.mdva.model.dto.RainPredictionDTO;
+import ti.mdva.model.dto.WeatherGridPointDTO;
+import ti.mdva.model.dto.WeatherGridResponseDTO;
+import ti.mdva.model.dto.WeatherGridResultadoDTO;
 import ti.mdva.service.WeatherMLService;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Implementación de WeatherMLService.
@@ -40,6 +47,11 @@ public class WeatherMLServiceImpl implements WeatherMLService {
     private final RestTemplate restTemplate;
     private final String mlServiceUrl;
     private final String googleApiKey;
+    private final Map<String, CachedGridResult> gridCache = new ConcurrentHashMap<>();
+
+    private static final int MAX_GRID_POINTS = 81;
+    private static final int GRID_TTL_SECONDS = 180;
+    private static final String GRID_SOURCE = "GOOGLE_WEATHER_ML";
 
     public WeatherMLServiceImpl(
             @Value("${ml.service.url}")      String mlServiceUrl,
@@ -122,6 +134,58 @@ public class WeatherMLServiceImpl implements WeatherMLService {
                 .velocidadVientoMs(windMs)
                 .build();
     }
+
+    @Override
+    public WeatherGridResponseDTO predictGridForArea(List<WeatherGridPointDTO> puntos) {
+        if (puntos == null || puntos.isEmpty()) {
+            return new WeatherGridResponseDTO(List.of(), Instant.now(), GRID_SOURCE, GRID_TTL_SECONDS);
+        }
+
+        if (puntos.size() > MAX_GRID_POINTS) {
+            throw new IllegalArgumentException("El heatmap acepta maximo " + MAX_GRID_POINTS + " puntos por grilla");
+        }
+
+        List<CompletableFuture<WeatherGridResultadoDTO>> futures = puntos.stream()
+            .map(p -> CompletableFuture.supplyAsync(() -> predictGridPoint(p)))
+            .toList();
+
+        List<WeatherGridResultadoDTO> resultados = futures.stream()
+            .map(CompletableFuture::join)
+            .toList();
+
+        return new WeatherGridResponseDTO(resultados, Instant.now(), GRID_SOURCE, GRID_TTL_SECONDS);
+    }
+
+    private WeatherGridResultadoDTO predictGridPoint(WeatherGridPointDTO point) {
+        String key = cacheKey(point);
+        CachedGridResult cached = gridCache.get(key);
+        if (cached != null && cached.expiresAt().isAfter(Instant.now())) {
+            return cached.result();
+        }
+
+        WeatherGridResultadoDTO result;
+        try {
+            RainPredictionDTO pred = predictRainForLocation(point.lat(), point.lng());
+            double probabilidad = pred.getProbabilidadRf() != null ? pred.getProbabilidadRf() : 0.0;
+            result = new WeatherGridResultadoDTO(point.lat(), point.lng(), clampProbability(probabilidad));
+        } catch (Exception e) {
+            log.warn("Heatmap rain prediction failed for lat={}, lng={}", point.lat(), point.lng(), e);
+            result = new WeatherGridResultadoDTO(point.lat(), point.lng(), 0.0);
+        }
+
+        gridCache.put(key, new CachedGridResult(result, Instant.now().plusSeconds(GRID_TTL_SECONDS)));
+        return result;
+    }
+
+    private String cacheKey(WeatherGridPointDTO point) {
+        return "%.3f:%.3f".formatted(point.lat(), point.lng());
+    }
+
+    private double clampProbability(double value) {
+        return Math.max(0.0, Math.min(1.0, value));
+    }
+
+    private record CachedGridResult(WeatherGridResultadoDTO result, Instant expiresAt) {}
 
     /**
      * Infiere cobertura nubosa (%) desde el tipo de condición de Google Weather.

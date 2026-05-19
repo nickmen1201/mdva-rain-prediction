@@ -27,6 +27,8 @@ public class TripResponseDTO {
     // ── Puntos de ruta ─────────────────────────────────────────────────────────
     private LocationPointDTO origen;
     private LocationPointDTO destino;
+    private List<LocationPointDTO> paradasOrdenadas;
+    private TripRequestDTO.ModoParadas modoParadas;
 
     // ── Datos de Google Directions ─────────────────────────────────────────────
     private Integer tiempoBaseMin;

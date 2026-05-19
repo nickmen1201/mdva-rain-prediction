@@ -17,6 +17,8 @@ function getRainHero(pred) {
   return { icon: '⛈', titulo: 'Lluvia fuerte', sub: 'Usa impermeable. Reduce velocidad y aumenta distancia al vehículo de adelante.' };
 }
 
+const NIVEL_LABEL = { VERDE: 'Normal', AMARILLO: 'Precaución', ROJO: 'Lluvia fuerte' };
+
 const REC = {
   VERDE:    { icon: '✓', texto: 'Buen momento para salir. Sin lluvia prevista.' },
   AMARILLO: { icon: '🌂', texto: 'Lleva paraguas. Posibles lloviznas en el camino.' },
@@ -207,7 +209,7 @@ export default function ResultadoViaje() {
           <div className="stat-item" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
             <div className="stat-label">Condición</div>
             <span className={`alerta-badge alerta-${viaje.alertaNivel}`} style={{ marginTop: '0.4rem', alignSelf: 'flex-start' }}>
-              {{ VERDE: '●', AMARILLO: '◆', ROJO: '▲' }[viaje.alertaNivel]} {viaje.alertaNivel}
+              {{ VERDE: '●', AMARILLO: '◆', ROJO: '▲' }[viaje.alertaNivel]} {NIVEL_LABEL[viaje.alertaNivel] ?? viaje.alertaNivel}
             </span>
           </div>
         )}

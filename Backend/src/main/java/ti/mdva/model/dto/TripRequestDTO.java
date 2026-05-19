@@ -20,6 +20,8 @@ public class TripRequestDTO {
 
     private String idVehiculo;
 
+    private TipoVehiculo tipoVehiculo;
+
     /** Ubicación de origen con coordenadas o placeId de Google Places */
     @Valid
     @NotNull(message = "El origen es obligatorio")
@@ -40,5 +42,11 @@ public class TripRequestDTO {
     public enum ModoParadas {
         ORDEN_INGRESADO,
         OPTIMIZAR_RUTA
+    }
+
+    public enum TipoVehiculo {
+        CARRO,
+        MOTO,
+        BICICLETA
     }
 }

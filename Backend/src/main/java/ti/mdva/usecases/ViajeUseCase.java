@@ -105,10 +105,22 @@ public class ViajeUseCase {
                 : TripRequestDTO.ModoParadas.ORDEN_INGRESADO;
         boolean optimizarParadas = modoParadas == TripRequestDTO.ModoParadas.OPTIMIZAR_RUTA;
 
+        // Parámetros de ruta por tipo de vehículo
+        TripRequestDTO.TipoVehiculo tipoVehiculo = request.getTipoVehiculo() != null
+                ? request.getTipoVehiculo()
+                : TripRequestDTO.TipoVehiculo.CARRO;
+        String travelMode        = tipoVehiculo == TripRequestDTO.TipoVehiculo.BICICLETA ? "bicycling" : "driving";
+        boolean avoidTunelOriente = tipoVehiculo == TripRequestDTO.TipoVehiculo.MOTO;
+
         // 3. Ruta con Google Maps para tráfico en tiempo real y waypoints
-        GoogleMapsService.RouteResult route = googleMapsService.getOptimalRoute(origen, destino, waypoints, optimizarParadas);
+        GoogleMapsService.RouteResult route = googleMapsService.getOptimalRoute(origen, destino, waypoints, optimizarParadas, travelMode, avoidTunelOriente);
         List<LocationPointDTO> paradasOrdenadas = ordenarWaypoints(waypoints, route.waypointOrder());
         int tiempoBaseMin = (int) Math.ceil(route.durationSeconds() / 60.0);
+
+        // Motos son más ágiles en tráfico urbano: ajuste de -15 % sobre el tiempo de Google
+        if (tipoVehiculo == TripRequestDTO.TipoVehiculo.MOTO) {
+            tiempoBaseMin = (int) Math.ceil(tiempoBaseMin * 0.85);
+        }
 
         log.debug("Ruta: {}m, {}min, {} pasos", route.distanceMeters(), tiempoBaseMin, route.steps().size());
 

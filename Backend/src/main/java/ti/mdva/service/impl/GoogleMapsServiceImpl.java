@@ -80,17 +80,39 @@ public class GoogleMapsServiceImpl implements GoogleMapsService {
                 .build();
     }
 
+    // ── Túnel de Oriente (Antioquia) ──────────────────────────────────────────
+
+    // Punto sobre la vía Las Palmas (antigua) que obliga a Google a desviar
+    // la ruta por encima de la montaña en lugar de atravesar el túnel.
+    private static final double BYPASS_LAT = 6.1203;
+    private static final double BYPASS_LNG = -75.4562;
+
+    /**
+     * Retorna true cuando la línea origen→destino atraviesa el corredor del Túnel de Oriente,
+     * es decir, cuando un extremo está en el Valle de Aburrá (lng oeste del túnel)
+     * y el otro en el Altiplano antioqueño (lng este del túnel),
+     * ambos dentro del rango de latitud de la zona metropolitana de Medellín.
+     */
+    private boolean routeCrossesTunelOriente(LocationPointDTO origin, LocationPointDTO destination) {
+        double splitLng = -75.45;
+        boolean originInArea = origin.getLat() > 6.0 && origin.getLat() < 6.35;
+        boolean destInArea   = destination.getLat() > 6.0 && destination.getLat() < 6.35;
+        boolean originWest   = origin.getLng() < splitLng;
+        boolean destWest     = destination.getLng() < splitLng;
+        return originInArea && destInArea && (originWest != destWest);
+    }
+
     // ── Ruta óptima ───────────────────────────────────────────────────────────
 
     @Override
-    public RouteResult getOptimalRoute(LocationPointDTO origin, LocationPointDTO destination, List<LocationPointDTO> waypoints, boolean optimizeWaypoints) {
+    public RouteResult getOptimalRoute(LocationPointDTO origin, LocationPointDTO destination, List<LocationPointDTO> waypoints, boolean optimizeWaypoints, String travelMode, boolean avoidTunelOriente) {
         String originParam      = origin.getLat()      + "," + origin.getLng();
         String destinationParam = destination.getLat() + "," + destination.getLng();
 
         UriComponentsBuilder builder = UriComponentsBuilder.fromHttpUrl(DIRECTIONS_URL)
                 .queryParam("origin",      originParam)
                 .queryParam("destination", destinationParam)
-                .queryParam("mode",        "driving")
+                .queryParam("mode",        travelMode)
                 .queryParam("departure_time", "now")       // tráfico en tiempo real
                 .queryParam("language",    "es")
                 .queryParam("region",      "CO")
@@ -100,6 +122,14 @@ public class GoogleMapsServiceImpl implements GoogleMapsService {
         // UriComponentsBuilder convierte '|' → '%7C', y luego RestTemplate re-codifica
         // '%' → '%25', produciendo '%257C' que Google Maps no reconoce.
         List<String> wpStrings = new ArrayList<>();
+
+        // Desvío por Túnel de Oriente: waypoint en vía Las Palmas (primer lugar para que
+        // Google lo respete como punto obligatorio antes que los waypoints del usuario).
+        if (avoidTunelOriente && routeCrossesTunelOriente(origin, destination)) {
+            wpStrings.add(BYPASS_LAT + "," + BYPASS_LNG);
+            log.info("Tunel de Oriente restringido para este vehiculo: inyectando desvio via Las Palmas");
+        }
+
         if (waypoints != null && !waypoints.isEmpty()) {
             for (LocationPointDTO wp : waypoints) {
                 if (wp.getLat() != null && wp.getLng() != null) {

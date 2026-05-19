@@ -24,14 +24,16 @@ public interface GoogleMapsService {
     /**
      * Obtiene la ruta óptima entre dos puntos usando Directions API,
      * soportando paradas intermedias (waypoints).
-     * Usa modo "driving" y tráfico actual.
      *
-     * @param origin      punto de origen (con lat/lng resueltos)
-     * @param destination punto de destino (con lat/lng resueltos)
-     * @param waypoints   lista opcional de paradas intermedias
+     * @param origin              punto de origen (con lat/lng resueltos)
+     * @param destination         punto de destino (con lat/lng resueltos)
+     * @param waypoints           lista opcional de paradas intermedias
+     * @param optimizeWaypoints   si Google debe reordenar las paradas
+     * @param travelMode          "driving" o "bicycling"
+     * @param avoidTunelOriente   si true, inyecta un waypoint de desvío cuando la ruta cruza el Túnel de Oriente
      * @return RouteResult con duración, distancia, polyline y pasos
      */
-    RouteResult getOptimalRoute(LocationPointDTO origin, LocationPointDTO destination, List<LocationPointDTO> waypoints, boolean optimizeWaypoints);
+    RouteResult getOptimalRoute(LocationPointDTO origin, LocationPointDTO destination, List<LocationPointDTO> waypoints, boolean optimizeWaypoints, String travelMode, boolean avoidTunelOriente);
 
     /**
      * Resultado de una consulta a Directions API.

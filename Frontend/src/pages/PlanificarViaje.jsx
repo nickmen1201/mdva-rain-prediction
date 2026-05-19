@@ -162,6 +162,7 @@ export default function PlanificarViaje() {
   const reverseGeocode = useReverseGeocoder();
 
   const [idVehiculo, setIdVehiculo] = useState('');
+  const [tipoVehiculo, setTipoVehiculo] = useState('CARRO');
   const [origen, setOrigen] = useState({ lat: null, lng: null, displayName: '' });
   const [destino, setDestino] = useState({ lat: null, lng: null, displayName: '' });
   const [paradas, setParadas] = useState([]); // [{ lat, lng, displayName }]
@@ -303,6 +304,7 @@ export default function PlanificarViaje() {
 
     const payload = {
       idVehiculo: idVehiculo || null,
+      tipoVehiculo,
       origen: { lat: origen.lat, lng: origen.lng, displayName: origen.displayName },
       destino: { lat: destino.lat, lng: destino.lng, displayName: destino.displayName },
       paradas: validParadas.map((p) => ({ lat: p.lat, lng: p.lng, displayName: p.displayName })),
@@ -347,6 +349,27 @@ export default function PlanificarViaje() {
               autoCapitalize="characters"
               style={{ textTransform: 'uppercase' }}
             />
+          </div>
+
+          <div className="field" style={{ gridColumn: '1 / -1' }}>
+            <label>Tipo de vehiculo</label>
+            <div className="route-mode-options" style={{ gridTemplateColumns: 'repeat(3, minmax(0, 1fr))' }}>
+              {[
+                { id: 'CARRO',     label: 'Carro',     desc: 'Todos los tuneles y autopistas habilitados' },
+                { id: 'MOTO',      label: 'Moto',       desc: 'Evita el Tunel de Oriente (restringido)' },
+                { id: 'BICICLETA', label: 'Bicicleta',  desc: 'Vias ciclistas, sin tuneles ni autopistas' },
+              ].map((v) => (
+                <button
+                  key={v.id}
+                  type="button"
+                  className={`route-mode-option${tipoVehiculo === v.id ? ' active' : ''}`}
+                  onClick={() => setTipoVehiculo(v.id)}
+                >
+                  <strong>{v.label}</strong>
+                  <span>{v.desc}</span>
+                </button>
+              ))}
+            </div>
           </div>
 
           <div className="field-section" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>

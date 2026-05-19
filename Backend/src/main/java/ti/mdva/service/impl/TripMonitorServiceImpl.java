@@ -16,7 +16,6 @@ import ti.mdva.service.AlertaGeneratorService;
 import ti.mdva.service.WeatherMLService;
 
 import java.time.OffsetDateTime;
-import java.time.temporal.ChronoUnit;
 import java.util.Map;
 
 /**
@@ -72,10 +71,9 @@ public class TripMonitorServiceImpl {
         RainPredictionDTO condicionesActuales = weatherMLService.predictRainForLocation(lat, lng);
 
         // 3. Llamar a FastAPI /monitorear/trayecto
+        // El cálculo de latencia se hace en el ML service usando timestamp_dato_weather;
+        // aquí solo armamos el payload.
         OffsetDateTime now = OffsetDateTime.now();
-        long minutos = snapshot.timestampDatoWeather() != null
-            ? ChronoUnit.MINUTES.between(snapshot.timestampDatoWeather(), now)
-            : latenciaUmbralMinutos + 1;
 
         Map<String, Object> payload = Map.of(
             "snapshot", Map.of(

@@ -9,6 +9,7 @@ import org.springframework.web.util.UriComponentsBuilder;
 
 import ti.mdva.model.dto.LocationPointDTO;
 import ti.mdva.model.dto.RouteStepDTO;
+import ti.mdva.service.GoogleApiErrorTranslator;
 import ti.mdva.service.GoogleMapsService;
 
 import java.util.ArrayList;
@@ -64,7 +65,7 @@ public class GoogleMapsServiceImpl implements GoogleMapsService {
         if (response == null || !"OK".equals(response.path("status").asText())) {
             String status = response != null ? response.path("status").asText() : "NULL_RESPONSE";
             log.error("Geocoding API error para placeId={} status={}", point.getPlaceId(), status);
-            throw new RuntimeException("No se pudo geocodificar el lugar: " + status);
+            throw new RuntimeException(GoogleApiErrorTranslator.traducir(status, true));
         }
 
         JsonNode location = response
@@ -121,7 +122,7 @@ public class GoogleMapsServiceImpl implements GoogleMapsService {
         if (response == null || !"OK".equals(response.path("status").asText())) {
             String status = response != null ? response.path("status").asText() : "NULL_RESPONSE";
             log.error("Directions API error: {}", status);
-            throw new RuntimeException("No se pudo calcular la ruta: " + status);
+            throw new RuntimeException(GoogleApiErrorTranslator.traducir(status, false));
         }
 
         JsonNode routeNode = response.path("routes").get(0);

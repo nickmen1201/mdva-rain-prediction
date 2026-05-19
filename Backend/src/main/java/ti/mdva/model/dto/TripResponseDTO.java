@@ -49,6 +49,10 @@ public class TripResponseDTO {
     private AlertaNivel alertaNivel;
     private String alertaMensaje;
 
+    // ── Paradas intermedias (Sprint 5.3) ──────────────────────────────────────
+    /** Lista vacía si es viaje directo, o ordenada por `orden` si es multi-destino. */
+    private List<ParadaDTO> paradas;
+
     public enum AlertaNivel {
         VERDE,
         AMARILLO,

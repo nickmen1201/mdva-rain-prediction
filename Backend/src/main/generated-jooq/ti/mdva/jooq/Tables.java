@@ -4,9 +4,12 @@
 package ti.mdva.jooq;
 
 
+import ti.mdva.jooq.tables.AlertasViaje;
 import ti.mdva.jooq.tables.Barrios;
 import ti.mdva.jooq.tables.Comunas;
+import ti.mdva.jooq.tables.CondicionesSnapshot;
 import ti.mdva.jooq.tables.Municipios;
+import ti.mdva.jooq.tables.ParadasViaje;
 import ti.mdva.jooq.tables.TiposMotor;
 import ti.mdva.jooq.tables.TiposVehiculo;
 import ti.mdva.jooq.tables.Usuarios;
@@ -21,6 +24,11 @@ import ti.mdva.jooq.tables.Viajes;
 public class Tables {
 
     /**
+     * The table <code>public.alertas_viaje</code>.
+     */
+    public static final AlertasViaje ALERTAS_VIAJE = AlertasViaje.ALERTAS_VIAJE;
+
+    /**
      * The table <code>public.barrios</code>.
      */
     public static final Barrios BARRIOS = Barrios.BARRIOS;
@@ -31,9 +39,19 @@ public class Tables {
     public static final Comunas COMUNAS = Comunas.COMUNAS;
 
     /**
+     * The table <code>public.condiciones_snapshot</code>.
+     */
+    public static final CondicionesSnapshot CONDICIONES_SNAPSHOT = CondicionesSnapshot.CONDICIONES_SNAPSHOT;
+
+    /**
      * The table <code>public.municipios</code>.
      */
     public static final Municipios MUNICIPIOS = Municipios.MUNICIPIOS;
+
+    /**
+     * The table <code>public.paradas_viaje</code>.
+     */
+    public static final ParadasViaje PARADAS_VIAJE = ParadasViaje.PARADAS_VIAJE;
 
     /**
      * The table <code>public.tipos_motor</code>.

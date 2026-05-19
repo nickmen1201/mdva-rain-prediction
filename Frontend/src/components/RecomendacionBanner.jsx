@@ -8,12 +8,14 @@ const CONFIG = {
 };
 
 export default function RecomendacionBanner({ alerta, onCerrar }) {
-  const cfg = alerta ? (CONFIG[alerta.nivelSeveridad] ?? CONFIG.INFORMATIVA) : CONFIG.INFORMATIVA;
+  const alertaId = alerta?.idAlerta ?? null;
+  const nivel = alerta?.nivelSeveridad ?? null;
+  const cfg = CONFIG[nivel] ?? CONFIG.INFORMATIVA;
 
   useEffect(() => {
     if (!alerta) return undefined;
 
-    if (alerta.nivelSeveridad === 'CRISIS' && navigator.vibrate) {
+    if (nivel === 'CRISIS' && navigator.vibrate) {
       navigator.vibrate([600, 200, 600, 200, 600]);
     }
 
@@ -23,14 +25,14 @@ export default function RecomendacionBanner({ alerta, onCerrar }) {
     }
 
     return undefined;
-  }, [alerta, cfg.autoDismiss, onCerrar]);
+  }, [alertaId, nivel, cfg.autoDismiss, onCerrar, alerta]);
 
   if (!alerta) return null;
 
   if (cfg.cls === 'toast') {
     return (
       <div
-        className={`recomendacion-toast ${alerta.nivelSeveridad?.toLowerCase() ?? ''}`}
+        className={`recomendacion-toast ${nivel?.toLowerCase() ?? ''}`}
         style={{ borderColor: cfg.border, color: cfg.color }}
         role="status"
       >

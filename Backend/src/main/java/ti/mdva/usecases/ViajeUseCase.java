@@ -185,11 +185,52 @@ public class ViajeUseCase {
             paradaRepo.saveAll(saved.getIdViaje(), paradasOrdenadas);
         }
 
-        // 6. Retornar DTO completo con el ID generado por la BD
+        // 6. Retornar DTO completo con el ID generado por la BD y las paradas
+        // recién persistidas (con su id_parada y orden asignado por la BD).
+        var paradasGuardadas = paradaRepo.findByViajeId(saved.getIdViaje());
+
         return response.toBuilder()
                 .idViaje(saved.getIdViaje())
                 .horaInicio(saved.getHoraInicio())
+                .paradas(paradasGuardadas)
                 .build();
+    }
+
+    /**
+     * Lista las paradas intermedias de un viaje (Sprint 5.3).
+     * Verifica pertenencia del viaje al usuario por seguridad.
+     */
+    public List<ParadaDTO> obtenerParadas(Integer idViaje, Integer idUsuario) {
+        validarViajePertenece(idViaje, idUsuario);
+        return paradaRepo.findByViajeId(idViaje);
+    }
+
+    /**
+     * Marca una parada como finalizada (V6 + Sprint 5.3).
+     * Caso de uso: el frontend detecta que el conductor está a <100m de la parada
+     * y dispara este endpoint, o el usuario confirma manualmente desde el HUD.
+     *
+     * @throws IllegalArgumentException si la parada no existe
+     */
+    public void finalizarParada(Integer idViaje, Integer orden, Integer idUsuario) {
+        validarViajePertenece(idViaje, idUsuario);
+        boolean ok = paradaRepo.marcarParadaFinalizada(idViaje, orden);
+        if (!ok) {
+            throw new IllegalArgumentException(
+                    "No existe parada con orden=" + orden + " en el viaje " + idViaje);
+        }
+        log.info("Parada finalizada: viaje={} orden={}", idViaje, orden);
+    }
+
+    private void validarViajePertenece(Integer idViaje, Integer idUsuario) {
+        Viajes viaje = viajeRepository.findById(idViaje)
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "No se encontró un viaje con id: " + idViaje));
+        if (!viaje.getIdUsuario().equals(idUsuario)) {
+            // Mismo mensaje que "no existe" para no revelar IDs ajenos
+            throw new IllegalArgumentException(
+                    "No se encontró un viaje con id: " + idViaje);
+        }
     }
 
     // ── Finalización ──────────────────────────────────────────────────────────

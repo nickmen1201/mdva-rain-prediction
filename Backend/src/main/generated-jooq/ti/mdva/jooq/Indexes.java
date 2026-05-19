@@ -9,8 +9,10 @@ import org.jooq.OrderField;
 import org.jooq.impl.DSL;
 import org.jooq.impl.Internal;
 
+import ti.mdva.jooq.tables.AlertasViaje;
 import ti.mdva.jooq.tables.Barrios;
 import ti.mdva.jooq.tables.Comunas;
+import ti.mdva.jooq.tables.ParadasViaje;
 import ti.mdva.jooq.tables.Usuarios;
 import ti.mdva.jooq.tables.Vehiculos;
 import ti.mdva.jooq.tables.Viajes;
@@ -26,8 +28,10 @@ public class Indexes {
     // INDEX definitions
     // -------------------------------------------------------------------------
 
+    public static final Index IDX_ALERTAS_VIAJE_ID = Internal.createIndex(DSL.name("idx_alertas_viaje_id"), AlertasViaje.ALERTAS_VIAJE, new OrderField[] { AlertasViaje.ALERTAS_VIAJE.ID_VIAJE, AlertasViaje.ALERTAS_VIAJE.TIMESTAMP_GENERACION.desc() }, false);
     public static final Index IDX_BARRIOS_COMUNA = Internal.createIndex(DSL.name("idx_barrios_comuna"), Barrios.BARRIOS, new OrderField[] { Barrios.BARRIOS.ID_COMUNA }, false);
     public static final Index IDX_COMUNAS_MUNICIPIO = Internal.createIndex(DSL.name("idx_comunas_municipio"), Comunas.COMUNAS, new OrderField[] { Comunas.COMUNAS.ID_MUNICIPIO }, false);
+    public static final Index IDX_PARADAS_VIAJE_ORDEN = Internal.createIndex(DSL.name("idx_paradas_viaje_orden"), ParadasViaje.PARADAS_VIAJE, new OrderField[] { ParadasViaje.PARADAS_VIAJE.ID_VIAJE, ParadasViaje.PARADAS_VIAJE.ORDEN }, true);
     public static final Index IDX_USUARIOS_BARRIO = Internal.createIndex(DSL.name("idx_usuarios_barrio"), Usuarios.USUARIOS, new OrderField[] { Usuarios.USUARIOS.ID_BARRIO }, false);
     public static final Index IDX_VEHICULOS_USUARIO = Internal.createIndex(DSL.name("idx_vehiculos_usuario"), Vehiculos.VEHICULOS, new OrderField[] { Vehiculos.VEHICULOS.ID_USUARIO }, false);
     public static final Index IDX_VIAJES_FECHA = Internal.createIndex(DSL.name("idx_viajes_fecha"), Viajes.VIAJES, new OrderField[] { Viajes.VIAJES.HORA_INICIO }, false);

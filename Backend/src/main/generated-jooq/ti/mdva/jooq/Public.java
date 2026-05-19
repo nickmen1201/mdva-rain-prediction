@@ -11,9 +11,12 @@ import org.jooq.Catalog;
 import org.jooq.Table;
 import org.jooq.impl.SchemaImpl;
 
+import ti.mdva.jooq.tables.AlertasViaje;
 import ti.mdva.jooq.tables.Barrios;
 import ti.mdva.jooq.tables.Comunas;
+import ti.mdva.jooq.tables.CondicionesSnapshot;
 import ti.mdva.jooq.tables.Municipios;
+import ti.mdva.jooq.tables.ParadasViaje;
 import ti.mdva.jooq.tables.TiposMotor;
 import ti.mdva.jooq.tables.TiposVehiculo;
 import ti.mdva.jooq.tables.Usuarios;
@@ -35,6 +38,11 @@ public class Public extends SchemaImpl {
     public static final Public PUBLIC = new Public();
 
     /**
+     * The table <code>public.alertas_viaje</code>.
+     */
+    public final AlertasViaje ALERTAS_VIAJE = AlertasViaje.ALERTAS_VIAJE;
+
+    /**
      * The table <code>public.barrios</code>.
      */
     public final Barrios BARRIOS = Barrios.BARRIOS;
@@ -45,9 +53,19 @@ public class Public extends SchemaImpl {
     public final Comunas COMUNAS = Comunas.COMUNAS;
 
     /**
+     * The table <code>public.condiciones_snapshot</code>.
+     */
+    public final CondicionesSnapshot CONDICIONES_SNAPSHOT = CondicionesSnapshot.CONDICIONES_SNAPSHOT;
+
+    /**
      * The table <code>public.municipios</code>.
      */
     public final Municipios MUNICIPIOS = Municipios.MUNICIPIOS;
+
+    /**
+     * The table <code>public.paradas_viaje</code>.
+     */
+    public final ParadasViaje PARADAS_VIAJE = ParadasViaje.PARADAS_VIAJE;
 
     /**
      * The table <code>public.tipos_motor</code>.
@@ -90,9 +108,12 @@ public class Public extends SchemaImpl {
     @Override
     public final List<Table<?>> getTables() {
         return Arrays.asList(
+            AlertasViaje.ALERTAS_VIAJE,
             Barrios.BARRIOS,
             Comunas.COMUNAS,
+            CondicionesSnapshot.CONDICIONES_SNAPSHOT,
             Municipios.MUNICIPIOS,
+            ParadasViaje.PARADAS_VIAJE,
             TiposMotor.TIPOS_MOTOR,
             TiposVehiculo.TIPOS_VEHICULO,
             Usuarios.USUARIOS,

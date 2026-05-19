@@ -1,272 +1,374 @@
-# Monitoreo de Variables Ambientales (MDVA)
+# Monitoreo de Variables Ambientales (MVA)
 
-Proyecto backend para monitorear variables ambientales relacionadas con movilidad urbana en Medellin y el Valle de Aburra.
+Aplicación web de planificación de viajes y monitoreo ambiental para el área metropolitana del Valle de Aburrá (Medellín, Colombia). Integra predicción de lluvia con modelos de Machine Learning entrenados con datos locales del SIATA, enrutamiento ambiental y recomendaciones instructivas de movilidad en tiempo real.
 
-El servicio expone una API REST para:
-- Consultar ubicaciones (municipios, comunas y barrios) desde PostgreSQL.
-- Consultar condiciones climaticas actuales por coordenadas usando Open-Meteo.
-- Verificar estado del servicio y documentar endpoints con Swagger/OpenAPI.
+**Equipo:** Camilo Ardila · Santiago Martínez · Nicolás Meneses · Luis Ángel Seoanes  
+**Periodo:** 13/02/2026 – 04/05/2026 · 5 sprints quincenales
+
+---
 
 ## Tabla de contenido
 
-1. [Descripcion general](#descripcion-general)
-2. [Stack tecnologico](#stack-tecnologico)
+1. [Descripción general](#descripción-general)
+2. [Stack tecnológico](#stack-tecnológico)
 3. [Estructura del repositorio](#estructura-del-repositorio)
-4. [Prerequisitos](#prerequisitos)
-5. [Configuracion de base de datos](#configuracion-de-base-de-datos)
-6. [Ejecucion del proyecto](#ejecucion-del-proyecto)
+4. [Requisitos previos](#requisitos-previos)
+5. [Ejecución con Docker (recomendado)](#ejecución-con-docker-recomendado)
+6. [Verificación de servicios](#verificación-de-servicios)
 7. [API y endpoints](#api-y-endpoints)
-8. [Perfiles y configuracion](#perfiles-y-configuracion)
-9. [Pruebas](#pruebas)
-10. [jOOQ y codigo generado](#jooq-y-codigo-generado)
-11. [Troubleshooting](#troubleshooting)
+8. [Desarrollo local (sin Docker)](#desarrollo-local-sin-docker)
+9. [Base de datos](#base-de-datos)
+10. [Modelos ML](#modelos-ml)
+11. [CI/CD](#cicd)
+12. [Documentación técnica](#documentación-técnica)
+13. [Troubleshooting](#troubleshooting)
 
-## Descripcion general
+---
 
-Este repositorio contiene principalmente un backend en Spring Boot ubicado en `Backend/`.
+## Descripción general
 
-Capacidades actuales:
-- API REST con validaciones de entrada.
-- Integracion con PostgreSQL mediante jOOQ.
-- Endpoint de clima actual por latitud/longitud.
-- Endpoint de health check.
-- Swagger UI y OpenAPI JSON.
+MVA es una webapp mobile-first que combina:
 
-## Stack tecnologico
+- **Predicción de lluvia** — dos modelos scikit-learn (Random Forest AUC=0.82, Regresión Logística F1=0.78) entrenados con datos históricos del SIATA y Open-Meteo para el Valle de Aburrá.
+- **Enrutamiento ambiental** — grafo vial OSMnx/NetworkX ponderado por condiciones climáticas.
+- **Integración Google Cloud** — Directions API (ruta), Geocoding API (búsqueda de lugares), Weather API (condiciones actuales), Maps JS API (mapa interactivo).
+- **Alertas instructivas** — niveles Verde / Amarillo / Rojo con tiempo de viaje ajustado por lluvia (factores ×1.00 / ×1.20 / ×1.35).
+- **Navegación 3D** — vista de navegación paso a paso con cámara inclinada y capa de calor meteorológico.
+- **Autenticación JWT** — registro y login de usuarios con hash bcrypt.
 
-- Java 21
-- Spring Boot 3.4.2
-- Gradle 9.2.0 (wrapper)
-- PostgreSQL
-- jOOQ 3.19.18
-- springdoc-openapi 2.7.0
-- Lombok
-- MapStruct
+El stack completo corre en Docker Compose con un solo comando.
+
+---
+
+## Stack tecnológico
+
+| Capa | Tecnología |
+|---|---|
+| Frontend | React 18 + Vite, nginx (Docker), Google Maps JS API |
+| Backend | Java 21, Spring Boot 3.4.2, JOOQ 3.19.18, Flyway, JWT |
+| ML Service | Python 3.11, FastAPI, scikit-learn 1.4.2 |
+| Routing Service | Python 3.11, FastAPI, OSMnx, NetworkX |
+| Base de datos | PostgreSQL 16 |
+| Infraestructura | Docker Compose, GitHub Actions (CI/CD parcial) |
+
+---
 
 ## Estructura del repositorio
 
-```text
+```
 Monitoreo-de-variables-ambientales/
-|-- README.md
-`-- Backend/
-    |-- build.gradle.kts
-    |-- gradlew
-    |-- gradlew.bat
-    |-- DB/
-    |   |-- init.sql
-    |   |-- TIC1DB.sql
-    |   `-- TIC1DB.backup
-    |-- src/main/java/ti/mdva/
-    |   |-- BackendApplication.java
-    |   |-- controller/
-    |   |-- service/
-    |   |-- dto/
-    |   |-- config/
-    |   `-- exception/
-    `-- src/main/resources/
-        |-- application.yml
-        |-- application-dev.yml
-        `-- application-prod.yml
+├── docker-compose.dev.yml          ← Orquestación de los 5 servicios
+├── README.md
+├── Informe_Tecnico.md              ← Arquitectura y decisiones técnicas
+├── Manual_Usuario.md               ← Guía de uso para el usuario final
+├── Manual_Pruebas.md               ← Casos de prueba y resultados
+│
+├── Backend/
+│   ├── Dockerfile                  ← Build multietapa JDK Alpine → JRE Alpine
+│   ├── build.gradle.kts
+│   ├── src/main/java/ti/mdva/
+│   │   ├── controller/             ← AuthController, ViajeController, WeatherController, LocationController
+│   │   ├── usecases/               ← ViajeUseCase (orquesta el flujo completo)
+│   │   ├── service/
+│   │   │   ├── impl/
+│   │   │   │   ├── GoogleMapsServiceImpl.java   ← Directions + Geocoding API
+│   │   │   │   └── WeatherMLServiceImpl.java    ← Weather API + FastAPI ML
+│   │   │   └── TripPlannerOrchestrator.java     ← Reglas de ajuste por lluvia
+│   │   ├── repositories/
+│   │   ├── model/dto/              ← DTOs de entrada y salida
+│   │   ├── model/valueobjects/
+│   │   │   └── Placa.java          ← Value object con validación de placa colombiana
+│   │   ├── security/               ← JwtUtil, JwtAuthenticationFilter
+│   │   └── exception/
+│   └── src/main/resources/
+│       ├── application.yml
+│       ├── application-dev.yml     ← Credenciales de desarrollo
+│       └── db/migration/
+│           └── V2__viajes_lat_lng.sql
+│
+├── Data-science/
+│   ├── Dockerfile                  ← Python 3.11-slim, scikit-learn 1.4.2
+│   ├── main.py                     ← FastAPI ML Service (puerto 8081)
+│   ├── requirements.txt
+│   ├── models/
+│   │   ├── random_forest.pkl
+│   │   └── regresion_logistica.pkl
+│   ├── notebooks/                  ← Notebooks de entrenamiento
+│   └── enrutamiento_ambiental/
+│       ├── Dockerfile              ← Routing Service (puerto 8000)
+│       └── ...                     ← OSMnx + NetworkX + caché de grafo
+│
+├── DB/
+│   ├── init-docker.sql             ← Script de inicialización (estado post-V2)
+│   ├── TIC1DB.sql
+│   └── TIC1DB.backup
+│
+└── Frontend/
+    ├── Dockerfile                  ← Node 24 Alpine (build) → nginx (serve)
+    ├── nginx.conf                  ← SPA fallback
+    ├── .env                        ← Variables para desarrollo local
+    ├── .env.production             ← Variables para build Docker
+    └── src/
+        ├── api/client.js           ← Llamadas al backend (axios)
+        ├── components/
+        │   ├── AlertaClimatica.jsx
+        │   ├── WeatherHeatmapLayer.jsx  ← Capa de calor meteorológico
+        │   ├── CenterButton.jsx
+        │   └── ...
+        ├── hooks/
+        │   ├── useNavigationCamera.js  ← Cámara 3D en navegación
+        │   └── useWeatherGrid.js       ← Datos de cuadrícula para heatmap
+        └── pages/
+            ├── PlanificarViaje.jsx
+            ├── ResultadoViaje.jsx
+            ├── EnRuta.jsx          ← Navegación 3D paso a paso
+            ├── MapaCiudad.jsx      ← Mapa panorámico + heatmap
+            ├── HistorialViajes.jsx
+            ├── Login.jsx
+            └── Register.jsx
 ```
 
-## Prerequisitos
+---
 
-Instala lo siguiente antes de iniciar:
+## Requisitos previos
 
-1. JDK 21
-2. PostgreSQL (14 o superior recomendado)
-3. Gradle no es obligatorio (se usa wrapper `gradlew`)
+- **Docker Desktop** instalado y corriendo (único requisito para el stack completo).
+- Para desarrollo local del frontend: Node.js 24+ y npm 11+.
+- Para regenerar código JOOQ: JDK 21 (no necesario si solo usas Docker).
 
-Verificaciones utiles:
+---
+
+## Ejecución con Docker (recomendado)
 
 ```bash
-java -version
+# Desde la raíz del repositorio
+docker compose -f docker-compose.dev.yml up --build
 ```
 
-## Configuracion de base de datos
-
-La app por defecto usa:
-- Base de datos: `mdva`
-- Host: `localhost`
-- Puerto: `5432`
-- Usuario por defecto: `postgres`
-
-### 1) Crear la base
-
-```sql
-CREATE DATABASE mdva;
+Los servicios arrancan en orden por healthchecks:
+```
+postgres → ml-service → routing-service → backend → frontend
 ```
 
-### 2) Inicializar esquema y datos
+> El primer arranque puede tardar **5-10 minutos**: descarga de imágenes base, compilación del JAR de Spring Boot y descarga del grafo OSM del Valle de Aburrá.
 
-Ejecuta el script:
-- `Backend/DB/init.sql`
-
-Ese script:
-- Crea tablas principales (`municipios`, `comunas`, `barrios`, `usuarios`, `vehiculos`, `viajes`, etc.).
-- Inserta datos semilla de municipios/comunas/barrios y tipos de vehiculo/motor.
-- Crea indices para consultas frecuentes.
-
-## Ejecucion del proyecto
-
-Desde la raiz del repositorio:
-
-### Windows (PowerShell)
-
-```powershell
-cd Backend
-.\gradlew.bat bootRun
-```
-
-### Linux/Mac
-
+Para detener y eliminar volúmenes:
 ```bash
-cd Backend
-./gradlew bootRun
+docker compose -f docker-compose.dev.yml down -v
 ```
 
-Servicio disponible en:
-- Base URL: `http://localhost:8080`
-- Health: `http://localhost:8080/api/health`
+---
+
+## Verificación de servicios
+
+Una vez levantado el stack, verifica que todo responde:
+
+| Servicio | URL | Verificación |
+|---|---|---|
+| Frontend | http://localhost:8090 | Pantalla de login/planificación |
+| Backend health | http://localhost:8080/actuator/health | `{ "status": "UP" }` |
+| Swagger UI | http://localhost:8080/swagger-ui.html | Documentación interactiva |
+| ML Service health | http://localhost:8081/health | Modelos cargados |
+| ML Service docs | http://localhost:8081/docs | Swagger FastAPI |
+| Routing Service health | http://localhost:8000/health | Grafo listo |
+| Routing Service docs | http://localhost:8000/docs | Swagger FastAPI |
+| PostgreSQL | `psql -h localhost -p 5436 -U postgres -d mdva` | Conexión exitosa |
+
+---
 
 ## API y endpoints
 
-Prefijo principal: `/api`
+### Autenticación
 
-### Health
+| Método | Ruta | Descripción |
+|---|---|---|
+| POST | `/api/auth/register` | Registro de usuario nuevo |
+| POST | `/api/auth/login` | Login — retorna JWT |
 
-- `GET /api/health`
+### Viajes
 
-Respuesta esperada:
+| Método | Ruta | HTTP | Descripción |
+|---|---|---|---|
+| POST | `/api/viajes/planificar` | 201 | Planifica viaje completo (ruta + ML + alerta) |
+| GET | `/api/viajes/{id}` | 200/404 | Obtiene un viaje por ID |
+| PATCH | `/api/viajes/{id}/finalizar` | 200 | Marca el viaje como finalizado |
+| GET | `/api/viajes/usuario/{idUsuario}` | 200 | Historial de viajes del usuario |
 
-```json
-{
-  "status": "UP",
-  "service": "mdva-backend",
-  "timestamp": "2026-03-12T22:30:00Z"
-}
-```
+### Clima
+
+| Método | Ruta | Descripción |
+|---|---|---|
+| GET/POST | `/api/weather/current` | Condiciones actuales por coordenada (Open-Meteo independiente) |
+| GET | `/api/weather/grid` | Datos de cuadrícula para capa de calor |
 
 ### Ubicaciones
 
-- `GET /api/locations/municipalities`
-- `GET /api/locations/municipalities/{id}/communes`
-- `GET /api/locations/communes/{id}/neighborhoods`
+| Método | Ruta | Descripción |
+|---|---|---|
+| GET | `/api/locations/municipalities` | Lista de municipios del Valle de Aburrá |
+| GET | `/api/locations/municipalities/{id}/communes` | Comunas de un municipio |
+| GET | `/api/locations/communes/{id}/neighborhoods` | Barrios de una comuna |
 
-Ejemplos:
-
-```bash
-curl http://localhost:8080/api/locations/municipalities
-curl http://localhost:8080/api/locations/municipalities/MED/communes
-curl http://localhost:8080/api/locations/communes/MED14/neighborhoods
-```
-
-### Clima actual
-
-- `GET /api/weather/current?latitude=6.2442&longitude=-75.5812`
-- `POST /api/weather/current`
-
-Ejemplo `POST`:
+### Ejemplo — Planificar un viaje
 
 ```bash
-curl -X POST http://localhost:8080/api/weather/current \
+curl -X POST http://localhost:8080/api/viajes/planificar \
   -H "Content-Type: application/json" \
-  -d '{"latitude":6.2442,"longitude":-75.5812}'
+  -d '{
+    "idUsuario": 1,
+    "origen": {
+      "lat": 6.2442,
+      "lng": -75.5812,
+      "displayName": "Medellín Centro"
+    },
+    "destino": {
+      "lat": 6.1132,
+      "lng": -75.6145,
+      "displayName": "Itagüí"
+    }
+  }'
 ```
 
-Campos esperados para `POST /api/weather/current`:
-- `latitude`: requerido, rango `[-90, 90]`
-- `longitude`: requerido, rango `[-180, 180]`
-
-## Documentacion interactiva
-
-Con la app ejecutandose:
-- Swagger UI: `http://localhost:8080/swagger-ui.html`
-- OpenAPI JSON: `http://localhost:8080/api-docs`
-
-## Perfiles y configuracion
-
-Archivos:
-- `Backend/src/main/resources/application.yml`
-- `Backend/src/main/resources/application-dev.yml`
-- `Backend/src/main/resources/application-prod.yml`
-
-### Perfil por defecto
-
-Usa `application.yml` con configuracion local de datasource.
-
-### Ejecutar con perfil `dev`
-
-```powershell
-cd Backend
-.\gradlew.bat bootRun --args="--spring.profiles.active=dev"
-```
-
-### Ejecutar con perfil `prod`
-
-Variables requeridas:
-- `DATABASE_URL`
-- `DATABASE_USERNAME`
-- `DATABASE_PASSWORD`
-
-Ejemplo en PowerShell:
-
-```powershell
-$env:DATABASE_URL="jdbc:postgresql://localhost:5432/mdva"
-$env:DATABASE_USERNAME="postgres"
-$env:DATABASE_PASSWORD="tu_password"
-cd Backend
-.\gradlew.bat bootRun --args="--spring.profiles.active=prod"
-```
-
-## Pruebas
-
-Desde `Backend/`:
-
-### Windows
-
-```powershell
-.\gradlew.bat test
-```
-
-### Linux/Mac
+El microservicio ML también es accesible directamente:
 
 ```bash
-./gradlew test
+curl -X POST http://localhost:8081/predecir/ambos \
+  -H "Content-Type: application/json" \
+  -d '{
+    "temperatura_c": 18.5,
+    "humedad_relativa_pct": 82.0,
+    "cobertura_nubosa_pct": 75.0,
+    "velocidad_viento_ms": 2.3,
+    "hora": 14,
+    "mes": 4
+  }'
 ```
 
-## jOOQ y codigo generado
+---
 
-El proyecto usa plugin jOOQ configurado en `Backend/build.gradle.kts`.
+## Desarrollo local (sin Docker)
 
-Regenerar clases jOOQ:
+### Backend
 
-```powershell
+```bash
 cd Backend
-.\gradlew.bat generateJooq
+# Windows
+.\gradlew.bat bootRun --args="--spring.profiles.active=dev"
+
+# Linux/Mac
+./gradlew bootRun --args="--spring.profiles.active=dev"
 ```
 
-Nota importante:
-- En esta rama, la salida de jOOQ esta configurada a `src/main/java`.
+Requiere PostgreSQL corriendo en `localhost:5436` con la BD `mdva` inicializada (`DB/init-docker.sql`).
+
+### Frontend
+
+```bash
+cd Frontend
+npm install
+npm run dev    # http://localhost:5173
+```
+
+Variables necesarias en `Frontend/.env`:
+```
+VITE_GOOGLE_MAPS_KEY=<tu_api_key>
+VITE_API_BASE_URL=http://localhost:8080
+```
+
+### Regenerar código JOOQ
+
+Con PostgreSQL corriendo en el puerto 5436:
+
+```bash
+cd Backend
+.\gradlew.bat generateJooq   # Windows
+./gradlew generateJooq        # Linux/Mac
+```
+
+---
+
+## Base de datos
+
+**Motor:** PostgreSQL 16  
+**Puerto host:** 5436 (→ 5432 interno)  
+**Base de datos:** `mdva`  
+**Usuario:** `postgres` / **Password:** `cambiame-db-password` (desarrollo)
+
+**Tablas principales:**
+
+| Tabla | Descripción |
+|---|---|
+| `municipios` | 10 municipios del Valle de Aburrá |
+| `comunas` | 21 comunas y corregimientos |
+| `barrios` | 46 barrios |
+| `tipos_vehiculo` | 11 tipos de vehículo |
+| `tipos_motor` | 7 tipos de motor |
+| `usuarios` | Cuentas de usuario con hash bcrypt |
+| `vehiculos` | Flota de vehículos por usuario (placa colombiana validada) |
+| `viajes` | Viajes planificados con ruta, condiciones ML y estado |
+
+**Migraciones Flyway:**
+
+| Versión | Descripción |
+|---|---|
+| V1 | Estado base (`init-docker.sql`) — tablas + datos seed |
+| V2 | Agrega coordenadas lat/lng, nombre y distancia a `viajes` |
+
+---
+
+## Modelos ML
+
+Los modelos se sirven vía `http://localhost:8081` (FastAPI).
+
+| Modelo | Archivo | AUC | F1 | Uso |
+|---|---|---|---|---|
+| Random Forest | `Data-science/models/random_forest.pkl` | 0.82 | ~0.78 | Decisión principal de alerta |
+| Regresión Logística | `Data-science/models/regresion_logistica.pkl` | — | 0.78 | Referencia complementaria |
+
+- Entrenados con datos del SIATA + Open-Meteo (Valle de Aburrá).
+- Versión scikit-learn **1.4.2** fijada — no cambiar sin re-entrenar.
+- Mejora desde línea base: F1 0.65 → 0.78 (+20%).
+
+> Nota: uno de los dos modelos puede no estar en el repositorio por tamaño. El ML Service arranca en modo tolerante a fallos y retorna HTTP 503 si se solicita un modelo no cargado.
+
+---
+
+## CI/CD
+
+Configurado parcialmente con GitHub Actions (`./github/workflows/release.yml`). El pipeline está en progreso (HU025); algunos workflows se marcan como fallidos en pushes regulares.
+
+---
+
+## Documentación técnica
+
+| Documento | Descripción |
+|---|---|
+| [Informe_Tecnico.md](Informe_Tecnico.md) | Arquitectura, esquema de BD, flujo de datos, decisiones técnicas |
+| [Manual_Usuario.md](Manual_Usuario.md) | Guía de uso con flujos paso a paso y escenarios cotidianos |
+| [Manual_Pruebas.md](Manual_Pruebas.md) | Casos de prueba, resultados de validación ML y pruebas piloto UX |
+| [Backend/MDVA_Documentacion_Sprint3.md](Backend/MDVA_Documentacion_Sprint3.md) | Documentación detallada del Sprint 3 (Camilo Ardila) |
+
+---
 
 ## Troubleshooting
 
-1. Error de conexion a PostgreSQL
-- Verifica que PostgreSQL este arriba en `localhost:5432`.
-- Confirma usuario/password en `application.yml` o variables de entorno.
+**El routing-service tarda mucho en arrancar**  
+Es normal en el primer arranque: descarga el grafo OSM del Valle de Aburrá y puede tardar 2-5 minutos. El healthcheck tiene `start_period: 120s`. Monitorea con `docker compose logs routing-service`.
 
-2. Endpoints de ubicaciones retornan vacio
-- Asegura que ejecutaste `Backend/DB/init.sql` en la base `mdva`.
+**El backend falla al conectarse a la BD**  
+Verifica que el contenedor `mdva-postgres` pasó su healthcheck (`pg_isready`). El backend depende del healthcheck, no solo del arranque del contenedor.
 
-3. `POST /api/weather/current` devuelve 400
-- Revisa que `latitude` y `longitude` esten dentro de rango.
+**Error de JOOQ: clase no encontrada**  
+Regenera el código JOOQ con `./gradlew generateJooq` y reconstruye el backend.
 
-4. Error por version de Java
-- Ejecuta con JDK 21 para coincidir con `build.gradle.kts`.
+**`POST /api/viajes/planificar` devuelve 502**  
+Verifica que `mdva-ml` está corriendo: `curl http://localhost:8081/health`. Si retorna 503, el modelo `.pkl` no está disponible en disco.
 
-## Estado actual
+**Frontend no carga el mapa (pantalla en blanco)**  
+Verifica que `VITE_GOOGLE_MAPS_KEY` tiene un valor válido en `.env.production` antes del build de Docker.
 
-El backend esta listo para integrarse con frontend web o app movil como proveedor de:
-- Catalogo geografico administrativo.
-- Clima actual por coordenadas.
-- Endpoints de observabilidad basica.
+**El gradlew falla con "bad interpreter" en Linux**  
+El archivo `gradlew` tiene line endings CRLF. El Dockerfile lo corrige automáticamente con `sed`. Si ejecutas fuera de Docker en Linux: `sed -i 's/\r$//' gradlew && chmod +x gradlew`.
+
+**Puerto 5436 en uso**  
+El mapeo es no estándar para evitar conflictos con instalaciones locales de PostgreSQL. Si el puerto 5436 también está ocupado, cambia el mapeo en `docker-compose.dev.yml` y actualiza `build.gradle.kts` → `generateJooq` URL.

@@ -87,21 +87,6 @@ public class GoogleMapsServiceImpl implements GoogleMapsService {
     private static final double BYPASS_LAT = 6.1203;
     private static final double BYPASS_LNG = -75.4562;
 
-    /**
-     * Retorna true cuando la línea origen→destino atraviesa el corredor del Túnel de Oriente,
-     * es decir, cuando un extremo está en el Valle de Aburrá (lng oeste del túnel)
-     * y el otro en el Altiplano antioqueño (lng este del túnel),
-     * ambos dentro del rango de latitud de la zona metropolitana de Medellín.
-     */
-    private boolean routeCrossesTunelOriente(LocationPointDTO origin, LocationPointDTO destination) {
-        double splitLng = -75.45;
-        boolean originInArea = origin.getLat() > 6.0 && origin.getLat() < 6.35;
-        boolean destInArea   = destination.getLat() > 6.0 && destination.getLat() < 6.35;
-        boolean originWest   = origin.getLng() < splitLng;
-        boolean destWest     = destination.getLng() < splitLng;
-        return originInArea && destInArea && (originWest != destWest);
-    }
-
     // ── Ruta óptima ───────────────────────────────────────────────────────────
 
     @Override
@@ -125,7 +110,7 @@ public class GoogleMapsServiceImpl implements GoogleMapsService {
 
         // Desvío por Túnel de Oriente: waypoint en vía Las Palmas (primer lugar para que
         // Google lo respete como punto obligatorio antes que los waypoints del usuario).
-        if (avoidTunelOriente && routeCrossesTunelOriente(origin, destination)) {
+        if (avoidTunelOriente) {
             wpStrings.add(BYPASS_LAT + "," + BYPASS_LNG);
             log.info("Tunel de Oriente restringido para este vehiculo: inyectando desvio via Las Palmas");
         }

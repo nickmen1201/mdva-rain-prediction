@@ -33,4 +33,4 @@ ENV RAIN_MODEL_PATH=/app/cache/rain_model.joblib
 HEALTHCHECK --interval=15s --timeout=10s --retries=8 --start-period=120s \
     CMD curl -f http://localhost:8000/health || exit 1
 
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["sh", "-c", "uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000}"]

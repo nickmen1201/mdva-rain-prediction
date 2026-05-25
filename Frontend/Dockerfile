@@ -6,33 +6,30 @@ FROM node:24-alpine AS builder
 
 WORKDIR /app
 
-# Instalar dependencias primero (cache de capas)
 COPY package.json package-lock.json ./
 RUN npm ci
 
-# Copiar código fuente y variables de entorno
 COPY . .
 
-# Build de producción
+# VITE_API_URL se inyecta como build arg para que Vite lo bake en el bundle
+ARG VITE_API_URL=""
+ARG VITE_GOOGLE_MAPS_KEY=""
+ENV VITE_API_URL=$VITE_API_URL
+ENV VITE_GOOGLE_MAPS_KEY=$VITE_GOOGLE_MAPS_KEY
+
 RUN npm run build
 
 # =============================================================================
-# Etapa 2: servir con nginx
+# Etapa 2: servir con nginx (Railway maneja HTTPS en el edge, no en el contenedor)
 FROM nginx:alpine AS runtime
 
-RUN apk add --no-cache openssl \
-    && mkdir -p /etc/nginx/certs \
-    && openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
-      -keyout /etc/nginx/certs/mdva-dev.key \
-      -out /etc/nginx/certs/mdva-dev.crt \
-      -subj "/CN=mdva-dev"
-
-# Copiar el build generado
 COPY --from=builder /app/dist /usr/share/nginx/html
+COPY nginx.conf /etc/nginx/conf.d/default.conf.template
 
-# Configuración de nginx para SPA (React Router)
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+RUN apk add --no-cache gettext
+
+ENV PORT=80
 
 EXPOSE 80
 
-CMD ["nginx", "-g", "daemon off;"]
+CMD ["/bin/sh", "-c", "envsubst '${PORT}' < /etc/nginx/conf.d/default.conf.template > /etc/nginx/conf.d/default.conf && nginx -g 'daemon off;'"]

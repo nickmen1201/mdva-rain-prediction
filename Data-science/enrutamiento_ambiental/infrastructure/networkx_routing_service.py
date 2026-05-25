@@ -74,18 +74,15 @@ class NetworkXRoutingService(RoutingService):
         except RouteNotFoundError:
             pass
         
-        # Ruta 3: Ruta más seca (máxima penalización por lluvia para evitar zonas húmedas)
-        # Ahora también se activa si MDVA predice lluvia
-        mdva_prob = mdva.get("probabilidad_rf", 0.0)
-        if weather_stats["probability"] > 10 or mdva_prob > 0.3:
-            try:
-                dry_route = self._build_route(graph, orig_node, dest_node,
-                                            weight_func=lambda u,v,d: get_weight(u,v,d, rain_sensitivity=3.0),
-                                            route_type="dryest", stats=weather_stats)
-                if not routes or abs(dry_route.distance_meters - routes[0].distance_meters) > 100:
-                    routes.append(dry_route)
-            except RouteNotFoundError:
-                pass
+        # Ruta 3: Ruta más seca — siempre se calcula para que el usuario pueda elegir
+        try:
+            dry_route = self._build_route(graph, orig_node, dest_node,
+                                        weight_func=lambda u,v,d: get_weight(u,v,d, rain_sensitivity=3.0),
+                                        route_type="dryest", stats=weather_stats)
+            if not routes or abs(dry_route.distance_meters - routes[0].distance_meters) > 50:
+                routes.append(dry_route)
+        except RouteNotFoundError:
+            pass
         
         if not routes:
             raise RouteNotFoundError()

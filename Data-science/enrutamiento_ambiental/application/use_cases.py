@@ -193,7 +193,14 @@ class FindBestRouteUseCase:
         
         # Ruta simple (sin paradas)
         routes = self.routing_svc.find_multiple_routes(origin, destination, graph, vehicle_type=request.vehicle_type)
+
+        # Seleccionar ruta principal según route_type solicitado
+        requested_type = getattr(request, "route_type", "fastest")
         best = routes[0]
+        for r in routes:
+            if r.route_type == requested_type:
+                best = r
+                break
         
         # Generar steps de navegación a partir del path
         steps = self._generate_nav_steps(best)

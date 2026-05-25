@@ -84,6 +84,7 @@ class SpringRouteRequest(BaseModel):
     destino: Coordinate
     paradas: Optional[List[Coordinate]] = None
     vehicle_type: str = "car"
+    route_type: str = "fastest"  # fastest | dryest | shortest
 
 class SpringRouteStep(BaseModel):
     """Paso de navegación compatible con RouteStepDTO de Spring Boot."""

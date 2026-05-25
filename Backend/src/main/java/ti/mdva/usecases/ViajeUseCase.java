@@ -157,19 +157,23 @@ public class ViajeUseCase {
             log.info("Métricas obtenidas: probRF={}, factor_lluvia={}, elevacion={}",
                     metrics.mdvaProbabilidadRf(), metrics.rainFactor(), metrics.elevationAvg());
 
-            // 4b. Si lluvia > 40%, calcular ruta más seca como alternativa
-            if (metrics.mdvaProbabilidadRf() > 0.40) {
-                try {
-                    log.info("Lluvia > 40% — calculando ruta 'dryest' alternativa...");
-                    EnvironmentalRoutingService.EnvironmentalRouteResult driest =
-                            environmentalRoutingService.getRoute(origen, destino, waypoints, "dryest", vehicleTypeStr);
+            // 4b. Calcular ruta más seca como alternativa (siempre, para que el usuario pueda elegir)
+            try {
+                log.info("Calculando ruta 'dryest' alternativa...");
+                EnvironmentalRoutingService.EnvironmentalRouteResult driest =
+                        environmentalRoutingService.getRoute(origen, destino, waypoints, "dryest", vehicleTypeStr);
+                // Solo mostrar si la polyline es diferente a la ruta principal de Google
+                if (driest.overviewPolyline() != null && !driest.overviewPolyline().isEmpty()
+                        && !driest.overviewPolyline().equals(route.overviewPolyline())) {
                     rutaAlternaPolyline  = driest.overviewPolyline();
                     rutaAlternaTiempoMin = (int) Math.ceil(driest.durationSeconds() / 60.0);
                     rutaAlternaTipo      = "dryest";
                     log.info("Ruta dryest: {}m en {}min", driest.distanceMeters(), rutaAlternaTiempoMin);
-                } catch (Exception ex) {
-                    log.warn("No se pudo obtener ruta dryest ({}), se omite", ex.getMessage());
+                } else {
+                    log.info("Ruta dryest idéntica a principal, no se muestra alterna");
                 }
+            } catch (Exception ex) {
+                log.warn("No se pudo obtener ruta dryest ({}), se omite", ex.getMessage());
             }
 
         } catch (Exception e) {

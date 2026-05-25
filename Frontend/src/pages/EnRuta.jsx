@@ -44,7 +44,7 @@ function bearingBetween(a, b) {
 }
 
 // ── Subcomponent: draws route, animated GPS marker ────────────────────────────
-function obtenerPosicionActual() {
+function leerGeolocalizacion(options) {
   return new Promise((resolve, reject) => {
     if (!navigator.geolocation) {
       reject(new Error('NO_GEOLOCATION'));
@@ -54,9 +54,18 @@ function obtenerPosicionActual() {
     navigator.geolocation.getCurrentPosition(
       ({ coords }) => resolve({ lat: coords.latitude, lng: coords.longitude }),
       reject,
-      { enableHighAccuracy: true, maximumAge: 0, timeout: 12000 },
+      options,
     );
   });
+}
+
+async function obtenerPosicionActual() {
+  try {
+    return await leerGeolocalizacion({ enableHighAccuracy: true, maximumAge: 15000, timeout: 8000 });
+  } catch (err) {
+    if (err?.code === 1) throw err;
+    return leerGeolocalizacion({ enableHighAccuracy: false, maximumAge: 120000, timeout: 7000 });
+  }
 }
 
 function CapaRuta({ viaje, posicion, heading, pasoActivo, theme, paradas }) {
@@ -339,7 +348,7 @@ export default function EnRuta() {
       lastGpsPoint.current = originPoint;
     } catch (err) {
       console.warn('No se pudo obtener GPS fresco para el siguiente tramo.', err);
-      originPoint = posicionRef.current ?? posicion;
+      originPoint = posicionRef.current ?? posicion ?? viaje.destino;
     }
 
     if (!originPoint?.lat || !originPoint?.lng) {
@@ -369,7 +378,9 @@ export default function EnRuta() {
         origen: {
           lat: originPoint.lat,
           lng: originPoint.lng,
-          displayName: "Mi ubicación actual",
+          displayName: originPoint === viaje.destino
+            ? (viaje.destino?.displayName ?? 'Parada actual')
+            : "Mi ubicación actual",
         },
         destino: nextDest,
         paradas: [],

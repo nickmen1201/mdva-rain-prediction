@@ -53,6 +53,8 @@ class EntradaPrediccion(BaseModel):
     velocidad_viento_ms:    float = Field(..., example=2.3,   description="Velocidad del viento (m/s)")
     hora:                   int   = Field(..., ge=0, le=23,    example=14,   description="Hora del día (0–23)")
     mes:                    int   = Field(..., ge=1, le=12,    example=4,    description="Mes del año (1–12)")
+    precip_lag_1h_mm:       float = Field(default=0.0, ge=0, example=0.0,
+                                          description="Precipitación caída en la última hora (mm)")
 
 
 class ResultadoPrediccion(BaseModel):
@@ -77,6 +79,7 @@ def preparar_features(entrada: EntradaPrediccion) -> np.ndarray:
         entrada.velocidad_viento_ms,
         hora_sin, hora_cos,
         mes_sin,  mes_cos,
+        entrada.precip_lag_1h_mm,
     ]])
 
 

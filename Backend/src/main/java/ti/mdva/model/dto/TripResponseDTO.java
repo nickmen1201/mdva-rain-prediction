@@ -49,6 +49,11 @@ public class TripResponseDTO {
     private AlertaNivel alertaNivel;
     private String alertaMensaje;
 
+    // ── Ruta alternativa (más seca, solo si lluvia > 40%) ─────────────────────
+    private String rutaAlternaPolyline;
+    private Integer rutaAlternaTiempoMin;
+    private String rutaAlternaTipo;
+
     // ── Paradas intermedias (Sprint 5.3) ──────────────────────────────────────
     /** Lista vacía si es viaje directo, o ordenada por `orden` si es multi-destino. */
     private List<ParadaDTO> paradas;

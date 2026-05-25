@@ -112,6 +112,13 @@ public class ViajeUseCase {
         String travelMode        = tipoVehiculo == TripRequestDTO.TipoVehiculo.BICICLETA ? "bicycling" : "driving";
         boolean avoidTunelOriente = tipoVehiculo == TripRequestDTO.TipoVehiculo.MOTO;
 
+        // Mapear TipoVehiculo → vehicle_type del routing service
+        String vehicleTypeStr = switch (tipoVehiculo) {
+            case MOTO      -> "moto";
+            case BICICLETA -> "bicycle";
+            default        -> "car";
+        };
+
         // 3. Ruta con Google Maps para tráfico en tiempo real y waypoints
         GoogleMapsService.RouteResult route = googleMapsService.getOptimalRoute(origen, destino, waypoints, optimizarParadas, travelMode, avoidTunelOriente);
         List<LocationPointDTO> paradasOrdenadas = ordenarWaypoints(waypoints, route.waypointOrder());
@@ -126,8 +133,10 @@ public class ViajeUseCase {
 
         // 4. OBTENER MÉTRICAS AMBIENTALES (Python: ML + SIATA + Open-Meteo)
         RainPredictionDTO prediccion;
-        String alertaNivel = "VERDE";
-        
+        String rutaAlternaPolyline = null;
+        Integer rutaAlternaTiempoMin = null;
+        String rutaAlternaTipo = null;
+
         try {
             log.info("Obteniendo métricas ambientales para enriquecer ruta de Google...");
             EnvironmentalRoutingService.EnvironmentalMetricsResult metrics =
@@ -142,14 +151,26 @@ public class ViajeUseCase {
                     .coberturaAnubosaPct(metrics.mdvaCoberturaNubosaPct())
                     .velocidadVientoMs(metrics.mdvaVelocidadVientoMs())
                     .build();
-            
-            // Opcionalmente, aquí podríamos multiplicar el tiempoBaseMin por metrics.rainFactor()
-            // pero el TripPlannerOrchestrator ya hace su propio ajuste basado en probRf.
-            // Para mantener compatibilidad con el factor de SIATA:
+
             tiempoBaseMin = (int) Math.ceil(tiempoBaseMin * metrics.rainFactor());
 
-            log.info("✓ Métricas obtenidas: probRF={}, factor_lluvia={}, elevacion={}",
+            log.info("Métricas obtenidas: probRF={}, factor_lluvia={}, elevacion={}",
                     metrics.mdvaProbabilidadRf(), metrics.rainFactor(), metrics.elevationAvg());
+
+            // 4b. Si lluvia > 40%, calcular ruta más seca como alternativa
+            if (metrics.mdvaProbabilidadRf() > 0.40) {
+                try {
+                    log.info("Lluvia > 40% — calculando ruta 'dryest' alternativa...");
+                    EnvironmentalRoutingService.EnvironmentalRouteResult driest =
+                            environmentalRoutingService.getRoute(origen, destino, waypoints, "dryest", vehicleTypeStr);
+                    rutaAlternaPolyline  = driest.overviewPolyline();
+                    rutaAlternaTiempoMin = (int) Math.ceil(driest.durationSeconds() / 60.0);
+                    rutaAlternaTipo      = "dryest";
+                    log.info("Ruta dryest: {}m en {}min", driest.distanceMeters(), rutaAlternaTiempoMin);
+                } catch (Exception ex) {
+                    log.warn("No se pudo obtener ruta dryest ({}), se omite", ex.getMessage());
+                }
+            }
 
         } catch (Exception e) {
             log.warn("Métricas ambientales no disponibles ({}), fallback a ML clásico", e.getMessage());
@@ -165,7 +186,10 @@ public class ViajeUseCase {
                 .tiempoBaseMin(tiempoBaseMin)
                 .distanciaMetros(route.distanceMeters())
                 .overviewPolyline(route.overviewPolyline())
-                .pasos(route.steps());
+                .pasos(route.steps())
+                .rutaAlternaPolyline(rutaAlternaPolyline)
+                .rutaAlternaTiempoMin(rutaAlternaTiempoMin)
+                .rutaAlternaTipo(rutaAlternaTipo);
 
         TripPlannerOrchestrator.apply(builder, prediccion, tiempoBaseMin, route.distanceMeters());
         TripResponseDTO response = builder.build();

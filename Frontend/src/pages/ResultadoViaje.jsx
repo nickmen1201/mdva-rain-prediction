@@ -39,13 +39,14 @@ export default function ResultadoViaje() {
   const location  = useLocation();
   const navigate  = useNavigate();
 
-  const [viaje,      setViaje]      = useState(location.state?.viaje ?? null);
-  const [loading,    setLoading]    = useState(!viaje);
-  const [finalizing, setFinalizing] = useState(false);
-  const [starting,   setStarting]   = useState(false);
-  const [error,      setError]      = useState(null);
-  const [gpsCheck,   setGpsCheck]   = useState('checking');
-  const [distOrigen, setDistOrigen] = useState(null);
+  const [viaje,          setViaje]          = useState(location.state?.viaje ?? null);
+  const [loading,        setLoading]        = useState(!viaje);
+  const [finalizing,     setFinalizing]     = useState(false);
+  const [starting,       setStarting]       = useState(false);
+  const [error,          setError]          = useState(null);
+  const [gpsCheck,       setGpsCheck]       = useState('checking');
+  const [distOrigen,     setDistOrigen]     = useState(null);
+  const [mostrarAlterna, setMostrarAlterna] = useState(false);
 
   const paradas = viaje?.paradasOrdenadas ?? location.state?.paradas ?? [];
   const modoParadas = viaje?.modoParadas ?? location.state?.modoParadas ?? 'ORDEN_INGRESADO';
@@ -290,10 +291,34 @@ export default function ResultadoViaje() {
         </div>
       )}
 
+      {/* ── Toggle ruta alterna ── */}
+      {viaje.rutaAlternaPolyline && (
+        <div className="fade-up" style={{ marginBottom: '0.75rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+          <button
+            className={`btn${!mostrarAlterna ? ' btn-primary' : ' btn-secondary'}`}
+            style={{ marginTop: 0, fontSize: '0.85rem', padding: '0.45rem 1rem' }}
+            onClick={() => setMostrarAlterna(false)}
+          >
+            Ver ruta mas rapida
+          </button>
+          <button
+            className={`btn${mostrarAlterna ? ' btn-primary' : ' btn-secondary'}`}
+            style={{ marginTop: 0, fontSize: '0.85rem', padding: '0.45rem 1rem' }}
+            onClick={() => setMostrarAlterna(true)}
+          >
+            Ver ruta mas seca {viaje.rutaAlternaTiempoMin ? `(${viaje.rutaAlternaTiempoMin} min)` : ''}
+          </button>
+        </div>
+      )}
+
       {/* ── Mapa ── */}
       {viaje.overviewPolyline && viaje.origen && viaje.destino && (
         <MapaRuta
-          encodedPolyline={viaje.overviewPolyline}
+          encodedPolyline={
+            mostrarAlterna && viaje.rutaAlternaPolyline
+              ? viaje.rutaAlternaPolyline
+              : viaje.overviewPolyline
+          }
           origen={viaje.origen}
           destino={viaje.destino}
           paradas={paradas}

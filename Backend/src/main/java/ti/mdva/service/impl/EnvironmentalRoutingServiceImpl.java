@@ -58,6 +58,7 @@ public class EnvironmentalRoutingServiceImpl implements EnvironmentalRoutingServ
                 "longitude", destination.getLng()
         ));
         payload.put("vehicle_type", "car");
+        payload.put("route_type", "fastest");
 
         // Paradas intermedias
         if (waypoints != null && !waypoints.isEmpty()) {
@@ -147,6 +148,93 @@ public class EnvironmentalRoutingServiceImpl implements EnvironmentalRoutingServ
                 alertaNivel,
                 alertaMensaje,
                 sugerirAlterna
+        );
+    }
+
+    @Override
+    public EnvironmentalRouteResult getRoute(
+            LocationPointDTO origin,
+            LocationPointDTO destination,
+            List<LocationPointDTO> waypoints,
+            String routeType,
+            String vehicleType
+    ) {
+        String endpoint = routingServiceUrl + "/api/v1/route/spring";
+
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("origen", Map.of(
+                "latitude", origin.getLat(),
+                "longitude", origin.getLng()
+        ));
+        payload.put("destino", Map.of(
+                "latitude", destination.getLat(),
+                "longitude", destination.getLng()
+        ));
+        payload.put("vehicle_type", vehicleType != null ? vehicleType : "car");
+        payload.put("route_type", routeType != null ? routeType : "fastest");
+
+        if (waypoints != null && !waypoints.isEmpty()) {
+            List<Map<String, Double>> paradasList = new ArrayList<>();
+            for (LocationPointDTO wp : waypoints) {
+                paradasList.add(Map.of(
+                        "latitude", wp.getLat(),
+                        "longitude", wp.getLng()
+                ));
+            }
+            payload.put("paradas", paradasList);
+        }
+
+        log.debug("Llamando al servicio de enrutamiento ambiental ({}): {}", routeType, endpoint);
+
+        JsonNode response = restTemplate.postForObject(endpoint, payload, JsonNode.class);
+
+        if (response == null) {
+            throw new RuntimeException(
+                    "El servicio de enrutamiento ambiental no respondió para ruta " + routeType);
+        }
+
+        int durationSeconds = response.path("duracionSegundos").asInt();
+        int distanceMeters  = response.path("distanciaMetros").asInt();
+        String overviewPoly = response.path("overviewPolyline").asText("");
+
+        List<RouteStepDTO> steps = new ArrayList<>();
+        JsonNode pasosNode = response.path("pasos");
+        if (pasosNode.isArray()) {
+            for (JsonNode paso : pasosNode) {
+                steps.add(RouteStepDTO.builder()
+                        .instruccion(paso.path("instruccion").asText(""))
+                        .distanciaMetros(paso.path("distanciaMetros").asInt(0))
+                        .duracionSegundos(paso.path("duracionSegundos").asInt(0))
+                        .startLat(paso.path("startLat").asDouble())
+                        .startLng(paso.path("startLng").asDouble())
+                        .endLat(paso.path("endLat").asDouble())
+                        .endLng(paso.path("endLng").asDouble())
+                        .build());
+            }
+        }
+
+        double rainFactor      = response.path("rain_factor").asDouble(1.0);
+        double rainProbability = response.path("rain_probability").asDouble(0.0);
+        double rainIntensityAvg= response.path("rain_intensity_avg").asDouble(0.0);
+        double elevationAvg    = response.path("elevation_avg").asDouble(1500.0);
+        String rType           = response.path("route_type").asText(routeType);
+        boolean mdvaLlueve     = response.path("mdva_llueve").asBoolean(false);
+        double mdvaProbRf      = response.path("mdva_probabilidad_rf").asDouble(0.0);
+        double mdvaProbRl      = response.path("mdva_probabilidad_rl").asDouble(0.0);
+        double mdvaTempC       = response.path("mdva_temperatura_c").asDouble(0.0);
+        double mdvaHumPct      = response.path("mdva_humedad_pct").asDouble(0.0);
+        double mdvaCloudPct    = response.path("mdva_cobertura_nubosa_pct").asDouble(0.0);
+        double mdvaWindMs      = response.path("mdva_velocidad_viento_ms").asDouble(0.0);
+        String alertaNivel     = response.path("alerta_nivel").asText("VERDE");
+        String alertaMensaje   = response.path("alerta_mensaje").asText("");
+        boolean sugerirAlterna = response.path("sugerir_ruta_alterna").asBoolean(false);
+
+        return new EnvironmentalRouteResult(
+                durationSeconds, distanceMeters, overviewPoly, steps,
+                rainFactor, rainProbability, rainIntensityAvg, elevationAvg,
+                rType, mdvaLlueve, mdvaProbRf, mdvaProbRl,
+                mdvaTempC, mdvaHumPct, mdvaCloudPct, mdvaWindMs,
+                alertaNivel, alertaMensaje, sugerirAlterna
         );
     }
 

@@ -78,7 +78,7 @@ public class WeatherMLServiceImpl implements WeatherMLService {
      * redondeado a 4 decimales (~11m de precisión). TTL: 60s, suficiente para
      * que múltiples puntos del heatmap o updates GPS reusen la misma respuesta.
      */
-    private static final long CACHE_TTL_MS = 60_000L;
+    private static final long CACHE_TTL_MS = 180_000L;
     private final ConcurrentHashMap<String, CachedPrediction> predictionCache = new ConcurrentHashMap<>();
     private record CachedPrediction(RainPredictionDTO prediction, long timestamp) {}
 

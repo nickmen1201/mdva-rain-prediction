@@ -32,6 +32,23 @@ public interface EnvironmentalRoutingService {
     );
 
     /**
+     * Obtiene la ruta óptima con tipo de ruta y vehículo explícitos.
+     *
+     * @param origin       punto de origen
+     * @param destination  punto de destino
+     * @param waypoints    paradas intermedias
+     * @param routeType    "fastest", "shortest" o "dryest"
+     * @param vehicleType  "car", "moto", "bicycle" o "walk"
+     */
+    EnvironmentalRouteResult getRoute(
+            LocationPointDTO origin,
+            LocationPointDTO destination,
+            List<LocationPointDTO> waypoints,
+            String routeType,
+            String vehicleType
+    );
+
+    /**
      * Obtiene únicamente las métricas ambientales (SIATA + MDVA ML + Open-Meteo) para un punto.
      * Ideal para enriquecer rutas generadas por otros motores (ej. Google Maps).
      */

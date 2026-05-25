@@ -85,7 +85,7 @@ def get_environmental_metrics(
     """
     try:
         # Usamos el weather_service inyectado
-        ws = use_case.routing_service.weather_service
+        ws = use_case.routing_svc.weather_service
         stats = ws.get_weather_stats(request.origen.latitude, request.origen.longitude)
         return stats
     except Exception as e:

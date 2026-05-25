@@ -242,10 +242,10 @@ export default function EnRuta() {
   } = useDeviceOrientationHeading();
   
   // Pending stops for trip chaining
-  const [pendingStops]  = useState(state?.pendingStops ?? []);
+  const [pendingStops, setPendingStops] = useState(state?.pendingStops ?? []);
 
   // Paradas intermedias para marcadores en mapa (estables, no cambian)
-  const [paradas] = useState(state?.paradas ?? []);
+  const [paradas, setParadas] = useState(state?.paradas ?? []);
   const itinerary = state?.itinerary ?? null;
   const parentViajeId = state?.parentViajeId ?? null;
 
@@ -256,6 +256,21 @@ export default function EnRuta() {
   const pollingTimer = useRef(null);
   const transitionRef = useRef(false);
   const cameraHeading = gyroRotationEnabled ? (deviceHeading ?? heading) : heading;
+
+  useEffect(() => {
+    if (!state?.viaje) return;
+    setViaje(state.viaje);
+    setPendingStops(state.pendingStops ?? []);
+    setParadas(state.paradas ?? []);
+    setPasoActivo(0);
+    setDistRestante(null);
+    setEta(null);
+    setAlertaActiva(null);
+    setArrivalPromptOpen(false);
+    setFinishPromptOpen(false);
+    setTransitioning(false);
+    transitionRef.current = false;
+  }, [id, state]);
 
   // Sync theme
   useEffect(() => {
@@ -389,12 +404,26 @@ export default function EnRuta() {
 
       // 3. Create next trip
       const nextViaje = await planificarViaje(payload);
+      const nextViajeConContexto = {
+        ...nextViaje,
+        idVehiculo: idVehiculoViaje,
+        tipoVehiculo: tipoVehiculoViaje,
+      };
+
+      setViaje(nextViajeConContexto);
+      setPendingStops(remaining);
+      setPasoActivo(0);
+      setDistRestante(null);
+      setEta(nextViaje.tiempoEstimadoMin ? Date.now() + nextViaje.tiempoEstimadoMin * 60_000 : null);
+      setAlertaActiva(null);
+      setArrivalPromptOpen(false);
+      setFinishPromptOpen(false);
       
       // 4. Reload page for next leg
       navigate(`/viaje/${nextViaje.idViaje}/en-ruta`, {
         replace: true,
         state: {
-          viaje: nextViaje,
+          viaje: nextViajeConContexto,
           pendingStops: remaining,
           paradas,
           itinerary,
@@ -404,11 +433,8 @@ export default function EnRuta() {
         }
       });
       
-      // Reset flags after small delay
-      setTimeout(() => {
-        transitionRef.current = false;
-        setTransitioning(false);
-      }, 2000);
+      transitionRef.current = false;
+      setTransitioning(false);
       
     } catch (err) {
       console.error("Chaining failed:", err);

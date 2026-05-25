@@ -355,18 +355,54 @@ export default function PlanificarViaje() {
             <label>Tipo de vehiculo</label>
             <div className="route-mode-options vehicle-mode-options">
               {[
-                { id: 'CARRO',     label: 'Carro',     desc: 'Todos los tuneles y autopistas habilitados' },
-                { id: 'MOTO',      label: 'Moto',       desc: 'Evita el Tunel de Oriente (restringido)' },
-                { id: 'BICICLETA', label: 'Bicicleta',  desc: 'Vias ciclistas, sin tuneles ni autopistas' },
+                {
+                  id: 'CARRO',
+                  label: 'Carro',
+                  icon: (
+                    <svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="2" y="11" width="20" height="6" rx="1" />
+                      <path d="M5 11l2-4h10l2 4" />
+                      <circle cx="6.5" cy="17" r="1.5" />
+                      <circle cx="17.5" cy="17" r="1.5" />
+                    </svg>
+                  ),
+                },
+                {
+                  id: 'MOTO',
+                  label: 'Moto',
+                  icon: (
+                    <svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                      <circle cx="5" cy="16" r="3" />
+                      <circle cx="19" cy="16" r="3" />
+                      <path d="M8 16l2-5h4l4 5" />
+                      <path d="M14 11l2-3h3" />
+                    </svg>
+                  ),
+                },
+                {
+                  id: 'BICICLETA',
+                  label: 'Bicicleta',
+                  icon: (
+                    <svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                      <circle cx="5" cy="16" r="3" />
+                      <circle cx="19" cy="16" r="3" />
+                      <path d="M5 16l4-7 3 7 5-7" />
+                      <path d="M17 9l2 7" />
+                      <path d="M15 7h4" />
+                      <path d="M7 9h4" />
+                    </svg>
+                  ),
+                },
               ].map((v) => (
                 <button
                   key={v.id}
                   type="button"
                   className={`route-mode-option${tipoVehiculo === v.id ? ' active' : ''}`}
+                  style={{ alignItems: 'center', justifyContent: 'center', minHeight: '88px', gap: '0.5rem' }}
                   onClick={() => setTipoVehiculo(v.id)}
                 >
-                  <strong>{v.label}</strong>
-                  <span>{v.desc}</span>
+                  {v.icon}
+                  <strong style={{ fontSize: '0.9rem', letterSpacing: '0.04em' }}>{v.label}</strong>
                 </button>
               ))}
             </div>

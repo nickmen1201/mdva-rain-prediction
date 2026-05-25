@@ -507,15 +507,15 @@ export default function EnRuta() {
         style={{ width: '100%', height: '100%' }}
         onDragStart={() => setCentering(false)}
       >
-        <WeatherHeatmapLayer
-          points={heatmapPoints}
-          visible={heatmapEnabled && !heatmapError}
-        />
         <NavigationCamera
           enabled={centering}
           position={posicion}
           heading={cameraHeading}
           recenterTick={recenterTick}
+        />
+        <WeatherHeatmapLayer
+          points={heatmapPoints}
+          visible={heatmapEnabled && !heatmapError}
         />
         {viaje && (
           <CapaRuta

@@ -76,7 +76,7 @@ export default function MapaCiudad() {
         disableDefaultUI={false}
         style={{ width: '100%', height: '100%' }}
       >
-        <WeatherHeatmapLayer points={points} visible={heatmapEnabled && !error} />
+        <WeatherHeatmapLayer points={points} visible={heatmapEnabled && !error} opacity={0.58} />
       </Map>
 
       <div style={{

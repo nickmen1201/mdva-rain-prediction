@@ -321,9 +321,16 @@ export default function PlanificarViaje() {
 
     try {
       const response = await planificarViaje(payload);
+      const viajePlanificado = {
+        ...response,
+        idVehiculo: payload.idVehiculo,
+        tipoVehiculo,
+      };
       navigate(`/viaje/${response.idViaje}`, {
         state: {
-          viaje: response,
+          viaje: viajePlanificado,
+          idVehiculo: payload.idVehiculo,
+          tipoVehiculo,
           paradas: response.paradasOrdenadas?.length ? response.paradasOrdenadas : validParadas,
           modoParadas: response.modoParadas ?? payload.modoParadas,
         },
@@ -528,6 +535,7 @@ export default function PlanificarViaje() {
                 <WeatherHeatmapLayer
                   points={heatmapPoints}
                   visible={!heatmapError}
+                  opacity={0.58}
                 />
               </Map>
             </div>

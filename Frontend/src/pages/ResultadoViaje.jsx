@@ -49,6 +49,8 @@ export default function ResultadoViaje() {
 
   const paradas = viaje?.paradasOrdenadas ?? location.state?.paradas ?? [];
   const modoParadas = viaje?.modoParadas ?? location.state?.modoParadas ?? 'ORDEN_INGRESADO';
+  const idVehiculoViaje = viaje?.idVehiculo ?? location.state?.idVehiculo ?? null;
+  const tipoVehiculoViaje = viaje?.tipoVehiculo ?? location.state?.tipoVehiculo ?? 'CARRO';
 
   useEffect(() => {
     if (viaje) return;
@@ -101,7 +103,8 @@ export default function ResultadoViaje() {
       const primeraParada = paradas[0];
       const cola = [...paradas.slice(1), viaje.destino];
       const primerTramo = await planificarViaje({
-        idVehiculo: viaje.idVehiculo ?? null,
+        idVehiculo: idVehiculoViaje,
+        tipoVehiculo: tipoVehiculoViaje,
         origen: viaje.origen,
         destino: primeraParada,
         paradas: [],
@@ -110,11 +113,17 @@ export default function ResultadoViaje() {
 
       navigate(`/viaje/${primerTramo.idViaje}/en-ruta`, {
         state: {
-          viaje: primerTramo,
+          viaje: {
+            ...primerTramo,
+            idVehiculo: idVehiculoViaje,
+            tipoVehiculo: tipoVehiculoViaje,
+          },
           pendingStops: cola,
           paradas,
           itinerary: [viaje.origen, ...paradas, viaje.destino],
           parentViajeId: viaje.idViaje,
+          idVehiculo: idVehiculoViaje,
+          tipoVehiculo: tipoVehiculoViaje,
         },
       });
     } catch (err) {

@@ -94,8 +94,8 @@ services:
   # ---------------------------------------------------------------------------
   backend:
     build:
-      context: .                         # Raíz del repo — el Dockerfile usa paths Backend/src, Backend/gradlew, etc.
-      dockerfile: Backend/Dockerfile
+      context: ./Backend
+      dockerfile: Dockerfile
     container_name: mdva-backend
     restart: unless-stopped
     ports:

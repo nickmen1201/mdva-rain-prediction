@@ -44,6 +44,30 @@ function bearingBetween(a, b) {
 }
 
 // ── Subcomponent: draws route, animated GPS marker ────────────────────────────
+function leerGeolocalizacion(options) {
+  return new Promise((resolve, reject) => {
+    if (!navigator.geolocation) {
+      reject(new Error('NO_GEOLOCATION'));
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      ({ coords }) => resolve({ lat: coords.latitude, lng: coords.longitude }),
+      reject,
+      options,
+    );
+  });
+}
+
+async function obtenerPosicionActual() {
+  try {
+    return await leerGeolocalizacion({ enableHighAccuracy: true, maximumAge: 15000, timeout: 8000 });
+  } catch (err) {
+    if (err?.code === 1) throw err;
+    return leerGeolocalizacion({ enableHighAccuracy: false, maximumAge: 120000, timeout: 7000 });
+  }
+}
+
 function CapaRuta({ viaje, posicion, heading, pasoActivo, theme, paradas }) {
   const map = useMap();
   const marcadorRef  = useRef(null);
@@ -218,10 +242,10 @@ export default function EnRuta() {
   } = useDeviceOrientationHeading();
   
   // Pending stops for trip chaining
-  const [pendingStops]  = useState(state?.pendingStops ?? []);
+  const [pendingStops, setPendingStops] = useState(state?.pendingStops ?? []);
 
   // Paradas intermedias para marcadores en mapa (estables, no cambian)
-  const [paradas] = useState(state?.paradas ?? []);
+  const [paradas, setParadas] = useState(state?.paradas ?? []);
   const itinerary = state?.itinerary ?? null;
   const parentViajeId = state?.parentViajeId ?? null;
 
@@ -232,6 +256,21 @@ export default function EnRuta() {
   const pollingTimer = useRef(null);
   const transitionRef = useRef(false);
   const cameraHeading = gyroRotationEnabled ? (deviceHeading ?? heading) : heading;
+
+  useEffect(() => {
+    if (!state?.viaje) return;
+    setViaje(state.viaje);
+    setPendingStops(state.pendingStops ?? []);
+    setParadas(state.paradas ?? []);
+    setPasoActivo(0);
+    setDistRestante(null);
+    setEta(null);
+    setAlertaActiva(null);
+    setArrivalPromptOpen(false);
+    setFinishPromptOpen(false);
+    setTransitioning(false);
+    transitionRef.current = false;
+  }, [id, state]);
 
   // Sync theme
   useEffect(() => {
@@ -314,9 +353,21 @@ export default function EnRuta() {
   // ── Auto-Chaining Logic: Detect stop arrival ─────────────────────────────
   const handleAutoNextLeg = useCallback(async () => {
     if (!viaje || pendingStops.length === 0) return;
-    const originPoint = posicion ?? viaje.destino;
+    setError(null);
+
+    let originPoint = null;
+    try {
+      originPoint = await obtenerPosicionActual();
+      setPosicion(originPoint);
+      posicionRef.current = originPoint;
+      lastGpsPoint.current = originPoint;
+    } catch (err) {
+      console.warn('No se pudo obtener GPS fresco para el siguiente tramo.', err);
+      originPoint = posicionRef.current ?? posicion ?? viaje.destino;
+    }
+
     if (!originPoint?.lat || !originPoint?.lng) {
-      setError('No se pudo iniciar el siguiente tramo porque falta la ubicacion actual.');
+      setError('No se pudo iniciar el siguiente tramo porque no pudimos obtener tu ubicacion actual.');
       transitionRef.current = false;
       setTransitioning(false);
       return;
@@ -324,19 +375,27 @@ export default function EnRuta() {
 
     try {
       // 1. Finish current leg
-      await finalizarViaje(id);
+      try {
+        await finalizarViaje(id);
+      } catch (err) {
+        if (err.response?.status !== 409) throw err;
+      }
       
       // 2. Prepare next leg
       const nextDest = pendingStops[0];
       const remaining = pendingStops.slice(1);
       
+      const idVehiculoViaje = viaje.idVehiculo ?? state?.idVehiculo ?? null;
+      const tipoVehiculoViaje = viaje.tipoVehiculo ?? state?.tipoVehiculo ?? 'CARRO';
       const payload = {
-        idVehiculo: viaje.idVehiculo,
-        tipoVehiculo: viaje.tipoVehiculo ?? undefined,
+        idVehiculo: idVehiculoViaje,
+        tipoVehiculo: tipoVehiculoViaje,
         origen: {
           lat: originPoint.lat,
           lng: originPoint.lng,
-          displayName: posicion ? "Mi ubicación actual" : (viaje.destino?.displayName ?? 'Parada actual'),
+          displayName: originPoint === viaje.destino
+            ? (viaje.destino?.displayName ?? 'Parada actual')
+            : "Mi ubicación actual",
         },
         destino: nextDest,
         paradas: [],
@@ -345,32 +404,49 @@ export default function EnRuta() {
 
       // 3. Create next trip
       const nextViaje = await planificarViaje(payload);
+      const nextViajeConContexto = {
+        ...nextViaje,
+        idVehiculo: idVehiculoViaje,
+        tipoVehiculo: tipoVehiculoViaje,
+      };
+
+      setViaje(nextViajeConContexto);
+      setPendingStops(remaining);
+      setPasoActivo(0);
+      setDistRestante(null);
+      setEta(nextViaje.tiempoEstimadoMin ? Date.now() + nextViaje.tiempoEstimadoMin * 60_000 : null);
+      setAlertaActiva(null);
+      setArrivalPromptOpen(false);
+      setFinishPromptOpen(false);
       
       // 4. Reload page for next leg
       navigate(`/viaje/${nextViaje.idViaje}/en-ruta`, {
         replace: true,
         state: {
-          viaje: nextViaje,
+          viaje: nextViajeConContexto,
           pendingStops: remaining,
           paradas,
           itinerary,
           parentViajeId,
+          idVehiculo: idVehiculoViaje,
+          tipoVehiculo: tipoVehiculoViaje,
         }
       });
       
-      // Reset flags after small delay
-      setTimeout(() => {
-        transitionRef.current = false;
-        setTransitioning(false);
-      }, 2000);
+      transitionRef.current = false;
+      setTransitioning(false);
       
     } catch (err) {
       console.error("Chaining failed:", err);
       transitionRef.current = false;
       setTransitioning(false);
-      setError('No se pudo iniciar el siguiente tramo.');
+      const msg = err.response?.data?.detail
+        ?? err.response?.data?.message
+        ?? err.message
+        ?? 'No se pudo iniciar el siguiente tramo.';
+      setError(msg);
     }
-  }, [id, itinerary, navigate, paradas, parentViajeId, pendingStops, posicion, viaje]);
+  }, [id, itinerary, navigate, paradas, parentViajeId, pendingStops, posicion, state, viaje]);
 
   // Auto-Chaining Logic: Detect stop arrival
   useEffect(() => {
@@ -531,6 +607,7 @@ export default function EnRuta() {
         <WeatherHeatmapLayer
           points={heatmapPoints}
           visible={heatmapEnabled && !heatmapError}
+          opacity={0.38}
         />
         {viaje && (
           <CapaRuta

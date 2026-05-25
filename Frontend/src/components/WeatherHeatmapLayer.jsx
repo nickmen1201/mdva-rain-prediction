@@ -176,7 +176,7 @@ function buildRainRaster(points) {
   };
 }
 
-export default function WeatherHeatmapLayer({ points = [], visible = true }) {
+export default function WeatherHeatmapLayer({ points = [], visible = true, opacity = 0.64 }) {
   const map = useMap();
   const overlayRef = useRef(null);
 
@@ -201,12 +201,15 @@ export default function WeatherHeatmapLayer({ points = [], visible = true }) {
       id: 'mdva-rain-cloud',
       bounds: raster.bounds,
       image: raster.canvas,
-      opacity: 0.92,
+      opacity,
       pickable: false,
+      parameters: {
+        depthTest: false,
+      },
     });
 
     overlayRef.current.setProps({ layers: [layer] });
-  }, [map, points, visible]);
+  }, [map, opacity, points, visible]);
 
   useEffect(() => () => {
     overlayRef.current?.setMap(null);

@@ -15,3 +15,9 @@ Thumbs.db
 
 # Logs
 *.log
+
+# Local Docker overrides (no compartir: evita choques con deploy/prod)
+docker-compose.local.yml
+docker-compose.*.local.yml
+**/Dockerfile.local
+**/nginx.local.conf

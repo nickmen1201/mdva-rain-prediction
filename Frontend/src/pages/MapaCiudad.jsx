@@ -7,6 +7,7 @@ import WeatherHeatmapToggle from '../components/WeatherHeatmapToggle';
 import useWeatherGrid from '../hooks/useWeatherGrid';
 
 const MEDELLIN_CENTER = { lat: 6.2442, lng: -75.5812 };
+const VALLE_ABURRA_CENTER = { lat: 6.266, lng: -75.570 };
 const RAIN_HEATMAP_STORAGE_KEY = 'mdva-rain-heatmap-enabled';
 
 function formatKm(meters) {
@@ -47,9 +48,9 @@ export default function MapaCiudad() {
   );
   const { points, loading, error } = useWeatherGrid({
     enabled: heatmapEnabled,
-    center: MEDELLIN_CENTER,
+    center: VALLE_ABURRA_CENTER,
     gridSize: 9,
-    spacingKm: 0.78,
+    spacingKm: 5,
   });
 
   const closeSummary = () => {

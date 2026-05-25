@@ -171,12 +171,12 @@ export default function PlanificarViaje() {
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const heatmapCenter = origen.lat ? { lat: origen.lat, lng: origen.lng } : MEDELLIN_CENTRO;
+  const heatmapCenter = { lat: 6.266, lng: -75.570 };
   const { points: heatmapPoints, error: heatmapError } = useWeatherGrid({
     enabled: true,
     center: heatmapCenter,
-    gridSize: 5,
-    spacingKm: 0.75,
+    gridSize: 9,
+    spacingKm: 5,
   });
 
   const originInputRef = useRef(null);

@@ -477,10 +477,10 @@ export default function EnRuta() {
   const heatmapCenter = posicion ?? centro;
   const { points: heatmapPoints, loading: heatmapLoading, error: heatmapError } = useWeatherGrid({
     enabled: heatmapEnabled,
-    center: heatmapCenter,
+    center: { lat: 6.266, lng: -75.570 },
     gridSize: 9,
-    spacingKm: 0.48,
-    minMoveMeters: posicion ? 700 : 0,
+    spacingKm: 5,
+    minMoveMeters: 0,
   });
 
   const toggleHeatmap = () => {

@@ -58,6 +58,7 @@ public class WeatherMLServiceImpl implements WeatherMLService {
         "?latitude=%f" +
         "&longitude=%f" +
         "&hourly=temperature_2m,relative_humidity_2m,cloud_cover,wind_speed_10m" +
+        "&current=precipitation" +
         "&wind_speed_unit=ms" +
         "&forecast_days=2" +
         "&timezone=auto";
@@ -150,6 +151,20 @@ public class WeatherMLServiceImpl implements WeatherMLService {
         log.debug("Google Weather [lat={}, lng={}]: temp={}C hum={}% nub={}% viento={}m/s lluvia={}%",
                 lat, lng, tempC, humidityPct, cloudPct, windMs, rainProbPct);
 
+        // ── Paso 1b: Precipitación actual desde Open-Meteo (lag feature) ────
+        double precipLag1h = 0.0;
+        try {
+            String omUrl = String.format(java.util.Locale.US,
+                "https://api.open-meteo.com/v1/forecast?latitude=%f&longitude=%f&current=precipitation&timezone=auto",
+                lat, lng);
+            JsonNode omResp = restTemplate.getForObject(omUrl, JsonNode.class);
+            if (omResp != null) {
+                precipLag1h = omResp.path("current").path("precipitation").asDouble(0.0);
+            }
+        } catch (Exception e) {
+            log.debug("Open-Meteo current precipitation no disponible: {}", e.getMessage());
+        }
+
         // ── Paso 2: Enviar al microservicio FastAPI ML ────────────────────────
         Map<String, Object> mlPayload = Map.of(
             "temperatura_c",         tempC,
@@ -157,7 +172,8 @@ public class WeatherMLServiceImpl implements WeatherMLService {
             "cobertura_nubosa_pct",  cloudPct,
             "velocidad_viento_ms",   windMs,
             "hora",                  currentHour,
-            "mes",                   currentMonth
+            "mes",                   currentMonth,
+            "precip_lag_1h_mm",      precipLag1h
         );
 
         String mlEndpoint = mlServiceUrl + "/predecir/ambos";
@@ -198,12 +214,16 @@ public class WeatherMLServiceImpl implements WeatherMLService {
             }
         }
 
-        // Boolean único derivado del RF (el modelo de mayor AUC), no de OR entre
-        // modelos. Antes "anyRain || llueve" causaba inconsistencia visual:
-        // app podía mostrar "30% de lluvia" + "va a llover" simultáneamente.
-        boolean llueve = probRf >= 0.5;
+        // Blend final: 65% RF propio + 35% probabilidad Google Weather.
+        // Google tiene señal independiente (su propio modelo NWP) que mejora
+        // precisión en condiciones límite donde el RF es menos seguro.
+        double googleWeight = rainProbPct / 100.0;
+        double blendedProb = 0.65 * probRf + 0.35 * googleWeight;
+        boolean llueve = blendedProb >= 0.5;
 
-        log.debug("ML result: llueve={} RF={} RL={}", llueve, probRf, probRl);
+        log.debug("ML result: llueve={} RF={} RL={} google={}% blended={}",
+                llueve, probRf, probRl, rainProbPct, String.format("%.4f", blendedProb));
+        probRf = blendedProb;
 
         RainPredictionDTO resultado = RainPredictionDTO.builder()
                 .llueve(llueve)

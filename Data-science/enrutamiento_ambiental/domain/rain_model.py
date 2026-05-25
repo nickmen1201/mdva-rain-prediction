@@ -52,8 +52,7 @@ class RainModel:
         dist_from_river = abs(lon - (-75.57)) * 100000 # aprox metros
         est_elevation = 1500 + (dist_from_river / 10.0) # sube 10m por cada 100m de distancia al río
         
-        # Para la demo, simulamos que hay algo de lluvia previa si es tarde
-        simulated_mean = 0.2 if now.hour > 14 else 0.0
+        simulated_mean = 0.0
         
         intensity = self.predict_rain_intensity(
             now.hour, now.month, now.weekday(), 

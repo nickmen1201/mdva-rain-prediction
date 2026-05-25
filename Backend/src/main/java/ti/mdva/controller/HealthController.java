@@ -14,11 +14,14 @@ import java.util.Map;
  * Health check endpoint for monitoring service status.
  */
 @RestController
-@RequestMapping("/api/health")
 @Tag(name = "Health", description = "Service health monitoring endpoints")
 public class HealthController {
 
-    @GetMapping
+    /**
+     * Health check accesible con y sin trailing slash para tolerar diferencias
+     * entre proxies/load balancers.
+     */
+    @GetMapping({"/api/health", "/api/health/"})
     @Operation(summary = "Check service health", description = "Returns service status and timestamp")
     public ResponseEntity<Map<String, Object>> health() {
         return ResponseEntity.ok(Map.of(

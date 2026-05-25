@@ -1,7 +1,13 @@
 import { Map } from '@vis.gl/react-google-maps';
 import { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import ForecastHorario from '../components/ForecastHorario';
+import WeatherHeatmapLayer from '../components/WeatherHeatmapLayer';
+import WeatherHeatmapToggle from '../components/WeatherHeatmapToggle';
+import useWeatherGrid from '../hooks/useWeatherGrid';
+
 const MEDELLIN_CENTER = { lat: 6.2442, lng: -75.5812 };
+const RAIN_HEATMAP_STORAGE_KEY = 'mdva-rain-heatmap-enabled';
 
 function formatKm(meters) {
   if (meters == null) return '—';
@@ -36,10 +42,27 @@ export default function MapaCiudad() {
   const navigate = useNavigate();
   const location = useLocation();
   const [tripSummary, setTripSummary] = useState(() => location.state?.tripSummary ?? null);
+  const [heatmapEnabled, setHeatmapEnabled] = useState(
+    () => localStorage.getItem(RAIN_HEATMAP_STORAGE_KEY) !== 'false',
+  );
+  const { points, loading, error } = useWeatherGrid({
+    enabled: heatmapEnabled,
+    center: MEDELLIN_CENTER,
+    gridSize: 9,
+    spacingKm: 0.78,
+  });
 
   const closeSummary = () => {
     setTripSummary(null);
     navigate('.', { replace: true, state: null });
+  };
+
+  const toggleHeatmap = () => {
+    setHeatmapEnabled((current) => {
+      const next = !current;
+      localStorage.setItem(RAIN_HEATMAP_STORAGE_KEY, String(next));
+      return next;
+    });
   };
 
   return (
@@ -53,7 +76,29 @@ export default function MapaCiudad() {
         disableDefaultUI={false}
         style={{ width: '100%', height: '100%' }}
       >
+        <WeatherHeatmapLayer points={points} visible={heatmapEnabled && !error} />
       </Map>
+
+      <div style={{
+        position: 'absolute',
+        top: '1rem',
+        left: '1rem',
+        zIndex: 10,
+      }}>
+        <ForecastHorario centro={MEDELLIN_CENTER} horas={6} />
+      </div>
+
+      <div className="map-controls top-right">
+        <WeatherHeatmapToggle
+          enabled={heatmapEnabled}
+          loading={loading}
+          onToggle={toggleHeatmap}
+        />
+      </div>
+
+      {heatmapEnabled && error && (
+        <div className="map-toast map-toast-warning">{error}</div>
+      )}
 
       {tripSummary && (
         <div className="arrival-modal-overlay">
@@ -109,7 +154,7 @@ export default function MapaCiudad() {
           </div>
         </div>
       )}
-      
+
       <div style={{
         position: 'absolute',
         bottom: '30px',
@@ -119,7 +164,7 @@ export default function MapaCiudad() {
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
-        gap: '10px'
+        gap: '10px',
       }}>
         <div className="city-map-cta-card">
           <h2 className="city-map-cta-title">Explora la Ciudad</h2>

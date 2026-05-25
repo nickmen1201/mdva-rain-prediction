@@ -1,8 +1,8 @@
 import { useEffect, useRef } from 'react';
 import { useMap } from '@vis.gl/react-google-maps';
 
-const MIN_CAMERA_MOVE_METERS = 4;
-const MIN_HEADING_DELTA_DEGREES = 2;
+const MIN_CAMERA_MOVE_METERS = 2;
+const MIN_HEADING_DELTA_DEGREES = 0.7;
 
 function toRad(value) {
   return value * Math.PI / 180;
@@ -26,7 +26,7 @@ function shortestAngle(from, to) {
 function smoothHeading(previous, next) {
   if (previous == null) return next ?? 0;
   if (next == null) return previous;
-  return (previous + shortestAngle(previous, next) * 0.35 + 360) % 360;
+  return (previous + shortestAngle(previous, next) * 0.72 + 360) % 360;
 }
 
 export default function useNavigationCamera({

@@ -67,6 +67,7 @@ public class AlertaViajeRepository {
             .detalleRecomendacion(r.get(field("detalle_recomendacion"), String.class))
             .datoConLatencia(r.get(field("dato_con_latencia"), Boolean.class))
             .timestampGeneracion(r.get(field("timestamp_generacion"), OffsetDateTime.class))
+            .leida(r.get(field("leida"), Boolean.class))
             .build()
         ).collect(Collectors.toList());
     }

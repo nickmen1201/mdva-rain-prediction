@@ -20,4 +20,6 @@ public class AlertaViajeDTO {
     private String detalleRecomendacion;
     private Boolean datoConLatencia;
     private OffsetDateTime timestampGeneracion;
+    /** True si el usuario ya leyó la alerta (acción PATCH .../leer). */
+    private Boolean leida;
 }

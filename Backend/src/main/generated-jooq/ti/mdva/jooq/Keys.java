@@ -10,17 +10,23 @@ import org.jooq.UniqueKey;
 import org.jooq.impl.DSL;
 import org.jooq.impl.Internal;
 
+import ti.mdva.jooq.tables.AlertasViaje;
 import ti.mdva.jooq.tables.Barrios;
 import ti.mdva.jooq.tables.Comunas;
+import ti.mdva.jooq.tables.CondicionesSnapshot;
 import ti.mdva.jooq.tables.Municipios;
+import ti.mdva.jooq.tables.ParadasViaje;
 import ti.mdva.jooq.tables.TiposMotor;
 import ti.mdva.jooq.tables.TiposVehiculo;
 import ti.mdva.jooq.tables.Usuarios;
 import ti.mdva.jooq.tables.Vehiculos;
 import ti.mdva.jooq.tables.Viajes;
+import ti.mdva.jooq.tables.records.AlertasViajeRecord;
 import ti.mdva.jooq.tables.records.BarriosRecord;
 import ti.mdva.jooq.tables.records.ComunasRecord;
+import ti.mdva.jooq.tables.records.CondicionesSnapshotRecord;
 import ti.mdva.jooq.tables.records.MunicipiosRecord;
+import ti.mdva.jooq.tables.records.ParadasViajeRecord;
 import ti.mdva.jooq.tables.records.TiposMotorRecord;
 import ti.mdva.jooq.tables.records.TiposVehiculoRecord;
 import ti.mdva.jooq.tables.records.UsuariosRecord;
@@ -39,9 +45,12 @@ public class Keys {
     // UNIQUE and PRIMARY KEY definitions
     // -------------------------------------------------------------------------
 
+    public static final UniqueKey<AlertasViajeRecord> ALERTAS_VIAJE_PKEY = Internal.createUniqueKey(AlertasViaje.ALERTAS_VIAJE, DSL.name("alertas_viaje_pkey"), new TableField[] { AlertasViaje.ALERTAS_VIAJE.ID_ALERTA }, true);
     public static final UniqueKey<BarriosRecord> BARRIOS_PKEY = Internal.createUniqueKey(Barrios.BARRIOS, DSL.name("barrios_pkey"), new TableField[] { Barrios.BARRIOS.ID_BARRIO }, true);
     public static final UniqueKey<ComunasRecord> COMUNAS_PKEY = Internal.createUniqueKey(Comunas.COMUNAS, DSL.name("comunas_pkey"), new TableField[] { Comunas.COMUNAS.ID_COMUNA }, true);
+    public static final UniqueKey<CondicionesSnapshotRecord> CONDICIONES_SNAPSHOT_PKEY = Internal.createUniqueKey(CondicionesSnapshot.CONDICIONES_SNAPSHOT, DSL.name("condiciones_snapshot_pkey"), new TableField[] { CondicionesSnapshot.CONDICIONES_SNAPSHOT.ID_VIAJE }, true);
     public static final UniqueKey<MunicipiosRecord> MUNICIPIOS_PKEY = Internal.createUniqueKey(Municipios.MUNICIPIOS, DSL.name("municipios_pkey"), new TableField[] { Municipios.MUNICIPIOS.ID_MUNICIPIO }, true);
+    public static final UniqueKey<ParadasViajeRecord> PARADAS_VIAJE_PKEY = Internal.createUniqueKey(ParadasViaje.PARADAS_VIAJE, DSL.name("paradas_viaje_pkey"), new TableField[] { ParadasViaje.PARADAS_VIAJE.ID_PARADA }, true);
     public static final UniqueKey<TiposMotorRecord> TIPOS_MOTOR_NOMBRE_KEY = Internal.createUniqueKey(TiposMotor.TIPOS_MOTOR, DSL.name("tipos_motor_nombre_key"), new TableField[] { TiposMotor.TIPOS_MOTOR.NOMBRE }, true);
     public static final UniqueKey<TiposMotorRecord> TIPOS_MOTOR_PKEY = Internal.createUniqueKey(TiposMotor.TIPOS_MOTOR, DSL.name("tipos_motor_pkey"), new TableField[] { TiposMotor.TIPOS_MOTOR.ID_MOTORIZACION }, true);
     public static final UniqueKey<TiposVehiculoRecord> TIPOS_VEHICULO_NOMBRE_KEY = Internal.createUniqueKey(TiposVehiculo.TIPOS_VEHICULO, DSL.name("tipos_vehiculo_nombre_key"), new TableField[] { TiposVehiculo.TIPOS_VEHICULO.NOMBRE }, true);
@@ -56,8 +65,11 @@ public class Keys {
     // FOREIGN KEY definitions
     // -------------------------------------------------------------------------
 
+    public static final ForeignKey<AlertasViajeRecord, ViajesRecord> ALERTAS_VIAJE__ALERTAS_VIAJE_VIAJE_FKEY = Internal.createForeignKey(AlertasViaje.ALERTAS_VIAJE, DSL.name("alertas_viaje_viaje_fkey"), new TableField[] { AlertasViaje.ALERTAS_VIAJE.ID_VIAJE }, Keys.VIAJES_PKEY, new TableField[] { Viajes.VIAJES.ID_VIAJE }, true);
     public static final ForeignKey<BarriosRecord, ComunasRecord> BARRIOS__BARRIOS_ID_COMUNA_FKEY = Internal.createForeignKey(Barrios.BARRIOS, DSL.name("barrios_id_comuna_fkey"), new TableField[] { Barrios.BARRIOS.ID_COMUNA }, Keys.COMUNAS_PKEY, new TableField[] { Comunas.COMUNAS.ID_COMUNA }, true);
     public static final ForeignKey<ComunasRecord, MunicipiosRecord> COMUNAS__COMUNAS_ID_MUNICIPIO_FKEY = Internal.createForeignKey(Comunas.COMUNAS, DSL.name("comunas_id_municipio_fkey"), new TableField[] { Comunas.COMUNAS.ID_MUNICIPIO }, Keys.MUNICIPIOS_PKEY, new TableField[] { Municipios.MUNICIPIOS.ID_MUNICIPIO }, true);
+    public static final ForeignKey<CondicionesSnapshotRecord, ViajesRecord> CONDICIONES_SNAPSHOT__CONDICIONES_SNAPSHOT_VIAJE_FKEY = Internal.createForeignKey(CondicionesSnapshot.CONDICIONES_SNAPSHOT, DSL.name("condiciones_snapshot_viaje_fkey"), new TableField[] { CondicionesSnapshot.CONDICIONES_SNAPSHOT.ID_VIAJE }, Keys.VIAJES_PKEY, new TableField[] { Viajes.VIAJES.ID_VIAJE }, true);
+    public static final ForeignKey<ParadasViajeRecord, ViajesRecord> PARADAS_VIAJE__PARADAS_VIAJE_VIAJE_FKEY = Internal.createForeignKey(ParadasViaje.PARADAS_VIAJE, DSL.name("paradas_viaje_viaje_fkey"), new TableField[] { ParadasViaje.PARADAS_VIAJE.ID_VIAJE }, Keys.VIAJES_PKEY, new TableField[] { Viajes.VIAJES.ID_VIAJE }, true);
     public static final ForeignKey<UsuariosRecord, BarriosRecord> USUARIOS__USUARIOS_ID_BARRIO_FKEY = Internal.createForeignKey(Usuarios.USUARIOS, DSL.name("usuarios_id_barrio_fkey"), new TableField[] { Usuarios.USUARIOS.ID_BARRIO }, Keys.BARRIOS_PKEY, new TableField[] { Barrios.BARRIOS.ID_BARRIO }, true);
     public static final ForeignKey<VehiculosRecord, TiposMotorRecord> VEHICULOS__VEHICULOS_ID_MOTORIZACION_FKEY = Internal.createForeignKey(Vehiculos.VEHICULOS, DSL.name("vehiculos_id_motorizacion_fkey"), new TableField[] { Vehiculos.VEHICULOS.ID_MOTORIZACION }, Keys.TIPOS_MOTOR_PKEY, new TableField[] { TiposMotor.TIPOS_MOTOR.ID_MOTORIZACION }, true);
     public static final ForeignKey<VehiculosRecord, TiposVehiculoRecord> VEHICULOS__VEHICULOS_ID_TIPO_VEHICULO_FKEY = Internal.createForeignKey(Vehiculos.VEHICULOS, DSL.name("vehiculos_id_tipo_vehiculo_fkey"), new TableField[] { Vehiculos.VEHICULOS.ID_TIPO_VEHICULO }, Keys.TIPOS_VEHICULO_PKEY, new TableField[] { TiposVehiculo.TIPOS_VEHICULO.ID_TIPO_VEHICULO }, true);

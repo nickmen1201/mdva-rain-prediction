@@ -37,6 +37,9 @@ import org.jooq.impl.TableImpl;
 import ti.mdva.jooq.Indexes;
 import ti.mdva.jooq.Keys;
 import ti.mdva.jooq.Public;
+import ti.mdva.jooq.tables.AlertasViaje.AlertasViajePath;
+import ti.mdva.jooq.tables.CondicionesSnapshot.CondicionesSnapshotPath;
+import ti.mdva.jooq.tables.ParadasViaje.ParadasViajePath;
 import ti.mdva.jooq.tables.Usuarios.UsuariosPath;
 import ti.mdva.jooq.tables.Vehiculos.VehiculosPath;
 import ti.mdva.jooq.tables.records.ViajesRecord;
@@ -259,6 +262,45 @@ public class Viajes extends TableImpl<ViajesRecord> {
             _vehiculos = new VehiculosPath(this, Keys.VIAJES__VIAJES_ID_VEHICULO_FKEY, null);
 
         return _vehiculos;
+    }
+
+    private transient AlertasViajePath _alertasViaje;
+
+    /**
+     * Get the implicit to-many join path to the
+     * <code>public.alertas_viaje</code> table
+     */
+    public AlertasViajePath alertasViaje() {
+        if (_alertasViaje == null)
+            _alertasViaje = new AlertasViajePath(this, null, Keys.ALERTAS_VIAJE__ALERTAS_VIAJE_VIAJE_FKEY.getInverseKey());
+
+        return _alertasViaje;
+    }
+
+    private transient CondicionesSnapshotPath _condicionesSnapshot;
+
+    /**
+     * Get the implicit to-many join path to the
+     * <code>public.condiciones_snapshot</code> table
+     */
+    public CondicionesSnapshotPath condicionesSnapshot() {
+        if (_condicionesSnapshot == null)
+            _condicionesSnapshot = new CondicionesSnapshotPath(this, null, Keys.CONDICIONES_SNAPSHOT__CONDICIONES_SNAPSHOT_VIAJE_FKEY.getInverseKey());
+
+        return _condicionesSnapshot;
+    }
+
+    private transient ParadasViajePath _paradasViaje;
+
+    /**
+     * Get the implicit to-many join path to the
+     * <code>public.paradas_viaje</code> table
+     */
+    public ParadasViajePath paradasViaje() {
+        if (_paradasViaje == null)
+            _paradasViaje = new ParadasViajePath(this, null, Keys.PARADAS_VIAJE__PARADAS_VIAJE_VIAJE_FKEY.getInverseKey());
+
+        return _paradasViaje;
     }
 
     @Override

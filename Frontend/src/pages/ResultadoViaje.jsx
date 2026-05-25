@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useLocation, useNavigate, Link } from 'react-router-dom';
 import { getViajeById, finalizarViaje, planificarViaje } from '../api/client';
 import MapaRuta from '../components/MapaRuta';
+import ForecastHorario from '../components/ForecastHorario';
 import { haversine } from '../utils/navUtils';
 
 const DISTANCIA_MAX_INICIO_M = 1000;
@@ -184,6 +185,13 @@ export default function ResultadoViaje() {
         </div>
       )}
 
+      {/* ── Forecast 6h: timeline en origen ── */}
+      {viaje.origen?.lat && (
+        <div className="fade-up" style={{ marginBottom: '0.75rem' }}>
+          <ForecastHorario centro={{ lat: viaje.origen.lat, lng: viaje.origen.lng }} horas={6} />
+        </div>
+      )}
+
       {/* ── Stats ── */}
       <div className="stats-grid fade-up">
         <div className="stat-item">
@@ -245,6 +253,31 @@ export default function ResultadoViaje() {
               💨 {vientoKmh} km/h
             </span>
           )}
+        </div>
+      )}
+
+      {/* ── Itinerario (HU032) ── */}
+      {paradas.length > 0 && (
+        <div className="card fade-up-2" style={{ marginBottom: '1rem' }}>
+          <div style={{ fontWeight: 600, marginBottom: '0.75rem', color: 'var(--text)', fontSize: '0.95rem' }}>
+            Itinerario · {paradas.length + 2} puntos
+          </div>
+          <ol style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            <li style={{ display: 'flex', alignItems: 'center', gap: '0.7rem', fontSize: '0.9rem' }}>
+              <span style={{ width: '24px', height: '24px', borderRadius: '50%', background: '#4af0a0', color: '#0a0c10', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '0.78rem', flexShrink: 0 }}>A</span>
+              <span style={{ color: 'var(--text)' }}>{viaje.origen?.displayName ?? 'Origen'}</span>
+            </li>
+            {paradas.map((p, i) => (
+              <li key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.7rem', fontSize: '0.9rem' }}>
+                <span style={{ width: '24px', height: '24px', borderRadius: '50%', background: '#c084fc', color: '#0a0c10', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '0.78rem', flexShrink: 0 }}>{i + 1}</span>
+                <span style={{ color: 'var(--text-soft)' }}>{p.displayName ?? `Parada ${i + 1}`}</span>
+              </li>
+            ))}
+            <li style={{ display: 'flex', alignItems: 'center', gap: '0.7rem', fontSize: '0.9rem' }}>
+              <span style={{ width: '24px', height: '24px', borderRadius: '50%', background: '#f0a04a', color: '#0a0c10', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '0.78rem', flexShrink: 0 }}>B</span>
+              <span style={{ color: 'var(--text)' }}>{viaje.destino?.displayName ?? 'Destino'}</span>
+            </li>
+          </ol>
         </div>
       )}
 

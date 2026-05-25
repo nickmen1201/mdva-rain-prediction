@@ -1,77 +1,58 @@
 import { useEffect } from 'react';
 
 const CONFIG = {
-  INFORMATIVA: { cls: 'toast',     bg: 'rgba(8,10,14,0.96)', border: 'rgba(74,240,160,0.4)', color: '#4af0a0',  icon: 'ℹ', autoDismiss: 6000 },
-  PRECAUCION:  { cls: 'banner',    bg: 'rgba(240,160,74,0.92)', border: null, color: '#1a1200',  icon: '⚠', autoDismiss: null },
-  PELIGRO:     { cls: 'modal',     bg: null, border: null, color: null, icon: '⚠', autoDismiss: null },
-  CRISIS:      { cls: 'crisis',    bg: null, border: null, color: null, icon: '⚠', autoDismiss: null },
+  INFORMATIVA: { cls: 'toast', border: 'rgba(74,240,160,0.4)', color: '#4af0a0', icon: 'i', autoDismiss: 6000 },
+  PRECAUCION: { cls: 'toast', border: 'rgba(240,160,74,0.65)', color: '#f0a04a', icon: '!', autoDismiss: 7500 },
+  PELIGRO: { cls: 'toast', border: 'rgba(240,74,74,0.68)', color: '#f04a4a', icon: '!', autoDismiss: 9000 },
+  CRISIS: { cls: 'crisis', border: null, color: null, icon: '!', autoDismiss: null },
 };
 
 export default function RecomendacionBanner({ alerta, onCerrar }) {
-  const cfg = alerta ? (CONFIG[alerta.nivelSeveridad] ?? CONFIG.INFORMATIVA) : CONFIG.INFORMATIVA;
+  const alertaId = alerta?.idAlerta ?? null;
+  const nivel = alerta?.nivelSeveridad ?? null;
+  const cfg = CONFIG[nivel] ?? CONFIG.INFORMATIVA;
 
-  // Vibrate on crisis
   useEffect(() => {
     if (!alerta) return undefined;
-    if (alerta.nivelSeveridad === 'CRISIS' && navigator.vibrate) {
+
+    if (nivel === 'CRISIS' && navigator.vibrate) {
       navigator.vibrate([600, 200, 600, 200, 600]);
     }
+
     if (cfg.autoDismiss) {
-      const t = setTimeout(onCerrar, cfg.autoDismiss);
-      return () => clearTimeout(t);
+      const timer = setTimeout(onCerrar, cfg.autoDismiss);
+      return () => clearTimeout(timer);
     }
+
     return undefined;
-  }, [alerta, cfg.autoDismiss, onCerrar]);
+  }, [alertaId, nivel, cfg.autoDismiss, onCerrar, alerta]);
 
   if (!alerta) return null;
 
-  // ── INFORMATIVA: floating toast ──────────────────────────────────────────
   if (cfg.cls === 'toast') {
     return (
-      <div className="recomendacion-toast" style={{ borderColor: cfg.border, color: cfg.color }}>
-        <span>{cfg.icon}</span>
-        <span>{alerta.mensaje}</span>
-        <button onClick={onCerrar} style={{ background: 'none', border: 'none', color: cfg.color, cursor: 'pointer', marginLeft: '0.5rem', fontSize: '1rem' }}>✕</button>
-      </div>
-    );
-  }
-
-  // ── PRECAUCION: persistent top banner ───────────────────────────────────
-  if (cfg.cls === 'banner') {
-    return (
-      <div className="recomendacion-banner precaucion">
-        <span style={{ fontSize: '1.4rem' }}>{cfg.icon}</span>
-        <span style={{ flex: 1 }}>{alerta.mensaje}</span>
-        <button onClick={onCerrar} style={{ background: 'none', border: '1px solid rgba(0,0,0,0.3)', color: '#1a1200', cursor: 'pointer', padding: '0.35rem 0.85rem', borderRadius: '4px', fontSize: '0.88rem' }}>
-          Entendido
+      <div
+        className={`recomendacion-toast ${nivel?.toLowerCase() ?? ''}`}
+        style={{ borderColor: cfg.border, color: cfg.color }}
+        role="status"
+      >
+        <span className="recomendacion-toast-icon">{cfg.icon}</span>
+        <span className="recomendacion-toast-body">
+          <strong>{alerta.mensaje}</strong>
+          {alerta.detalleRecomendacion && <small>{alerta.detalleRecomendacion}</small>}
+        </span>
+        <button
+          className="recomendacion-toast-close"
+          onClick={onCerrar}
+          aria-label="Cerrar recomendacion"
+          type="button"
+        >
+          x
         </button>
       </div>
     );
   }
 
-  // ── PELIGRO: modal overlay ───────────────────────────────────────────────
-  if (cfg.cls === 'modal') {
-    return (
-      <div className="recomendacion-modal-overlay">
-        <div className="recomendacion-modal-card" style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>{cfg.icon}</div>
-          <h2 style={{ color: '#f0a04a', fontWeight: 800, marginBottom: '0.75rem', fontSize: '1.4rem' }}>
-            {alerta.mensaje}
-          </h2>
-          {alerta.detalleRecomendacion && (
-            <p style={{ color: '#c0c4d0', fontSize: '0.95rem', lineHeight: 1.5, marginBottom: '1.5rem' }}>
-              {alerta.detalleRecomendacion}
-            </p>
-          )}
-          <button className="btn btn-danger" onClick={onCerrar} style={{ width: '100%' }}>
-            Entendido — continuar
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  // ── CRISIS: full-screen ──────────────────────────────────────────────────
   return (
     <div className="recomendacion-modal-overlay crisis">
       <div className="recomendacion-modal-card crisis" style={{ textAlign: 'center' }}>
@@ -88,8 +69,9 @@ export default function RecomendacionBanner({ alerta, onCerrar }) {
           className="btn"
           onClick={onCerrar}
           style={{ background: '#f04a4a', color: 'white', width: '100%', padding: '1rem', fontSize: '1.05rem' }}
+          type="button"
         >
-          Deteniéndome en lugar seguro
+          Deteniendome en lugar seguro
         </button>
       </div>
     </div>

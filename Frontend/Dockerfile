@@ -20,6 +20,13 @@ RUN npm run build
 # Etapa 2: servir con nginx
 FROM nginx:alpine AS runtime
 
+RUN apk add --no-cache openssl \
+    && mkdir -p /etc/nginx/certs \
+    && openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+      -keyout /etc/nginx/certs/mdva-dev.key \
+      -out /etc/nginx/certs/mdva-dev.crt \
+      -subj "/CN=mdva-dev"
+
 # Copiar el build generado
 COPY --from=builder /app/dist /usr/share/nginx/html
 

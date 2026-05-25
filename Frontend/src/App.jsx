@@ -53,8 +53,15 @@ export default function App() {
         </div>
       </header>
 
-      <main style={{ maxWidth: 'none', padding: 0, height: 'calc(100vh - 57px)' }}>
-        <APIProvider apiKey={MAPS_KEY} libraries={['geometry', 'places', 'visualization']}>
+      <main style={{
+        maxWidth: 'none',
+        padding: 0,
+        height: 'calc(100dvh - 57px)',
+        width: '100%',
+        overflowX: 'hidden',
+        overflowY: 'auto',
+      }}>
+        <APIProvider apiKey={MAPS_KEY} libraries={['geometry', 'places']}>
           <Routes>
             <Route path="/login"    element={<Login />} />
             <Route path="/register" element={<Register />} />

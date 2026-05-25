@@ -6,7 +6,11 @@ import NavigationHeader from '../components/NavigationHeader';
 import NavigationPanel from '../components/NavigationPanel';
 import RecomendacionBanner from '../components/RecomendacionBanner';
 import CenterButton from '../components/CenterButton';
+import WeatherHeatmapLayer from '../components/WeatherHeatmapLayer';
+import WeatherHeatmapToggle from '../components/WeatherHeatmapToggle';
 import useNavigationCamera from '../hooks/useNavigationCamera';
+import useDeviceOrientationHeading from '../hooks/useDeviceOrientationHeading';
+import useWeatherGrid from '../hooks/useWeatherGrid';
 import {
   calcularPasoActivo,
   calcularDistanciaRestante,
@@ -15,6 +19,7 @@ import {
 
 // ── SVG arrow marker path ─────────────────────────────────────────────────────
 const NAV_ARROW_PATH = 'M 0,-14 L 6,8 L 0,4 L -6,8 Z';
+const RAIN_HEATMAP_STORAGE_KEY = 'mdva-rain-heatmap-enabled';
 
 function getClimateStatus(alertaNivel, alertaActiva, prediccion) {
   const nivel = alertaActiva?.nivelSeveridad ?? alertaNivel ?? 'VERDE';
@@ -71,7 +76,24 @@ function CapaRuta({ viaje, posicion, heading, pasoActivo, theme, paradas }) {
     };
 
     makeMarker({ lat: viaje.origen.lat,  lng: viaje.origen.lng  }, viaje.origen.displayName  ?? 'Origen',  '#4af0a0', 8);
-    paradas?.forEach(p => makeMarker({ lat: p.lat, lng: p.lng }, p.displayName ?? 'Parada', '#c084fc', 6));
+    paradas?.forEach((p, i) => {
+      const m = new window.google.maps.Marker({
+        position: { lat: p.lat, lng: p.lng },
+        map,
+        title: p.displayName ?? `Parada ${i + 1}`,
+        zIndex: 6,
+        label: { text: String(i + 1), color: '#0a0c10', fontWeight: 'bold', fontSize: '11px' },
+        icon: {
+          path: window.google.maps.SymbolPath.CIRCLE,
+          scale: 11,
+          fillColor: '#c084fc',
+          fillOpacity: 1,
+          strokeColor: '#0a0c10',
+          strokeWeight: 2,
+        },
+      });
+      markers.push(m);
+    });
     makeMarker({ lat: viaje.destino.lat, lng: viaje.destino.lng }, viaje.destino.displayName ?? 'Destino', '#f0a04a', 8);
 
     return () => markers.forEach(m => m.setMap(null));
@@ -156,7 +178,7 @@ function CapaRuta({ viaje, posicion, heading, pasoActivo, theme, paradas }) {
 }
 
 function NavigationCamera({ enabled, position, heading, recenterTick }) {
-  useNavigationCamera({ enabled, position, heading, recenterTick, zoom: 19, tilt: 45 });
+  useNavigationCamera({ enabled, position, heading, recenterTick, zoom: 19, tilt: 60 });
   return null;
 }
 
@@ -182,6 +204,19 @@ export default function EnRuta() {
   const [arrivalPromptOpen, setArrivalPromptOpen] = useState(false);
   const [finishPromptOpen, setFinishPromptOpen] = useState(false);
   const [recenterTick, setRecenterTick] = useState(0);
+  const [heatmapEnabled, setHeatmapEnabled] = useState(
+    () => localStorage.getItem(RAIN_HEATMAP_STORAGE_KEY) !== 'false',
+  );
+  const [gyroRotationEnabled, setGyroRotationEnabled] = useState(
+    () => localStorage.getItem('mdva-gyro-rotation-enabled') !== 'false',
+  );
+  const {
+    heading: deviceHeading,
+    supported: orientationSupported,
+    permissionState: orientationPermission,
+    requestAccess: requestOrientationAccess,
+  } = useDeviceOrientationHeading();
+  
   // Pending stops for trip chaining
   const [pendingStops]  = useState(state?.pendingStops ?? []);
 
@@ -196,6 +231,7 @@ export default function EnRuta() {
   const posicionRef  = useRef(null);
   const pollingTimer = useRef(null);
   const transitionRef = useRef(false);
+  const cameraHeading = gyroRotationEnabled ? (deviceHeading ?? heading) : heading;
 
   // Sync theme
   useEffect(() => {
@@ -244,13 +280,22 @@ export default function EnRuta() {
         posicionRef.current = pos;
         lastGpsPoint.current = pos;
 
-        if (coords.heading != null && !isNaN(coords.heading)) {
-          lastHeading.current = coords.heading;
-          setHeading(coords.heading);
-        } else if (previous && haversine(previous.lat, previous.lng, pos.lat, pos.lng) > 5) {
-          const calculatedHeading = bearingBetween(previous, pos);
-          lastHeading.current = calculatedHeading;
-          setHeading(calculatedHeading);
+        const movedEnough = previous
+          ? haversine(previous.lat, previous.lng, pos.lat, pos.lng) > 5
+          : false;
+        const targetHeading = coords.heading != null && !isNaN(coords.heading)
+          ? coords.heading
+          : movedEnough
+            ? bearingBetween(previous, pos)
+            : null;
+
+        if (targetHeading != null) {
+          // Low-pass filter para amortiguar el tembleque del heading bajo ruido GPS.
+          // diff usa el camino angular más corto para evitar saltos al cruzar 0/360.
+          const diff = ((targetHeading - lastHeading.current + 540) % 360) - 180;
+          const smoothed = (lastHeading.current + diff * 0.25 + 360) % 360;
+          lastHeading.current = smoothed;
+          setHeading(smoothed);
         } else {
           setHeading(lastHeading.current);
         }
@@ -268,7 +313,15 @@ export default function EnRuta() {
 
   // ── Auto-Chaining Logic: Detect stop arrival ─────────────────────────────
   const handleAutoNextLeg = useCallback(async () => {
-    if (!posicion || !viaje) return;
+    if (!viaje || pendingStops.length === 0) return;
+    const originPoint = posicion ?? viaje.destino;
+    if (!originPoint?.lat || !originPoint?.lng) {
+      setError('No se pudo iniciar el siguiente tramo porque falta la ubicacion actual.');
+      transitionRef.current = false;
+      setTransitioning(false);
+      return;
+    }
+
     try {
       // 1. Finish current leg
       await finalizarViaje(id);
@@ -279,9 +332,15 @@ export default function EnRuta() {
       
       const payload = {
         idVehiculo: viaje.idVehiculo,
-        origen: { lat: posicion.lat, lng: posicion.lng, displayName: "Mi ubicación actual" },
+        tipoVehiculo: viaje.tipoVehiculo ?? undefined,
+        origen: {
+          lat: originPoint.lat,
+          lng: originPoint.lng,
+          displayName: posicion ? "Mi ubicación actual" : (viaje.destino?.displayName ?? 'Parada actual'),
+        },
         destino: nextDest,
-        paradas: []
+        paradas: [],
+        modoParadas: 'ORDEN_INGRESADO',
       };
 
       // 3. Create next trip
@@ -309,6 +368,7 @@ export default function EnRuta() {
       console.error("Chaining failed:", err);
       transitionRef.current = false;
       setTransitioning(false);
+      setError('No se pudo iniciar el siguiente tramo.');
     }
   }, [id, itinerary, navigate, paradas, parentViajeId, pendingStops, posicion, viaje]);
 
@@ -414,6 +474,35 @@ export default function EnRuta() {
     ? { lat: (viaje.origen.lat + viaje.destino.lat) / 2, lng: (viaje.origen.lng + viaje.destino.lng) / 2 }
     : { lat: 6.2442, lng: -75.5812 };
   const pasoActualData = viaje?.pasos?.[pasoActivo] ?? null;
+  const heatmapCenter = posicion ?? centro;
+  const { points: heatmapPoints, loading: heatmapLoading, error: heatmapError } = useWeatherGrid({
+    enabled: heatmapEnabled,
+    center: heatmapCenter,
+    gridSize: 9,
+    spacingKm: 0.48,
+    minMoveMeters: posicion ? 700 : 0,
+  });
+
+  const toggleHeatmap = () => {
+    setHeatmapEnabled((current) => {
+      const next = !current;
+      localStorage.setItem(RAIN_HEATMAP_STORAGE_KEY, String(next));
+      return next;
+    });
+  };
+
+  const toggleGyroRotation = async () => {
+    if (!gyroRotationEnabled && orientationSupported && orientationPermission !== 'granted') {
+      const granted = await requestOrientationAccess();
+      if (!granted) return;
+    }
+
+    setGyroRotationEnabled((current) => {
+      const next = !current;
+      localStorage.setItem('mdva-gyro-rotation-enabled', String(next));
+      return next;
+    });
+  };
 
   const handleCenterMap = () => {
     setCentering(true);
@@ -436,14 +525,18 @@ export default function EnRuta() {
         <NavigationCamera
           enabled={centering}
           position={posicion}
-          heading={heading}
+          heading={cameraHeading}
           recenterTick={recenterTick}
+        />
+        <WeatherHeatmapLayer
+          points={heatmapPoints}
+          visible={heatmapEnabled && !heatmapError}
         />
         {viaje && (
           <CapaRuta
             viaje={viaje}
             posicion={posicion}
-            heading={heading}
+            heading={cameraHeading}
             pasoActivo={pasoActivo}
             theme={theme}
             paradas={paradas}
@@ -469,26 +562,42 @@ export default function EnRuta() {
         onClose={() => setPanelOpen(false)}
       />
 
-      {/* Control Buttons */}
-      <div style={{
-        position: 'absolute',
-        top: '5.5rem',
-        right: panelOpen ? '292px' : '1rem',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '0.5rem',
-        transition: 'right 0.3s',
-        zIndex: 11,
-      }}>
+      <div className={`nav-map-controls${panelOpen ? ' panel-open' : ''}`}>
         <CenterButton active={centering} onClick={handleCenterMap} />
+        {orientationSupported && (
+          <button
+            onClick={toggleGyroRotation}
+            className={`map-control-button${gyroRotationEnabled ? ' active' : ''}`}
+            title={gyroRotationEnabled ? 'Usar rumbo por movimiento' : 'Usar giro del dispositivo'}
+            aria-label={gyroRotationEnabled ? 'Desactivar giro del dispositivo' : 'Activar giro del dispositivo'}
+            aria-pressed={gyroRotationEnabled}
+            type="button"
+          >
+            Giro
+          </button>
+        )}
+        <WeatherHeatmapToggle
+          enabled={heatmapEnabled}
+          loading={heatmapLoading}
+          onToggle={toggleHeatmap}
+        />
         <button
           onClick={() => setPanelOpen(v => !v)}
           className="map-control-button"
+          aria-label="Ver lista de pasos del viaje"
+          aria-expanded={panelOpen}
           title="Ver pasos"
+          type="button"
         >
-          ☰
+          Menu
         </button>
       </div>
+
+      {heatmapEnabled && heatmapError && (
+        <div className="map-toast map-toast-warning">
+          {heatmapError}
+        </div>
+      )}
 
       {arrivalPromptOpen && pendingStops.length > 0 && (
         <div className="arrival-modal-overlay">

@@ -313,7 +313,15 @@ export default function EnRuta() {
 
   // ── Auto-Chaining Logic: Detect stop arrival ─────────────────────────────
   const handleAutoNextLeg = useCallback(async () => {
-    if (!posicion || !viaje) return;
+    if (!viaje || pendingStops.length === 0) return;
+    const originPoint = posicion ?? viaje.destino;
+    if (!originPoint?.lat || !originPoint?.lng) {
+      setError('No se pudo iniciar el siguiente tramo porque falta la ubicacion actual.');
+      transitionRef.current = false;
+      setTransitioning(false);
+      return;
+    }
+
     try {
       // 1. Finish current leg
       await finalizarViaje(id);
@@ -324,9 +332,15 @@ export default function EnRuta() {
       
       const payload = {
         idVehiculo: viaje.idVehiculo,
-        origen: { lat: posicion.lat, lng: posicion.lng, displayName: "Mi ubicación actual" },
+        tipoVehiculo: viaje.tipoVehiculo ?? undefined,
+        origen: {
+          lat: originPoint.lat,
+          lng: originPoint.lng,
+          displayName: posicion ? "Mi ubicación actual" : (viaje.destino?.displayName ?? 'Parada actual'),
+        },
         destino: nextDest,
-        paradas: []
+        paradas: [],
+        modoParadas: 'ORDEN_INGRESADO',
       };
 
       // 3. Create next trip
@@ -354,6 +368,7 @@ export default function EnRuta() {
       console.error("Chaining failed:", err);
       transitionRef.current = false;
       setTransitioning(false);
+      setError('No se pudo iniciar el siguiente tramo.');
     }
   }, [id, itinerary, navigate, paradas, parentViajeId, pendingStops, posicion, viaje]);
 

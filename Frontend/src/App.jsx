@@ -61,7 +61,7 @@ export default function App() {
         overflowX: 'hidden',
         overflowY: 'auto',
       }}>
-        <APIProvider apiKey={MAPS_KEY} libraries={['geometry', 'places', 'visualization']}>
+        <APIProvider apiKey={MAPS_KEY} libraries={['geometry', 'places']}>
           <Routes>
             <Route path="/login"    element={<Login />} />
             <Route path="/register" element={<Register />} />

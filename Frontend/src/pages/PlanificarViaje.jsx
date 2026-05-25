@@ -2,8 +2,9 @@ import { useState, useRef, useEffect, createRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { planificarViaje } from '../api/client';
 import { Map, useMap, useMapsLibrary } from '@vis.gl/react-google-maps';
-import HeatmapClima from '../components/HeatmapClima';
 import ForecastHorario from '../components/ForecastHorario';
+import WeatherHeatmapLayer from '../components/WeatherHeatmapLayer';
+import useWeatherGrid from '../hooks/useWeatherGrid';
 
 const MEDELLIN_CENTRO = { lat: 6.2442, lng: -75.5812 };
 
@@ -170,6 +171,13 @@ export default function PlanificarViaje() {
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const heatmapCenter = origen.lat ? { lat: origen.lat, lng: origen.lng } : MEDELLIN_CENTRO;
+  const { points: heatmapPoints, error: heatmapError } = useWeatherGrid({
+    enabled: true,
+    center: heatmapCenter,
+    gridSize: 5,
+    spacingKm: 0.75,
+  });
 
   const originInputRef = useRef(null);
   const destInputRef = useRef(null);
@@ -517,11 +525,9 @@ export default function PlanificarViaje() {
                   onMoveOrigen={handleMoveOrigen}
                   onMoveDestino={handleMoveDestino}
                 />
-                <HeatmapClima
-                  centro={origen.lat ? { lat: origen.lat, lng: origen.lng } : MEDELLIN_CENTRO}
-                  size={5}
-                  spacing={0.008}
-                  visible={true}
+                <WeatherHeatmapLayer
+                  points={heatmapPoints}
+                  visible={!heatmapError}
                 />
               </Map>
             </div>

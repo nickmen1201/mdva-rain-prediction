@@ -80,7 +80,7 @@ description: "Task list for 002-python-tooling-ci"
 ## Phase 7: Polish & Cross-Cutting
 
 - [ ] T013 Documentar en `README.md` (sección "Desarrollo") los objetivos del Makefile con sus equivalentes para Windows, y actualizar `CLAUDE.md` (versión real de scikit-learn por servicio, comandos uv)
-- [ ] T014 Verificación final: stack reconstruido, smoke test idéntico a la línea base, CI en verde en GitHub; cerrar la spec
+- [ ] T014 Verificación final: `make clean`, stack reconstruido, smoke test idéntico a la línea base, CI en verde en GitHub; cerrar la spec
 
 ---
 

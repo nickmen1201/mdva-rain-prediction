@@ -42,3 +42,18 @@ git grep -nE "Data-science/|\bBackend/|\bFrontend/|\bDB/" -- . ':!docs/*' ':!.sp
                                                        # esperado: sin resultados
 git status --ignored data/                             # esperado: CSV de SIATA ignorados
 ```
+
+## Línea base registrada (2026-10-28, antes de mover nada)
+
+| Verificación | Resultado |
+|---|---|
+| `ml_health`, `routing_health`, `backend_health` | 200 |
+| `auth_register` / `auth_login` | 201 / 200 con token |
+| `locations_municipalities` | 200, no vacío |
+| `ml_predecir_ambos` | 200, modelos `random_forest` y `regresion_logistica` |
+| `routing_route` | 200, con opciones de ruta |
+| `weather_forecast` | 200 (usa Open-Meteo) |
+| `weather_current` | **502** — Google Weather sin facturación (H-19) |
+| `viajes_planificar` | **500** — Google Directions sin facturación (H-19) |
+
+Usuarios en la base de desarrollo: **6** (cada corrida del smoke test agrega un usuario `smoke_*`).

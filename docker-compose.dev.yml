@@ -16,6 +16,9 @@
 #   8090  → Frontend React       (http://localhost:8090)
 # =============================================================================
 
+# Nombre fijo: los volúmenes (postgres_data, routing_graph_cache) no dependen del nombre de la carpeta
+name: monitoreo-de-variables-ambientales
+
 services:
 
   # ---------------------------------------------------------------------------

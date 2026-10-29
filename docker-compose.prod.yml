@@ -20,6 +20,9 @@ x-logging: &default-logging
     max-size: "10m"
     max-file: "3"
 
+# Nombre fijo: los volúmenes (postgres_data, routing_graph_cache) no dependen del nombre de la carpeta
+name: monitoreo-de-variables-ambientales
+
 services:
 
   postgres:

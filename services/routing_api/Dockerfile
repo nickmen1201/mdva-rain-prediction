@@ -1,5 +1,5 @@
 # =============================================================================
-# Data-science/enrutamiento_ambiental/Dockerfile — FastAPI Routing Service
+# services/routing_api/Dockerfile — FastAPI Routing Service
 # =============================================================================
 # Sistema de enrutamiento inteligente con variables ambientales integradas.
 # Usa OSMnx + NetworkX para cálculo de rutas en el Valle de Aburrá.

@@ -62,7 +62,7 @@ services:
 
   routing-service:
     build:
-      context: ./Data-science/enrutamiento_ambiental
+      context: ./services/routing_api
       dockerfile: Dockerfile
     container_name: mdva-routing
     restart: always

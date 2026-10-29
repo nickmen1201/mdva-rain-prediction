@@ -70,7 +70,7 @@ Sistema de enrutamiento inteligente para el Valle de Aburrá que **integra varia
 
 ### Local (desarrollo)
 ```bash
-cd Data-science/enrutamiento_ambiental
+cd services/routing_api
 pip install -r requirements.txt
 python -m uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 ```
@@ -105,7 +105,7 @@ POST /api/v1/route/spring
 ## Estructura del proyecto
 
 ```
-enrutamiento_ambiental/
+routing_api/
 ├── main.py                    ← Entrypoint FastAPI
 ├── requirements.txt
 ├── Dockerfile

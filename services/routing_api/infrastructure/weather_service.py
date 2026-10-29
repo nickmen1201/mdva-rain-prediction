@@ -18,7 +18,7 @@ class WeatherService:
         self.rain_model = rain_model
         self.api_key = api_key
         self.base_url = "http://api.openweathermap.org/data/2.5/weather"
-        # URL del microservicio MDVA de predicción ML (Data-science/main.py)
+        # URL del microservicio MDVA de predicción ML (services/ml_api/main.py)
         self.mdva_ml_url = mdva_ml_url or os.environ.get("MDVA_ML_URL", "http://ml-service:8081")
         self._mdva_cache = {}
         self._mdva_cache_time = 0
@@ -68,7 +68,7 @@ class WeatherService:
 
     def _get_mdva_prediction(self, lat: float, lon: float) -> dict:
         """
-        Obtiene la predicción de lluvia del microservicio MDVA (Data-science/main.py).
+        Obtiene la predicción de lluvia del microservicio MDVA (services/ml_api/main.py).
         Primero obtiene variables climáticas de Open-Meteo, luego las envía al ML.
         """
         import time

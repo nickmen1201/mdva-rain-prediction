@@ -51,7 +51,7 @@ description: "Task list for 001-ccds-restructure"
 - [X] T006 [US1] Mover `Frontend/` → `apps/frontend/`; actualizar `docker-compose.dev.yml`, `docker-compose.prod.yml`, el job de Frontend en `.github/workflows/ci-backend.yml` y la nota de `.env.example`
 - [X] T007 [US1] Mover `Data-science/enrutamiento_ambiental/` → `services/routing_api/`; actualizar contextos en ambos compose
 - [X] T008 [US1] Mover el servicio ML a `services/ml_api/` y los modelos a `models/`; `MDVA_MODELS_DIR` en `services/ml_api/main.py` (R4); Dockerfile con contexto raíz y `.dockerignore` de permitidos (R3); `services/ml_api/railway.toml` (R8); `services/ml_api/README.md` en reemplazo de los dos READMEs duplicados (D-05); contextos en ambos compose
-- [ ] T009 [US1] Crear `mdva/__init__.py`, `mdva/config.py` y `mdva/modeling/__init__.py`; mover `Data-science/train_models.py` → `mdva/modeling/train.py` resolviendo rutas con `mdva.config` y sin la ruta absoluta (R5); mover el notebook a `notebooks/1.0-nm-analisis-espacial-siata-vs-openmeteo.ipynb`
+- [X] T009 [US1] Crear `mdva/__init__.py`, `mdva/config.py` y `mdva/modeling/__init__.py`; mover `Data-science/train_models.py` → `mdva/modeling/train.py` resolviendo rutas con `mdva.config` y sin la ruta absoluta (R5); mover el notebook a `notebooks/1.0-nm-analisis-espacial-siata-vs-openmeteo.ipynb`
 - [ ] T010 [US1] Mover `DB/` → `db/` en dos pasos (R2): `db/init-docker.sql`, `db/seeds/*.csv`, `db/scripts/webscraper_municipios.py`; actualizar el montaje en ambos compose
 - [ ] T011 [P] [US1] Mover documentos a `docs/` y PDFs a `references/` según `contracts/repo-layout.md` (R9)
 

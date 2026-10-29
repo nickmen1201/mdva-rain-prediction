@@ -10,6 +10,9 @@ Estrategia:
 Features de inferencia (deben coincidir con EntradaPrediccion en main.py):
   temperatura_c, humedad_relativa_pct, cobertura_nubosa_pct, velocidad_viento_ms,
   hora_sin, hora_cos, mes_sin, mes_cos, precip_lag_1h_mm
+
+Uso (desde la raíz del repo):
+  python -m mdva.modeling.train
 """
 import time
 import math
@@ -19,13 +22,13 @@ import requests
 import numpy as np
 import pandas as pd
 import joblib
-from pathlib import Path
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import cross_val_score
 
-MODELS_DIR  = Path(__file__).parent / "models"
-PLUVIO_DIR  = Path(__file__).parent / ".." / ".." / ".." / "pluviometrica"
+from mdva.config import MODELS_DIR, RAW_DATA_DIR
+
+PLUVIO_DIR  = RAW_DATA_DIR / "siata"
 MODELS_DIR.mkdir(parents=True, exist_ok=True)
 
 LLUVIA_UMBRAL_MM = 0.1   # mm/hora → llueve=1
@@ -42,11 +45,6 @@ def cargar_siata_hourly() -> pd.DataFrame:
     """
     pattern = str(PLUVIO_DIR / "*.csv")
     files   = sorted(glob.glob(pattern))
-
-    if not files:
-        # Fallback: ruta absoluta en caso de que el CWD sea diferente
-        abs_path = Path("C:/Users/Luis Seoanes/Desktop/Ciencia de datos/Quinto semestre/Proyecto en tic/pluviometrica/*.csv")
-        files = sorted(glob.glob(str(abs_path)))
 
     if not files:
         print("ERROR: No se encontraron CSVs de pluviometría. Verifica PLUVIO_DIR.", file=sys.stderr)

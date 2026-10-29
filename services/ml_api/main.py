@@ -11,6 +11,7 @@ from pydantic import BaseModel, Field
 from enum import Enum
 from pathlib import Path
 import math
+import os
 
 # ── App ────────────────────────────────────────────────────────────────────────
 app = FastAPI(
@@ -20,7 +21,8 @@ app = FastAPI(
 )
 
 # ── Model loading ──────────────────────────────────────────────────────────────
-MODELS_DIR = Path(__file__).parent / "models"
+# models/ en la raíz del repo (CCDS v2); el contenedor define MDVA_MODELS_DIR=/app/models
+MODELS_DIR = Path(os.environ.get("MDVA_MODELS_DIR", Path(__file__).resolve().parents[2] / "models"))
 
 def load_models():
     models = {}

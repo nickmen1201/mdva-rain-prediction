@@ -50,8 +50,8 @@ services:
   # ---------------------------------------------------------------------------
   ml-service:
     build:
-      context: ./Data-science          # Ajustar si la carpeta tiene otro nombre
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: services/ml_api/Dockerfile
     container_name: mdva-ml
     restart: unless-stopped
     ports:

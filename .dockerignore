@@ -1,0 +1,7 @@
+# Aplica solo a builds con la raíz del repo como contexto (hoy: services/ml_api).
+# Lista de permitidos: todo queda fuera salvo lo que el servicio ML necesita.
+*
+!services/ml_api/
+!models/
+**/__pycache__
+**/*.pyc

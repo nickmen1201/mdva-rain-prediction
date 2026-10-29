@@ -46,8 +46,8 @@ services:
 
   ml-service:
     build:
-      context: ./Data-science
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: services/ml_api/Dockerfile
     container_name: mdva-ml
     restart: always
     environment:

@@ -1,6 +1,6 @@
 [build]
 builder = "DOCKERFILE"
-dockerfilePath = "Dockerfile"
+dockerfilePath = "services/ml_api/Dockerfile"
 
 [deploy]
 restartPolicyType = "ON_FAILURE"

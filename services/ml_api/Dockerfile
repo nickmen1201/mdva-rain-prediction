@@ -1,12 +1,9 @@
 # =============================================================================
-# Data-science/Dockerfile — FastAPI ML Service (Python 3.11)
+# services/ml_api/Dockerfile — FastAPI ML Service (Python 3.11)
 # =============================================================================
-# Asume la siguiente estructura en la carpeta Data-science/:
-#   main.py           ← entrypoint de FastAPI
-#   requirements.txt  ← dependencias Python
-#   models/
-#     random_forest.pkl
-#     regresion_logistica.pkl
+# Build context: raíz del repo (los modelos viven en models/, convención CCDS v2).
+#   docker build -f services/ml_api/Dockerfile .
+# El .dockerignore de la raíz solo deja entrar services/ml_api/ y models/.
 # =============================================================================
 
 FROM python:3.11-slim
@@ -18,12 +15,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends curl \
     && rm -rf /var/lib/apt/lists/*
 
 # Copiar e instalar dependencias primero (cache de capas)
-COPY requirements.txt .
+COPY services/ml_api/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copiar el código y los modelos entrenados
-COPY main.py .
+COPY services/ml_api/main.py .
 COPY models/ models/
+ENV MDVA_MODELS_DIR=/app/models
 
 # Exponer el puerto del servicio ML
 EXPOSE 8081

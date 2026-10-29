@@ -51,7 +51,7 @@ description: "Task list for 002-python-tooling-ci"
 
 - [X] T006 [P] [US4] Tests de caracterización en `services/ml_api/tests/test_api.py` (health, raíz, `/predecir/{modelo}`, `/predecir/ambos`, 422 por hora/mes fuera de rango) y `services/ml_api/tests/test_monitoreo.py` (tabla completa de RF-17 con `monkeypatch` sobre `main.predecir`)
 - [X] T007 [P] [US4] Tests de funciones puras en `services/routing_api/tests/test_use_case_helpers.py` (`_haversine`, `_encode_polyline`, `_bearing_to_direction`)
-- [ ] T008 [P] [US4] Test de rutas en `tests/test_config.py`
+- [X] T008 [P] [US4] Test de rutas en `tests/test_config.py`
 
 ---
 

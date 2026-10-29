@@ -118,7 +118,7 @@ La configuración de producción construye el Backend con el contexto correcto.
 ### Measurable Outcomes
 
 - **SC-001**: La raíz del repositorio contiene como máximo los elementos del árbol objetivo más los archivos de configuración de herramientas (control de versiones, compose, ignore, licencia, Makefile); 0 documentos sueltos.
-- **SC-002**: 100 % de los archivos movidos aparecen como renombres en el historial (ningún archivo movido figura como borrado y recreado).
+- **SC-002**: 100 % de los archivos movidos aparecen como renombres en el historial (ningún archivo movido figura como borrado y recreado), salvo los marcados como "contenido reescrito" en el mapa de reubicación.
 - **SC-003**: El smoke test de punta a punta tiene exactamente el mismo resultado antes y después de la reestructura (mismas verificaciones aprobadas y la misma falla conocida H-19).
 - **SC-004**: Los tests del Backend dan el mismo resultado (152 de 153) y el build del Frontend termina sin errores.
 - **SC-005**: 0 referencias en archivos versionados a rutas que ya no existen (`Data-science/`, `Backend/`, `Frontend/`, `DB/`), salvo en el registro histórico del charter y en documentos del curso preservados tal cual.

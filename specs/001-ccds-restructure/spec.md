@@ -8,6 +8,17 @@
 
 **Input**: User description: "Reorganizar el repositorio siguiendo Cookiecutter Data Science v2 y eliminar archivos innecesarios, sin cambiar el comportamiento del sistema (charter §2, §3.1, §3.2)."
 
+## Clarifications
+
+### Session 2026-10-28
+
+Respondidas por el agente con la opción más conservadora (constitución, "Flujo de trabajo y quality gates").
+
+- Q: ¿Se eliminan los archivos de despliegue en Railway (D-12) o se conservan? → A: Se conservan y se mueven junto a su Dockerfile; el repo nuevo no está conectado a Railway, pero eliminarlos quitaría una capacidad existente sin una spec que lo decida.
+- Q: ¿Dónde queda el script de entrenamiento del clasificador mientras no se reescriba (spec 005)? → A: En `mdva/modeling/train.py`, con el mismo comportamiento y rutas resueltas por `mdva/config.py`.
+- Q: ¿Dónde queda el script de entrenamiento del regresor de intensidad del routing service? → A: Dentro de `services/routing_api/`, junto al servicio que lo consume, hasta que la spec 009 lo elimine.
+- Q: ¿Los dos CSV de SIATA van ambos a `data/raw/`? → A: No. `precipitacion_siata_plano.csv` es el dato crudo → `data/raw/siata/`; `clean_precipitacion_siata_plano.csv` es un derivado hecho por el equipo → `data/interim/siata/`. La spec 003 decide cuál se usa.
+
 ## User Scenarios & Testing *(mandatory)*
 
 Los usuarios de esta spec son **quien revisa el portafolio** (reclutador o entrevistador de Ciencia de Datos) y **quien desarrolla** el proyecto. El producto final (la app de viajes) no debe notar ningún cambio.
@@ -56,7 +67,7 @@ El repositorio no versiona archivos sin uso: respaldos de base de datos obsoleto
 **Acceptance Scenarios**:
 
 1. **Given** el repositorio reorganizado, **When** se listan los archivos versionados, **Then** no aparecen respaldos de base de datos, configuración de IDE, el script de entrenamiento duplicado, el servicio SIATA simulado ni los READMEs duplicados del servicio ML.
-2. **Given** los CSV de SIATA en la raíz, **When** se reorganiza, **Then** quedan en `data/raw/siata/` y git los ignora.
+2. **Given** los CSV de SIATA en la raíz, **When** se reorganiza, **Then** el crudo queda en `data/raw/siata/`, el derivado en `data/interim/siata/`, y git ignora ambos.
 
 ---
 
@@ -90,8 +101,8 @@ La configuración de producción construye el Backend con el contexto correcto.
 - **FR-004**: El arranque MUST reutilizar los volúmenes de datos existentes (mismo nombre de proyecto de Compose).
 - **FR-005**: Ningún comportamiento observable de los servicios (endpoints, respuestas, reglas de negocio del charter §4) MUST cambiar.
 - **FR-006**: El paquete `mdva/` MUST existir con un módulo de configuración que sea el único lugar donde se definen las rutas del proyecto (charter E-04); el script de entrenamiento existente MUST resolver sus rutas a través de él en lugar de rutas absolutas o relativas a carpetas externas.
-- **FR-007**: Los archivos del charter §3.1 aplicables a esta spec MUST eliminarse o reubicarse: D-02, D-04, D-05, D-07, D-08, D-09, D-10, D-11, D-13. Quedan fuera D-03 (spec 009), D-06 (spec 005) y D-12 (ver Clarifications).
-- **FR-008**: `data/` y su contenido MUST estar ignorados por git, salvo marcadores de carpeta; los CSV de SIATA MUST quedar en `data/raw/siata/`.
+- **FR-007**: Los archivos del charter §3.1 aplicables a esta spec MUST eliminarse o reubicarse: D-02, D-04, D-05, D-07, D-08, D-09, D-10, D-11, D-13. Quedan fuera D-03 (spec 009), D-06 (spec 005) y D-12 (se conserva; ver Clarifications).
+- **FR-008**: `data/` y su contenido MUST estar ignorados por git, salvo marcadores de carpeta; el CSV crudo de SIATA MUST quedar en `data/raw/siata/` y el derivado "clean" en `data/interim/siata/`.
 - **FR-009**: La CI existente (Backend y Frontend) y el flujo de release MUST apuntar a las nuevas rutas y seguir ejecutando los mismos pasos.
 - **FR-010**: La configuración de producción MUST construir el Backend con un contexto compatible con su Dockerfile.
 - **FR-011**: La documentación operativa (`README.md`, `CLAUDE.md`) MUST reflejar las nuevas rutas; ninguna instrucción documentada MUST apuntar a una ruta inexistente.

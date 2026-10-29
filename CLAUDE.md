@@ -126,7 +126,7 @@ http://localhost:8000/docs              # Routing Service
 
 ## Seguridad (pendiente para producción)
 
-- La contraseña de PostgreSQL (`cambiame-db-password`) está hardcodeada en varios archivos — usar variables de entorno
+- La contraseña de PostgreSQL, el JWT secret y la API key de Google se leen del `.env` local (gitignored); ver `.env.example`
 - El JWT secret de dev está hardcodeado — usar `JWT_SECRET` env var
 - Tokens JWT en localStorage — considerar cookies HTTPOnly en producción
 - `CORS allow_origins=["*"]` en routing-service — restringir en producción

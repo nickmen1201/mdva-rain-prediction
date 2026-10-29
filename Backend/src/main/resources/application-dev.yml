@@ -6,10 +6,13 @@
 # =============================================================================
 
 spring:
+  config:
+    # .env de la raíz del repo (gitignored) al correr con bootRun desde Backend/
+    import: optional:file:../.env[.properties]
   datasource:
     url: jdbc:postgresql://localhost:5432/mdva
     username: postgres
-    password: cambiame-db-password
+    password: ${POSTGRES_PASSWORD}
 
 # Enhanced logging for development
 logging:
@@ -22,8 +25,8 @@ logging:
 # Google Maps API key for development 
 google:
   maps:
-    api-key: REEMPLAZAR_GOOGLE_MAPS_API_KEY
+    api-key: ${GOOGLE_MAPS_API_KEY}
 
 mdva:
   jwt:
-    secret: cambiame-dev-jwt-secret-de-al-menos-256-bits-para-hs256-signing
+    secret: ${JWT_SECRET}

@@ -9,6 +9,9 @@
 # Documentación interna del equipo (Trello/Teams es la fuente)
 doc/
 
+# Variables de entorno locales (secretos)
+.env
+
 # OS
 .DS_Store
 Thumbs.db

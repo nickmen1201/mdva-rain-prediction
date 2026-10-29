@@ -292,7 +292,7 @@ cd Backend
 **Motor:** PostgreSQL 16  
 **Puerto host:** 5436 (→ 5432 interno)  
 **Base de datos:** `mdva`  
-**Usuario:** `postgres` / **Password:** `cambiame-db-password` (desarrollo)
+**Usuario:** `postgres` / **Password:** valor de `POSTGRES_PASSWORD` en tu `.env` local (desarrollo)
 
 **Tablas principales:**
 

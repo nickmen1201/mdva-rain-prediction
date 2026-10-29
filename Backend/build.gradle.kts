@@ -7,6 +7,14 @@ plugins {
     id("nu.studer.jooq") version "9.0"
 }
 
+// Valores locales desde el .env de la raíz del repo (gitignored)
+val rootEnv: Map<String, String> = rootProject.file("../.env").takeIf { it.exists() }
+    ?.readLines()
+    ?.map { it.trim() }
+    ?.filter { it.isNotEmpty() && !it.startsWith("#") && "=" in it }
+    ?.associate { it.substringBefore("=").trim() to it.substringAfter("=").trim() }
+    ?: emptyMap()
+
 group = "ti.mdva"
 version = "1.0-SNAPSHOT"
 
@@ -89,7 +97,7 @@ jooq {
                     driver = "org.postgresql.Driver"
                     url = "jdbc:postgresql://localhost:5436/mdva"
                     user = "postgres"
-                password = "cambiame-db-password" // TODO: USAR UN .ENV O CONFIGURACIÓN EXTERNA PARA ESTO. También se puede especificar en el dockercompose (Camilo)
+                password = System.getenv("POSTGRES_PASSWORD") ?: rootEnv["POSTGRES_PASSWORD"] ?: "postgres"
                 } 
 
                 generator.apply {

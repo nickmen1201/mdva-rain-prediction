@@ -150,7 +150,7 @@ Host:     localhost
 Puerto:   5436
 BD:       mdva
 Usuario:  postgres
-Password: cambiame-db-password
+Password: (POSTGRES_PASSWORD del .env local)
 ```
 
 ---

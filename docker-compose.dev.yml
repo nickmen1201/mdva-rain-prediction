@@ -5,6 +5,7 @@
 #
 # Uso:
 #   docker compose -f docker-compose.dev.yml up --build
+#   (requiere un .env en la raíz con GOOGLE_MAPS_API_KEY, POSTGRES_PASSWORD y JWT_SECRET; ver .env.example)
 #   docker compose -f docker-compose.dev.yml down -v   ← borra también los volúmenes
 #
 # Puertos expuestos al host:
@@ -27,7 +28,7 @@ services:
     environment:
       POSTGRES_DB:       mdva
       POSTGRES_USER:     postgres
-      POSTGRES_PASSWORD: cambiame-db-password
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     ports:
       - "5436:5432"
     volumes:
@@ -104,8 +105,9 @@ services:
       SPRING_PROFILES_ACTIVE:           dev
       SPRING_DATASOURCE_URL:            jdbc:postgresql://postgres:5432/mdva
       SPRING_DATASOURCE_USERNAME:       postgres
-      SPRING_DATASOURCE_PASSWORD:       cambiame-db-password
-      GOOGLE_MAPS_API_KEY:              REEMPLAZAR_GOOGLE_MAPS_API_KEY
+      SPRING_DATASOURCE_PASSWORD:       ${POSTGRES_PASSWORD}
+      GOOGLE_MAPS_API_KEY:              ${GOOGLE_MAPS_API_KEY}
+      JWT_SECRET:                       ${JWT_SECRET}
       ML_SERVICE_URL:                   http://ml-service:8081
       ROUTING_SERVICE_URL:              http://routing-service:8000
     depends_on:

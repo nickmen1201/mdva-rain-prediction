@@ -4,7 +4,7 @@
 
 **Created**: 2026-10-28
 
-**Status**: Draft
+**Status**: Implemented (2026-10-28)
 
 **Input**: User description: "Fijar versiones y entorno reproducible de Python, automatizar lint/format/tests y escaneo de secretos en CI, con pruebas de caracterización del servicio ML antes de refactorizarlo (charter R-38–R-41; constitución II, III y quality gates)."
 

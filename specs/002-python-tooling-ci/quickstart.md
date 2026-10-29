@@ -45,3 +45,11 @@ Esperado: mismas versiones de las librerías principales y smoke test idéntico.
 - `services/routing_api`: los 76 paquetes son idénticos (antes sin ninguna versión fijada).
 - Se excluyen de la comparación `pip`, `setuptools`, `wheel` y `packaging`, que vienen con la imagen base de Python, y `colorama` (solo Windows).
 - Smoke test: idéntico a la línea base de la spec 001.
+
+## Verificación final registrada (2026-10-28)
+
+- `make clean` (equivalente) sin errores; `ruff check` y `ruff format --check` sin hallazgos en todo el repo.
+- Tests: raíz 36 · `services/ml_api` 29 · `services/routing_api` 17, todos en verde y sin red.
+- `gitleaks` sobre la rama actual: `no leaks found`; prueba negativa con credencial ficticia: `leaks found: 1`.
+- Smoke test tras reconstruir las imágenes con el código formateado: idéntico a la línea base de la spec 001.
+- CI de GitHub: verde en todos los commits subidos hasta el cierre; los workflows nuevos (`ci-python`, `ci-frontend`, `ci-secrets`) se verifican al llegar sus commits.

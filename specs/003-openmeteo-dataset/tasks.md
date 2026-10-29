@@ -24,7 +24,7 @@ description: "Task list for 003-openmeteo-dataset"
 ## Phase 2: Foundational
 
 - [X] T002 [P] Contrato declarativo y validador en `mdva/data_contract.py` (columnas, tipos, unidades, rangos, nulos, clave única, cobertura; reporte por regla; `DataContractError`) con tests de las 5 alteraciones en `tests/test_data_contract.py`
-- [ ] T003 [P] Cliente Open-Meteo en `mdva/openmeteo.py` (construcción de URLs con unidades explícitas y UTC, verificación de `hourly_units`, reintentos exponenciales ante 429/5xx, escritura atómica, manifiesto SHA-256) con tests sin red en `tests/test_openmeteo.py`
+- [X] T003 [P] Cliente Open-Meteo en `mdva/openmeteo.py` (construcción de URLs con unidades explícitas y UTC, verificación de `hourly_units`, reintentos exponenciales ante 429/5xx, escritura atómica, manifiesto SHA-256) con tests sin red en `tests/test_openmeteo.py`
 
 **Checkpoint**: contrato y descarga probados sin red
 

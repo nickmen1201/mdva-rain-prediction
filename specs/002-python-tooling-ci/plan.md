@@ -68,7 +68,7 @@ No hay `data-model.md`: la spec no introduce entidades de datos.
 ├── pyproject.toml  uv.lock  .python-version     # proyecto mdva + config de ruff y pytest
 ├── Makefile                                    # objetivos CCDS v2
 ├── .gitleaksignore
-├── .github/workflows/{ci-python.yml, ci-backend.yml, ci-frontend.yml, release.yml}
+├── .github/workflows/{ci-python.yml, ci-secrets.yml, ci-backend.yml, ci-frontend.yml, release.yml}
 ├── tests/test_config.py
 ├── services/ml_api/{pyproject.toml, uv.lock, Dockerfile, tests/}
 ├── services/routing_api/{pyproject.toml, uv.lock, Dockerfile, .dockerignore, tests/}

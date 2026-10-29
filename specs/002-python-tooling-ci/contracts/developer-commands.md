@@ -19,7 +19,7 @@
 |---|---|---|
 | `ci-python.yml` | `lint` | ruff encuentra un hallazgo o un archivo sin formato |
 | `ci-python.yml` | `test (., services/ml_api, services/routing_api)` | algún test falla o el lock no corresponde al `pyproject.toml` |
-| `ci-python.yml` | `secrets` | gitleaks reporta un hallazgo no listado en `.gitleaksignore` |
+| `ci-secrets.yml` | `gitleaks` | gitleaks reporta un hallazgo no listado en `.gitleaksignore` |
 | `ci-backend.yml` | `build`, `compile-check` | igual que hoy |
 | `ci-frontend.yml` | `frontend` | ESLint con errores o build fallido |
 

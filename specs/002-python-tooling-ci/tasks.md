@@ -73,7 +73,7 @@ description: "Task list for 002-python-tooling-ci"
 
 **Independent Test**: `make secrets` y prueba negativa del quickstart
 
-- [ ] T012 [US3] Agregar `.gitleaksignore` (falso positivo de R6) y `.github/workflows/ci-secrets.yml`; ejecutar la prueba negativa local
+- [X] T012 [US3] Agregar `.gitleaksignore` (falso positivo de R6) y `.github/workflows/ci-secrets.yml`; ejecutar la prueba negativa local
 
 ---
 

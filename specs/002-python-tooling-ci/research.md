@@ -48,7 +48,8 @@
 ## R8. CI
 
 - **Decision**:
-  - `ci-python.yml`: job `lint` (ruff check + format --check), job `test` en matriz por proyecto (`.`, `services/ml_api`, `services/routing_api`) con `astral-sh/setup-uv`, job `secrets` (gitleaks).
+  - `ci-python.yml`: job `lint` (ruff check + format --check) y job `test` en matriz por proyecto (`.`, `services/ml_api`, `services/routing_api`) con `astral-sh/setup-uv`.
+  - `ci-secrets.yml`: gitleaks sobre el historial completo (workflow propio para que corra en cada push, cambie lo que cambie).
   - `ci-backend.yml`: solo jobs del Backend.
   - `ci-frontend.yml`: lint + build del Frontend (sale de `ci-backend.yml`).
 - **Rationale**: un workflow por ecosistema hace más legible el estado en GitHub. FR-006.

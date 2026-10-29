@@ -46,7 +46,7 @@ El stack completo corre en Docker Compose con un solo comando.
 |---|---|
 | Frontend | React 18 + Vite, nginx (Docker), Google Maps JS API |
 | Backend | Java 21, Spring Boot 3.4.2, JOOQ 3.19.18, Flyway, JWT |
-| ML Service | Python 3.11, FastAPI, scikit-learn 1.4.2 |
+| ML Service | Python 3.11, FastAPI, scikit-learn 1.8.0 |
 | Routing Service | Python 3.11, FastAPI, OSMnx, NetworkX |
 | Base de datos | PostgreSQL 16 |
 | Infraestructura | Docker Compose, GitHub Actions (CI/CD parcial) |
@@ -194,6 +194,22 @@ curl -X POST http://localhost:8081/predecir/ambos \
 
 ---
 
+## Comandos de desarrollo
+
+Requisitos: [uv](https://docs.astral.sh/uv/) (instala Python 3.11 si hace falta) y Docker. Los objetivos del `Makefile` siguen la convención Cookiecutter Data Science v2; en Windows sin `make` se usa el comando equivalente.
+
+| Objetivo | Comando equivalente | Qué hace |
+|---|---|---|
+| `make requirements` | `uv sync` · `uv sync --project services/ml_api` · `uv sync --project services/routing_api` | Entornos de los 3 proyectos Python desde sus lockfiles |
+| `make lint` | `uv run ruff check .` · `uv run ruff format --check .` | Lint y formato |
+| `make format` | `uv run ruff check --fix .` · `uv run ruff format .` | Corrige y formatea |
+| `make test` | `uv run pytest` · `uv run --project services/ml_api pytest services/ml_api/tests` · `uv run --project services/routing_api pytest services/routing_api/tests` | Tests de Python |
+| `make secrets` | `docker run --rm -v "$PWD:/repo" ghcr.io/gitleaks/gitleaks:v8.30.1 git /repo --log-opts=HEAD` | Escaneo de secretos |
+| `make up` / `make down` | `docker compose -f docker-compose.dev.yml up --build -d` / `down` | Stack de desarrollo |
+| `make smoke` | `uv run python tests/e2e/smoke_stack.py` | Smoke test de punta a punta (con el stack arriba) |
+
+La CI (`.github/workflows/`) corre lint, tests, escaneo de secretos y los builds del Backend y del Frontend en cada push.
+
 ## Desarrollo local (sin Docker)
 
 ### Backend
@@ -274,7 +290,7 @@ Los modelos se sirven vía `http://localhost:8081` (FastAPI).
 | Regresión Logística | `models/regresion_logistica.pkl` | — | 0.78 | Referencia complementaria |
 
 - Entrenados con datos del SIATA + Open-Meteo (Valle de Aburrá).
-- Versión scikit-learn **1.4.2** fijada — no cambiar sin re-entrenar.
+- Versión scikit-learn **1.8.0** fijada en `services/ml_api/uv.lock` (la de los `.pkl`) — no cambiar sin re-entrenar.
 - Mejora desde línea base: F1 0.65 → 0.78 (+20%).
 
 > Nota: uno de los dos modelos puede no estar en el repositorio por tamaño. El ML Service arranca en modo tolerante a fallos y retorna HTTP 503 si se solicita un modelo no cargado.

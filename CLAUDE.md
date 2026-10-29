@@ -25,10 +25,10 @@ docker compose -f docker-compose.dev.yml up --build
 ```bash
 # 1. PostgreSQL (puerto 5432 local)
 # 2. ML Service
-uvicorn main:app --app-dir services/ml_api --port 8081
+uv run --project services/ml_api uvicorn main:app --app-dir services/ml_api --port 8081
 
 # 3. Routing Service
-cd services/routing_api && uvicorn main:app --port 8000
+cd services/routing_api && uv run uvicorn main:app --port 8000
 
 # 4. Backend
 cd apps/backend && ./gradlew bootRun --args='--spring.profiles.active=dev'
@@ -64,7 +64,8 @@ ResultadoViaje.jsx → MapaRuta + AlertaClimatica
 
 - `random_forest.pkl` — AUC 0.82, **usado para decisiones** (umbral verde/amarillo/rojo)
 - `regresion_logistica.pkl` — AUC 0.78, backup/validación cruzada
-- **scikit-learn fijado en 1.4.2** — cambiar la versión rompe los `.pkl`
+- **scikit-learn fijado en 1.8.0** en `services/ml_api/uv.lock` — cambiar la versión rompe los `.pkl` (el routing service usa 1.9.1 con un modelo serializado en 1.8.0; se elimina en la spec 009)
+- Dependencias Python: un `pyproject.toml` + `uv.lock` por proyecto (raíz `mdva`, `services/ml_api`, `services/routing_api`); comandos en el `Makefile`
 
 ### Reglas de ajuste de tiempo por lluvia
 

@@ -65,7 +65,7 @@ description: "Task list for 003-openmeteo-dataset"
 
 ## Phase 6: Polish
 
-- [ ] T010 Documentar en `README.md` (sección Datos) la fuente, la etiqueta, el umbral y la limitación de resolución, con los números del reporte; verificar SC-001…SC-005 y cerrar la spec
+- [X] T010 Documentar en `README.md` (sección Datos) la fuente, la etiqueta, el umbral y la limitación de resolución, con los números del reporte; verificar SC-001…SC-005 y cerrar la spec
 
 ---
 

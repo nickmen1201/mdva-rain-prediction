@@ -4,7 +4,7 @@
 
 **Created**: 2026-10-28
 
-**Status**: Draft
+**Status**: Implemented (2026-10-29)
 
 **Input**: User description: "Una sola definición de features compartida por entrenamiento e inferencia, con contrato de entradas explícito (unidades, rangos, zona horaria) y prueba de paridad, para eliminar el train/serve skew (charter R-07–R-10; H-03, H-05, H-06; constitución VI)."
 

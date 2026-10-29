@@ -18,10 +18,11 @@ Aplicación web de planificación de viajes y monitoreo ambiental para el área 
 7. [API y endpoints](#api-y-endpoints)
 8. [Desarrollo local (sin Docker)](#desarrollo-local-sin-docker)
 9. [Base de datos](#base-de-datos)
-10. [Modelos ML](#modelos-ml)
-11. [CI/CD](#cicd)
-12. [Documentación técnica](#documentación-técnica)
-13. [Troubleshooting](#troubleshooting)
+10. [Datos](#datos)
+11. [Modelos ML](#modelos-ml)
+12. [CI/CD](#cicd)
+13. [Documentación técnica](#documentación-técnica)
+14. [Troubleshooting](#troubleshooting)
 
 ---
 
@@ -277,6 +278,29 @@ cd apps/backend
 |---|---|
 | V1 | Estado base (`init-docker.sql`) — tablas + datos seed |
 | V2 | Agrega coordenadas lat/lng, nombre y distancia a `viajes` |
+
+---
+
+## Datos
+
+El dataset de entrenamiento se reconstruye con un solo comando (`make data`, ~30 s con la caché de descargas) y queda en `data/processed/rain_hourly.parquet` (no versionado; sí lo están el contrato y los reportes).
+
+| Aspecto | Detalle |
+|---|---|
+| Fuente | Open-Meteo, 2022–2025: *Historical Forecast* (variables de entrada, las mismas que se piden en vivo) y *ERA5* (precipitación de referencia), en UTC y con unidades explícitas |
+| Ubicaciones | 13 estaciones SIATA del Valle de Aburrá → **455 832 filas** (13 × 35 064 horas), 0 descartadas |
+| Etiqueta | `rain = precipitación ERA5 de la misma hora ≥ 0.5 mm/h`; tasa de lluvia 19.0 % |
+| Calidad | Contrato declarativo `rain_hourly` v1 (`mdva/data_contract.py`): tipos, unidades, rangos, nulos, clave única y cobertura; una etapa que no lo cumple no se promueve. Resultado en [`reports/data_quality.json`](reports/data_quality.json) |
+| Reproducibilidad | Manifiesto SHA-256 de las descargas; una segunda ejecución hace 0 descargas y produce la misma huella de contenido |
+
+### Validación externa de la etiqueta (SIATA)
+
+Los pluviómetros SIATA disponibles cubren solo un mes (7 jun – 7 jul de 2022), así que no se usan para entrenar sino para medir qué tan fiel es la etiqueta (`make validate-labels` → [`reports/metrics/label_validation.json`](reports/metrics/label_validation.json)):
+
+- **Umbral calibrado sin fuga**: con la primera mitad del mes, por igualación de frecuencias, 0.5 mm/h en ERA5 reproduce la tasa observada en SIATA (24.0 % vs. 21.4 %). La segunda mitad solo se usa para medir.
+- **Acuerdo hora a hora bajo** (validación, 11 estaciones, 3 891 horas): kappa 0.05 a 1 h, 0.13 a 3 h y 0.18 a 6 h (F1 0.23 → 0.57). El pronóstico crudo de Open-Meteo obtiene valores muy parecidos (kappa 0.08 / 0.15 / 0.19).
+- **Limitación de resolución**: ERA5 tiene celdas de ~25 km; 8 de las 13 estaciones caen en la misma celda, de modo que la etiqueta describe lluvia "en la zona" y no en un punto. Las métricas del modelo se leen frente a esta referencia, no frente a un pluviómetro.
+- Exclusiones: la estación 205 no tiene minutos con calidad 1 y la 206 solo 9 horas comparables (< 250).
 
 ---
 

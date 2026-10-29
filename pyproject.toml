@@ -6,6 +6,7 @@ readme = "README.md"
 requires-python = ">=3.11,<3.12"
 dependencies = [
     "joblib==1.5.2",
+    "matplotlib==3.11.2",
     "numpy==2.4.6",
     "pandas==3.1.0",
     "pyarrow==26.0.0",
@@ -29,7 +30,7 @@ packages = ["mdva"]
 [tool.ruff]
 line-length = 120
 target-version = "py311"
-extend-exclude = ["notebooks", ".specify"]
+extend-exclude = ["notebooks", ".specify", "*.md"]  # fragmentos ilustrativos en la documentación
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I"]

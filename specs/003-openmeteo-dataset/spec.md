@@ -4,7 +4,7 @@
 
 **Created**: 2026-10-28
 
-**Status**: Draft
+**Status**: Implemented (2026-10-29)
 
 **Input**: User description: "Los 185 CSV de SIATA se perdieron; construir con Open-Meteo un dataset de modelado reproducible desde cero, con contrato de datos y quality gates, y usar los CSV de SIATA disponibles solo para validar la etiqueta (charter R-01–R-06, H-02, H-04, H-20; constitución V)."
 

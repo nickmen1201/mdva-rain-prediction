@@ -1,243 +1,293 @@
-"""
-Entrena random_forest.pkl y regresion_logistica.pkl usando SIATA como ground truth.
+"""Entrena, calibra y evalúa el clasificador de lluvia (spec 005).
 
-Estrategia:
-  - 185 CSVs de pluviometría SIATA → etiquetas reales de lluvia (no Open-Meteo weather_code)
-  - Open-Meteo Archive API → features meteorológicas (temperatura, humedad, viento, etc.)
-  - Join en hora → features + etiqueta real
-  - precip_lag_1h_mm viene del promedio SIATA real (no estimado)
+1. Features con `mdva.features` sobre el dataset `rain_hourly` (spec 003).
+2. Split temporal: train 2022–2023 (sin junio–julio de 2022), validación 2024, prueba 2025.
+3. Selección por log loss en validación entre regresión logística e HistGradientBoosting.
+4. Calibración sobre validación (método elegido con un sub-split temporal de la validación).
+5. Evaluación única en prueba frente a baselines, con IC por bootstrap en bloques de días,
+   curva de confiabilidad, niveles de alerta y validación externa contra pluviómetros SIATA.
+6. Artefactos: modelo + metadata + model card, métricas, figuras y registro de corrida.
 
-Features de inferencia (deben coincidir con EntradaPrediccion en main.py):
-  temperatura_c, humedad_relativa_pct, cobertura_nubosa_pct, velocidad_viento_ms,
-  hora_sin, hora_cos, mes_sin, mes_cos, precip_lag_1h_mm
-
-Uso (desde la raíz del repo):
-  python -m mdva.modeling.train
+Uso (desde la raíz del repo, con el dataset construido):
+    python -m mdva.modeling.train
 """
 
-import glob
-import sys
+from __future__ import annotations
+
+import argparse
+import itertools
+import json
+import logging
+import platform
+import subprocess
 import time
+from datetime import datetime, timezone
 
 import joblib
 import numpy as np
 import pandas as pd
-import requests
-from sklearn.ensemble import RandomForestClassifier
+import sklearn
+from sklearn.calibration import CalibratedClassifierCV
+from sklearn.ensemble import HistGradientBoostingClassifier
+from sklearn.frozen import FrozenEstimator
 from sklearn.linear_model import LogisticRegression
-from sklearn.model_selection import cross_val_score
+from sklearn.metrics import log_loss
+from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import StandardScaler
 
-from mdva.config import MODELS_DIR, RAW_DATA_DIR
+from mdva import config, openmeteo
+from mdva.data_contract import DATASET_CONTRACT
+from mdva.dataset import content_fingerprint
+from mdva.features import FEATURE_CONTRACT_VERSION, FEATURES, build_features
+from mdva.label_validation import siata_hourly
+from mdva.modeling import evaluate, model_card, splits
+from mdva.modeling.baselines import Climatology, RawForecast, persistence
+from mdva.modeling.predict import MODEL_NAME, model_dir
 
-PLUVIO_DIR = RAW_DATA_DIR / "siata"
-MODELS_DIR.mkdir(parents=True, exist_ok=True)
+log = logging.getLogger(__name__)
 
-LLUVIA_UMBRAL_MM = 0.1  # mm/hora → llueve=1
-# Rango con mejor cobertura SIATA
-DATE_START = "2018-01-01"
-DATE_END = "2025-12-31"
-
-# ── Paso 1: Agregar pluviometría SIATA a promedios horarios del Valle ─────────
-
-
-def cargar_siata_hourly() -> pd.DataFrame:
-    """
-    Lee todos los CSVs de SIATA, agrega a totales horarios por estación
-    y luego promedia entre estaciones para obtener precipitación del Valle.
-    """
-    pattern = str(PLUVIO_DIR / "*.csv")
-    files = sorted(glob.glob(pattern))
-
-    if not files:
-        print("ERROR: No se encontraron CSVs de pluviometría. Verifica PLUVIO_DIR.", file=sys.stderr)
-        sys.exit(1)
-
-    print(f"Cargando {len(files)} estaciones SIATA...")
-
-    station_dfs = []
-    ok = 0
-    for i, fpath in enumerate(files):
-        try:
-            df = pd.read_csv(
-                fpath,
-                usecols=["codigo", "fecha_hora", "p1", "calidad"],
-                parse_dates=["fecha_hora"],
-            )
-            # Filtrar calidad OK y valores válidos
-            df = df[(df["calidad"] == 1) & (df["p1"] >= 0)].copy()
-            if len(df) < 100:
-                continue
-
-            # Truncar a la hora
-            df["hora"] = df["fecha_hora"].dt.floor("h")
-
-            # Sumar p1 por hora para esta estación
-            hourly = df.groupby("hora")["p1"].sum().reset_index()
-            hourly.columns = ["hora", "precip_mm_h"]
-            hourly["station"] = df["codigo"].iloc[0]
-            station_dfs.append(hourly)
-            ok += 1
-        except Exception:
-            pass  # Ignorar estaciones con problemas
-
-        if (i + 1) % 30 == 0:
-            print(f"  {i + 1}/{len(files)} procesadas ({ok} OK)...")
-
-    print(f"  Estaciones cargadas con éxito: {ok}")
-
-    all_st = pd.concat(station_dfs, ignore_index=True)
-
-    # Filtrar rango de fechas con mejor cobertura
-    all_st = all_st[(all_st["hora"] >= DATE_START) & (all_st["hora"] <= DATE_END)]
-
-    # Promedio del Valle por hora (media entre estaciones activas)
-    valle_hourly = (
-        all_st.groupby("hora")["precip_mm_h"].mean().reset_index().rename(columns={"precip_mm_h": "precip_valle_mm_h"})
-    )
-    valle_hourly = valle_hourly.sort_values("hora").reset_index(drop=True)
-
-    # Etiqueta: llueve si precip >= 0.1 mm/h
-    valle_hourly["llueve"] = (valle_hourly["precip_valle_mm_h"] >= LLUVIA_UMBRAL_MM).astype(int)
-
-    # Lag de 1 hora (precip hora anterior)
-    valle_hourly["precip_lag_1h_mm"] = valle_hourly["precip_valle_mm_h"].shift(1).fillna(0.0)
-
-    print(f"Horas con datos SIATA: {len(valle_hourly):,}")
-    print(f"Llueve en {valle_hourly['llueve'].mean() * 100:.1f}% de las horas")
-    return valle_hourly
+MODEL_VERSION = "1.0.0"
+SEED = 42
+ALERT_THRESHOLDS = {"amarillo": 0.40, "rojo": 0.70}
+HGB_GRID = {
+    "learning_rate": (0.05, 0.1),
+    "max_leaf_nodes": (15, 31),
+    "max_iter": (200, 400),
+    "l2_regularization": (0.0, 1.0),
+}
+MAX_MODEL_BYTES = 5_000_000
 
 
-# ── Paso 2: Descargar features de Open-Meteo (solo La Candelaria) ─────────────
+def candidates():
+    yield "logistic", {}, make_pipeline(StandardScaler(), LogisticRegression(max_iter=2000))
+    claves = list(HGB_GRID)
+    for valores in itertools.product(*HGB_GRID.values()):
+        params = dict(zip(claves, valores))
+        yield "hgb", params, HistGradientBoostingClassifier(early_stopping=False, random_state=SEED, **params)
 
 
-def descargar_openmeteo(lat: float = 6.2518, lon: float = -75.5636) -> pd.DataFrame:
-    """
-    Descarga features meteorológicas del archivo Open-Meteo para La Candelaria.
-    Solo descarga un punto para ser más rápido y confiable.
-    """
-    url = "https://archive-api.open-meteo.com/v1/archive"
-    params = {
-        "latitude": lat,
-        "longitude": lon,
-        "start_date": DATE_START,
-        "end_date": DATE_END,
-        "hourly": ",".join(
-            [
-                "temperature_2m",
-                "relative_humidity_2m",
-                "cloud_cover",
-                "wind_speed_10m",
-            ]
-        ),
-        "timezone": "America/Bogota",
-    }
-    print(f"Descargando Open-Meteo ({DATE_START} → {DATE_END}) para La Candelaria...")
-    for intento in range(3):
-        resp = requests.get(url, params=params, timeout=120)
-        if resp.status_code == 200:
-            break
-        if resp.status_code == 429:
-            espera = 60 * (intento + 1)
-            print(f"  Rate limit — esperando {espera}s...")
-            time.sleep(espera)
-        else:
-            resp.raise_for_status()
+def _ll(y, p) -> float:
+    return float(log_loss(y, np.clip(p, evaluate.EPS, 1 - evaluate.EPS), labels=[0, 1]))
 
-    data = resp.json()["hourly"]
-    df = pd.DataFrame(data)
-    df["hora"] = pd.to_datetime(df["time"]).dt.tz_localize(None)
-    df = df.rename(
-        columns={
-            "temperature_2m": "temperatura_c",
-            "relative_humidity_2m": "humedad_relativa_pct",
-            "cloud_cover": "cobertura_nubosa_pct",
-            "wind_speed_10m": "velocidad_viento_ms",
+
+def choose_calibration(base, X_val: pd.DataFrame, y_val: np.ndarray, t_val: pd.Series) -> tuple[str, dict]:
+    """Elige entre sin calibrar, isotónica y sigmoide: ajusta en enero–junio y evalúa en julio–diciembre de 2024."""
+    corte = pd.Timestamp("2024-07-01", tz="UTC")
+    a, b = (t_val < corte).to_numpy(), (t_val >= corte).to_numpy()
+    resultados = {"none": round(_ll(y_val[b], base.predict_proba(X_val[b])[:, 1]), 5)}
+    for metodo in ("isotonic", "sigmoid"):
+        cal = CalibratedClassifierCV(FrozenEstimator(base), method=metodo).fit(X_val[a], y_val[a])
+        resultados[metodo] = round(_ll(y_val[b], cal.predict_proba(X_val[b])[:, 1]), 5)
+    return min(resultados, key=resultados.get), resultados
+
+
+def calibrate(base, metodo: str, X_val: pd.DataFrame, y_val: np.ndarray):
+    if metodo == "none":
+        return base
+    return CalibratedClassifierCV(FrozenEstimator(base), method=metodo).fit(X_val, y_val)
+
+
+def git_info() -> tuple[str, bool]:
+    try:
+        sha = subprocess.run(["git", "rev-parse", "HEAD"], capture_output=True, text=True, check=True).stdout.strip()
+        sucio = bool(subprocess.run(["git", "status", "--porcelain"], capture_output=True, text=True).stdout.strip())
+        return sha, sucio
+    except (OSError, subprocess.CalledProcessError):
+        return "desconocido", True
+
+
+def run(
+    dataset: pd.DataFrame | None = None,
+    *,
+    n_boot: int = 500,
+    siata_hours: pd.DataFrame | None = None,
+    out_models=None,
+    out_reports=None,
+) -> dict:
+    inicio = time.time()
+    df = dataset if dataset is not None else pd.read_parquet(config.DATASET_PROCESSED)
+    df = df.sort_values(["time_utc", "station_id"]).reset_index(drop=True)
+    X = build_features(df)
+    y = df["rain"].to_numpy(dtype=int)
+    t = df["time_utc"]
+    masks = {k: v.to_numpy() for k, v in splits.temporal_splits(t).items()}
+    tr, va, te, ex = masks["train"], masks["validation"], masks["test"], masks["external"]
+
+    # ── Selección ────────────────────────────────────────────────────────────
+    seleccion = []
+    mejor = None
+    for nombre, params, est in candidates():
+        est.fit(X[tr], y[tr])
+        ll = _ll(y[va], est.predict_proba(X[va])[:, 1])
+        seleccion.append({"name": nombre, "params": params, "val_log_loss": round(ll, 5)})
+        log.info("candidato %s %s → log loss validación %.5f", nombre, params, ll)
+        if mejor is None or ll < mejor[0]:
+            mejor = (ll, nombre, params, est)
+    _, nombre_base, params_base, base = mejor
+    logistica = next(c for c in seleccion if c["name"] == "logistic")
+    modelo_logistico = make_pipeline(StandardScaler(), LogisticRegression(max_iter=2000)).fit(X[tr], y[tr])
+
+    # ── Calibración ──────────────────────────────────────────────────────────
+    metodo, comparacion = choose_calibration(base, X[va], y[va], t[va].reset_index(drop=True))
+    modelo = calibrate(base, metodo, X[va], y[va])
+
+    # ── Baselines ────────────────────────────────────────────────────────────
+    clima = Climatology().fit(t[tr], y[tr])
+    crudo = RawForecast().fit(X[tr], y[tr])
+
+    def predicciones(m):
+        return {
+            "model": modelo.predict_proba(X[m])[:, 1],
+            "climatology": clima.predict_proba(t[m]),
+            "raw_forecast": crudo.predict_proba(X[m]),
+            "logistic": modelo_logistico.predict_proba(X[m])[:, 1],
+            "persistence_reference": persistence(df.loc[m, "station_id"], t[m], y[m]),
         }
+
+    reporte_splits = {}
+    for nombre, m in (("validation", va), ("test", te)):
+        preds = predicciones(m)
+        puntos = {k: evaluate.point_metrics(y[m], p) for k, p in preds.items()}
+        for k in puntos:
+            puntos[k]["bss"] = 1 - puntos[k]["brier"] / puntos["climatology"]["brier"]
+        reporte_splits[nombre] = {"models": {k: {mk: round(v, 4) for mk, v in r.items()} for k, r in puntos.items()}}
+        if nombre == "test":
+            dias = t[m].dt.floor("D").to_numpy()
+            boot = evaluate.day_block_bootstrap(y[m], preds, dias, n_boot=n_boot, seed=SEED)
+            for k in puntos:
+                reporte_splits[nombre]["models"][k]["ci95"] = boot["ci95"][k]
+            reporte_splits[nombre]["paired_vs_model"] = boot["paired_vs_model"]
+            p_test = preds["model"]
+
+    pareadas = reporte_splits["test"]["paired_vs_model"]
+
+    def supera(baseline):
+        return all(pareadas[baseline][k]["ci95"][1] < 0 for k in ("brier_diff", "log_loss_diff"))
+
+    # ── Validación externa contra SIATA ──────────────────────────────────────
+    horas = siata_hours if siata_hours is not None else siata_hourly()[0]
+    ext = df.loc[ex, ["station_id", "time_utc", "precipitation", "precipitation_ref"]].assign(
+        p_model=modelo.predict_proba(X[ex])[:, 1]
     )
-    df = df.drop(columns=["time"])
-    print(f"Open-Meteo: {len(df):,} registros horarios")
-    return df
-
-
-# ── Paso 3: Unir y entrenar ───────────────────────────────────────────────────
-
-
-def main():
-    # Cargar SIATA
-    siata = cargar_siata_hourly()
-
-    # Descargar Open-Meteo
-    weather = descargar_openmeteo()
-
-    # Join en hora
-    df = pd.merge(siata, weather, on="hora", how="inner")
-    print(f"\nRegistros tras join (SIATA ∩ Open-Meteo): {len(df):,}")
-    if len(df) < 1000:
-        print("ERROR: muy pocos registros tras el join. Revisar fechas.", file=sys.stderr)
-        sys.exit(1)
-
-    # Feature engineering temporal (cyclic encoding)
-    df["hora_sin"] = np.sin(2 * np.pi * df["hora"].dt.hour / 24)
-    df["hora_cos"] = np.cos(2 * np.pi * df["hora"].dt.hour / 24)
-    df["mes_sin"] = np.sin(2 * np.pi * df["hora"].dt.month / 12)
-    df["mes_cos"] = np.cos(2 * np.pi * df["hora"].dt.month / 12)
-
-    df = df.dropna()
-    print(f"Registros tras dropna: {len(df):,} | Llueve: {df['llueve'].mean() * 100:.1f}%")
-
-    FEATURES = [
-        "temperatura_c",
-        "humedad_relativa_pct",
-        "cobertura_nubosa_pct",
-        "velocidad_viento_ms",
-        "hora_sin",
-        "hora_cos",
-        "mes_sin",
-        "mes_cos",
-        "precip_lag_1h_mm",
-    ]
-
-    X = df[FEATURES].values
-    y = df["llueve"].values
-
-    # ── Entrenar RF ────────────────────────────────────────────────────────────
-    print("\nEntrenando Random Forest (100 árboles, SIATA ground truth)...")
-    rf = RandomForestClassifier(
-        n_estimators=100,
-        max_depth=14,
-        min_samples_leaf=15,
-        class_weight="balanced",
-        random_state=42,
-        n_jobs=-1,
+    ext = ext.merge(horas[["station_id", "time_utc", "rain_obs"]], on=["station_id", "time_utc"], how="inner")
+    externa = evaluate.external_validation(
+        ext["rain_obs"].to_numpy(),
+        ext["p_model"].to_numpy(),
+        ext["precipitation"].to_numpy(),
+        ext["precipitation_ref"].to_numpy(),
+        ALERT_THRESHOLDS["amarillo"],
     )
-    rf.fit(X, y)
 
-    # ── Entrenar RL ────────────────────────────────────────────────────────────
-    print("Entrenando Regresión Logística...")
-    rl = LogisticRegression(max_iter=1000, class_weight="balanced", random_state=42)
-    rl.fit(X, y)
+    huella = content_fingerprint(df)
+    metrics = {
+        "model_name": MODEL_NAME,
+        "model_version": MODEL_VERSION,
+        "dataset_fingerprint": huella,
+        "bootstrap": {"B": n_boot, "block": "day_utc", "seed": SEED},
+        "selection": {"candidates": seleccion, "chosen": {"name": nombre_base, "params": params_base}},
+        "calibration_choice": {**comparacion, "chosen": metodo},
+        "splits": reporte_splits,
+        "reliability": {"test": evaluate.reliability(y[te], p_test)},
+        "alert_levels": {"test": evaluate.alert_levels(y[te], p_test, **ALERT_THRESHOLDS)},
+        "external_siata": externa,
+        "claims": {
+            "beats_climatology": supera("climatology"),
+            "beats_raw_forecast": supera("raw_forecast"),
+            "beats_logistic": supera("logistic"),
+            "ece_below_0_03": reporte_splits["test"]["models"]["model"]["ece"] < 0.03,
+        },
+    }
 
-    # ── Cross-validation ───────────────────────────────────────────────────────
-    print("Evaluando RF con cross-validation (3 folds)...")
-    auc_scores = cross_val_score(rf, X, y, cv=3, scoring="roc_auc", n_jobs=-1)
-    print(f"RF  AUC: {auc_scores.mean():.4f} ± {auc_scores.std():.4f}")
+    # ── Artefactos ───────────────────────────────────────────────────────────
+    carpeta = model_dir(MODEL_VERSION, out_models)
+    carpeta.mkdir(parents=True, exist_ok=True)
+    joblib.dump(modelo, carpeta / "model.joblib")
+    tamano = (carpeta / "model.joblib").stat().st_size
+    if tamano >= MAX_MODEL_BYTES:
+        raise RuntimeError(f"El modelo pesa {tamano} bytes (≥ 5 MB): publíquelo como asset de release (charter P7)")
 
-    auc_rl = cross_val_score(rl, X, y, cv=3, scoring="roc_auc", n_jobs=-1)
-    print(f"RL  AUC: {auc_rl.mean():.4f} ± {auc_rl.std():.4f}")
+    reports = out_reports or config.REPORTS_DIR
+    metrics_path = reports / "metrics" / MODEL_NAME / MODEL_VERSION / "metrics.json"
+    sha, sucio = git_info()
+    metadata = {
+        "model_name": MODEL_NAME,
+        "model_version": MODEL_VERSION,
+        "created_at_utc": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "git_sha": sha,
+        "dataset_contract_version": DATASET_CONTRACT.version,
+        "dataset_fingerprint": huella,
+        "feature_contract_version": FEATURE_CONTRACT_VERSION,
+        "features": list(FEATURES),
+        "label": {"threshold_mm": config.LABEL_THRESHOLD_MM, "source": "ERA5"},
+        "splits": splits.describe(t, pd.Series(y), splits.temporal_splits(t)),
+        "base_estimator": {"class": type(base).__name__, "params": params_base},
+        "calibration": {"method": metodo, "fitted_on": None if metodo == "none" else "validation"},
+        "alert_thresholds": ALERT_THRESHOLDS,
+        "seed": SEED,
+        "library_versions": {
+            "python": platform.python_version(),
+            "scikit-learn": sklearn.__version__,
+            "numpy": np.__version__,
+            "pandas": pd.__version__,
+        },
+        "size_bytes": tamano,
+        "metrics_path": metrics_path.relative_to(config.PROJ_ROOT).as_posix()
+        if metrics_path.is_relative_to(config.PROJ_ROOT)
+        else metrics_path.as_posix(),
+    }
+    _write_json(carpeta / "metadata.json", metadata)
+    _write_json(metrics_path, metrics)
+    openmeteo.write_atomic(carpeta / "model_card.md", model_card.render(metadata, metrics).encode("utf-8"))
 
-    # ── Importancia de features ────────────────────────────────────────────────
-    print("\nImportancia de features RF:")
-    for feat, imp in sorted(zip(FEATURES, rf.feature_importances_), key=lambda x: -x[1]):
-        print(f"  {feat:<30} {imp:.4f}")
+    try:
+        from mdva import plots
 
-    # ── Guardar ────────────────────────────────────────────────────────────────
-    rf_path = MODELS_DIR / "random_forest.pkl"
-    rl_path = MODELS_DIR / "regresion_logistica.pkl"
-    joblib.dump(rf, rf_path)
-    joblib.dump(rl, rl_path)
-    print(f"\nGuardado: {rf_path} ({rf_path.stat().st_size / 1e6:.1f} MB)")
-    print(f"Guardado: {rl_path}")
-    print("Listo.")
+        plots.reliability_diagram(metrics["reliability"]["test"], reports / "figures" / f"{MODEL_NAME}_reliability.png")
+        plots.pr_curves(y[te], predicciones(te), reports / "figures" / f"{MODEL_NAME}_pr_curves.png")
+    except ImportError:  # pragma: no cover - matplotlib es dependencia del proyecto
+        log.warning("matplotlib no disponible: se omiten las figuras")
+
+    corrida = {
+        "run_at_utc": metadata["created_at_utc"],
+        "git_sha": sha,
+        "dirty_worktree": sucio,
+        "model_version": MODEL_VERSION,
+        "dataset_fingerprint": huella,
+        "seed": SEED,
+        "grid": {k: list(v) for k, v in HGB_GRID.items()},
+        "chosen": metrics["selection"]["chosen"],
+        "calibration": metodo,
+        "val_metrics": reporte_splits["validation"]["models"]["model"],
+        "test_metrics": {k: v for k, v in reporte_splits["test"]["models"]["model"].items() if k != "ci95"},
+        "logistic_val_log_loss": logistica["val_log_loss"],
+        "duration_s": round(time.time() - inicio, 1),
+    }
+    _write_json(reports / "runs" / f"{metadata['created_at_utc'].replace(':', '')}_{sha[:7]}.json", corrida)
+    return {"metadata": metadata, "metrics": metrics, "run": corrida}
+
+
+def _write_json(path, data) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    openmeteo.write_atomic(path, json.dumps(data, indent=2, ensure_ascii=False).encode("utf-8") + b"\n")
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument("--log-level", default="INFO")
+    parser.add_argument("--n-boot", type=int, default=500)
+    args = parser.parse_args()
+    logging.basicConfig(level=args.log_level, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
+    r = run(n_boot=args.n_boot)
+    m = r["metrics"]["splits"]["test"]["models"]["model"]
+    log.info(
+        "Modelo %s listo: prueba ROC-AUC %.3f, Brier %.4f, BSS %.3f, ECE %.4f; afirmaciones %s",
+        MODEL_VERSION,
+        m["roc_auc"],
+        m["brier"],
+        m["bss"],
+        m["ece"],
+        r["metrics"]["claims"],
+    )
 
 
 if __name__ == "__main__":

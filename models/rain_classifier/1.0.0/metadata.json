@@ -1,0 +1,84 @@
+{
+  "model_name": "rain_classifier",
+  "model_version": "1.0.0",
+  "created_at_utc": "2026-10-29T04:42:19Z",
+  "git_sha": "91c0d001b05210b6765597e9a15b03bd8cdfea1a",
+  "dataset_contract_version": "1.0.0",
+  "dataset_fingerprint": "57133164d885fd2e04d4baee5f9ab48ffb13c092589b1aa43be44f623b5fc482",
+  "feature_contract_version": "1.0.0",
+  "features": [
+    "temperature_2m",
+    "relative_humidity_2m",
+    "dew_point_depression",
+    "cloud_cover",
+    "wind_u",
+    "wind_v",
+    "pressure_msl",
+    "precipitation_log1p",
+    "cape_log1p",
+    "hour_sin",
+    "hour_cos",
+    "month_sin",
+    "month_cos"
+  ],
+  "label": {
+    "threshold_mm": 0.5,
+    "source": "ERA5"
+  },
+  "splits": {
+    "train": {
+      "start": "2022-01-01T00:00:00+00:00",
+      "end": "2023-12-31T23:00:00+00:00",
+      "rows": 208728,
+      "rain_rate": 0.1922,
+      "excluded": [
+        "2022-06-01T00:00:00+00:00",
+        "2022-08-01T00:00:00+00:00"
+      ]
+    },
+    "validation": {
+      "start": "2024-01-02T00:00:00+00:00",
+      "end": "2024-12-31T23:00:00+00:00",
+      "rows": 113880,
+      "rain_rate": 0.1568
+    },
+    "test": {
+      "start": "2025-01-02T00:00:00+00:00",
+      "end": "2025-12-31T23:00:00+00:00",
+      "rows": 113568,
+      "rain_rate": 0.2149
+    },
+    "external": {
+      "start": "2022-06-01T00:00:00+00:00",
+      "end": "2022-07-31T23:00:00+00:00",
+      "rows": 19032,
+      "rain_rate": 0.2283
+    }
+  },
+  "base_estimator": {
+    "class": "HistGradientBoostingClassifier",
+    "params": {
+      "learning_rate": 0.1,
+      "max_leaf_nodes": 15,
+      "max_iter": 400,
+      "l2_regularization": 1.0
+    }
+  },
+  "calibration": {
+    "method": "none",
+    "fitted_on": null
+  },
+  "alert_thresholds": {
+    "amarillo": 0.4,
+    "rojo": 0.7
+  },
+  "seed": 42,
+  "library_versions": {
+    "python": "3.11.16",
+    "scikit-learn": "1.8.0",
+    "numpy": "2.4.6",
+    "pandas": "3.1.0"
+  },
+  "size_bytes": 741760,
+  "metrics_path": "reports/metrics/rain_classifier/1.0.0/metrics.json"
+}

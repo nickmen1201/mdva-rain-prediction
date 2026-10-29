@@ -1,0 +1,54 @@
+{
+  "run_at_utc": "2026-10-29T04:42:19Z",
+  "git_sha": "91c0d001b05210b6765597e9a15b03bd8cdfea1a",
+  "dirty_worktree": true,
+  "model_version": "1.0.0",
+  "dataset_fingerprint": "57133164d885fd2e04d4baee5f9ab48ffb13c092589b1aa43be44f623b5fc482",
+  "seed": 42,
+  "grid": {
+    "learning_rate": [
+      0.05,
+      0.1
+    ],
+    "max_leaf_nodes": [
+      15,
+      31
+    ],
+    "max_iter": [
+      200,
+      400
+    ],
+    "l2_regularization": [
+      0.0,
+      1.0
+    ]
+  },
+  "chosen": {
+    "name": "hgb",
+    "params": {
+      "learning_rate": 0.1,
+      "max_leaf_nodes": 15,
+      "max_iter": 400,
+      "l2_regularization": 1.0
+    }
+  },
+  "calibration": "none",
+  "val_metrics": {
+    "roc_auc": 0.8649,
+    "pr_auc": 0.5526,
+    "brier": 0.0945,
+    "log_loss": 0.3066,
+    "ece": 0.0162,
+    "bss": 0.2182
+  },
+  "test_metrics": {
+    "roc_auc": 0.825,
+    "pr_auc": 0.5805,
+    "brier": 0.1264,
+    "log_loss": 0.4009,
+    "ece": 0.0346,
+    "bss": 0.0956
+  },
+  "logistic_val_log_loss": 0.34407,
+  "duration_s": 272.0
+}

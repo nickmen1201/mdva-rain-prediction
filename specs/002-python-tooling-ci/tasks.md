@@ -19,7 +19,7 @@ description: "Task list for 002-python-tooling-ci"
 
 ## Phase 1: Setup
 
-- [ ] T001 Crear `.python-version` (3.11) y `pyproject.toml` raíz del paquete `mdva` (dependencias de R2, grupo dev con ruff y pytest, `[tool.ruff]` y `[tool.pytest.ini_options]` de R4/R5); generar `uv.lock`
+- [X] T001 Crear `.python-version` (3.11) y `pyproject.toml` raíz del paquete `mdva` (dependencias de R2, grupo dev con ruff y pytest, `[tool.ruff]` y `[tool.pytest.ini_options]` de R4/R5); generar `uv.lock`
 
 ---
 

@@ -1,0 +1,40 @@
+[project]
+name = "mdva"
+version = "0.1.0"
+description = "Predicción de lluvia para la movilidad en el Valle de Aburrá (Cookiecutter Data Science v2)"
+readme = "README.md"
+requires-python = ">=3.11,<3.12"
+dependencies = [
+    "joblib==1.5.2",
+    "numpy==2.4.6",
+    "pandas==3.1.0",
+    "requests==2.34.2",
+    "scikit-learn==1.8.0",
+]
+
+[dependency-groups]
+dev = [
+    "pytest==9.2.0",
+    "ruff==0.17.3",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["mdva"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+extend-exclude = ["notebooks", ".specify"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["mdva"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

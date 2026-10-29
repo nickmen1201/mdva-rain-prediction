@@ -1,0 +1,7 @@
+# Contexto services/routing_api/
+.venv/
+**/__pycache__/
+**/*.pyc
+tests/
+.pytest_cache/
+cache/*.graphml

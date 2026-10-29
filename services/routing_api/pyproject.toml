@@ -1,0 +1,26 @@
+[project]
+name = "mdva-routing-api"
+version = "2.0.0"
+description = "Servicio FastAPI de enrutamiento ambiental sobre OSMnx + NetworkX (MDVA)"
+requires-python = ">=3.11,<3.12"
+# Versiones fijadas a las que corrían en el contenedor el 2026-10-28 (spec 002, R2)
+dependencies = [
+    "fastapi[standard]==0.162.0",
+    "joblib==1.6.0",
+    "networkx==3.6.1",
+    "osmnx==2.1.1",
+    "pandas==3.1.0",
+    "pydantic==2.14.1",
+    "requests==2.34.2",
+    "scikit-learn==1.9.1",
+    "shapely==2.2.0",
+    "uvicorn==0.54.0",
+]
+
+[dependency-groups]
+dev = [
+    "pytest==9.2.0",
+]
+
+[tool.uv]
+package = false

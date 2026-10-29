@@ -16,8 +16,11 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends curl \
     && rm -rf /var/lib/apt/lists/*
 
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# Dependencias exactas desde el lockfile (falla si uv.lock no corresponde a pyproject.toml)
+COPY --from=ghcr.io/astral-sh/uv:0.12.5 /uv /bin/uv
+COPY pyproject.toml uv.lock ./
+RUN uv sync --frozen --no-dev --no-install-project --no-cache
+ENV PATH="/app/.venv/bin:$PATH"
 
 COPY . .
 

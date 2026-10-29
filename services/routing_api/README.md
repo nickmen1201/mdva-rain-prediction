@@ -71,8 +71,8 @@ Sistema de enrutamiento inteligente para el Valle de Aburrá que **integra varia
 ### Local (desarrollo)
 ```bash
 cd services/routing_api
-pip install -r requirements.txt
-python -m uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+uv sync
+uv run uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
 ### Docker (con todo el stack MDVA)
@@ -107,7 +107,7 @@ POST /api/v1/route/spring
 ```
 routing_api/
 ├── main.py                    ← Entrypoint FastAPI
-├── requirements.txt
+├── pyproject.toml + uv.lock
 ├── Dockerfile
 ├── domain/
 │   ├── entities.py            ← Location, Route (con campos MDVA)

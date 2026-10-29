@@ -1,6 +1,6 @@
 # =============================================================================
-# Backend/Dockerfile — Spring Boot (Java 21)
-# Build context: Backend/ (para Railway y docker-compose)
+# apps/backend/Dockerfile — Spring Boot (Java 21)
+# Build context: apps/backend/ (para Railway y docker-compose)
 # =============================================================================
 
 # ── Etapa 1: Build ──────────────────────────────────────────────────────────

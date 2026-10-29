@@ -25,16 +25,16 @@ docker compose -f docker-compose.dev.yml up --build
 ```bash
 # 1. PostgreSQL (puerto 5432 local)
 # 2. ML Service
-cd Data-science && uvicorn main:app --port 8081
+uvicorn main:app --app-dir services/ml_api --port 8081
 
 # 3. Routing Service
-cd enrutamiento && uvicorn main:app --port 8000
+cd services/routing_api && uvicorn main:app --port 8000
 
 # 4. Backend
-cd Backend && ./gradlew bootRun --args='--spring.profiles.active=dev'
+cd apps/backend && ./gradlew bootRun --args='--spring.profiles.active=dev'
 
 # 5. Frontend
-cd Frontend && npm install && npm run dev
+cd apps/frontend && npm install && npm run dev
 ```
 
 ## Flujo de un viaje (integración completa)
@@ -60,7 +60,7 @@ ResultadoViaje.jsx → MapaRuta + AlertaClimatica
 | `SPRING_DATASOURCE_URL` | `jdbc:postgresql://localhost:5432/mdva` | `jdbc:postgresql://postgres:5432/mdva` |
 | `JWT_SECRET` | (dev hardcoded) | Usar GitHub Secrets en producción |
 
-## Modelos ML (Data-science/models/)
+## Modelos ML (models/)
 
 - `random_forest.pkl` — AUC 0.82, **usado para decisiones** (umbral verde/amarillo/rojo)
 - `regresion_logistica.pkl` — AUC 0.78, backup/validación cruzada
@@ -81,14 +81,14 @@ ResultadoViaje.jsx → MapaRuta + AlertaClimatica
 3. POST a FastAPI `/predecir/ambos` → 2 predicciones (RF + RL)
 4. Si hay precipitación activa (>0.1mm), fuerza `llueve=true`
 
-## Enrutamiento (enrutamiento/)
+## Enrutamiento (services/routing_api/)
 
 Arquitectura DDD con 3 tipos de ruta:
 - **fastest** — optimizada por tráfico + lluvia (`rain_sensitivity=1.0`)
 - **shortest** — distancia bruta
 - **dryest** — evita zonas húmedas (`rain_sensitivity=3.0`, solo si prob > 10%)
 
-El Backend usa la primera opción (fastest). El modelo de lluvia interno (`cache/rain_model.joblib`) es independiente del modelo en `Data-science/` — es un regressor de intensidad, no un clasificador binario.
+El Backend usa la primera opción (fastest). El modelo de lluvia interno (`cache/rain_model.joblib`) es independiente del modelo en `models/` — es un regressor de intensidad, no un clasificador binario.
 
 ## Base de datos (Flyway migrations)
 
@@ -98,7 +98,7 @@ El Backend usa la primera opción (fastest). El modelo de lluvia interno (`cache
 
 Regenerar código JOOQ tras cambios de schema:
 ```bash
-cd Backend && ./gradlew generateJooq
+cd apps/backend && ./gradlew generateJooq
 ```
 
 ## Autenticación

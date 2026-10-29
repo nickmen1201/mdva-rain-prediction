@@ -91,7 +91,7 @@ description: "Task list for 001-ccds-restructure"
 
 ## Phase 7: Polish & Cross-Cutting
 
-- [ ] T015 Actualizar rutas en `README.md` y `CLAUDE.md`; verificar SC-005 con el `git grep` del quickstart §4
+- [X] T015 Actualizar rutas en `README.md` y `CLAUDE.md`; verificar SC-005 con el `git grep` del quickstart §4
 - [ ] T016 Verificar SC-001…SC-006 y FR-012 (`.specify/scripts/powershell/check-prerequisites.ps1 -Json -PathsOnly`), marcar la spec como `Implemented` en `specs/001-ccds-restructure/spec.md`
 
 ---

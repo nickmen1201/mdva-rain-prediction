@@ -56,76 +56,24 @@ El stack completo corre en Docker Compose con un solo comando.
 ## Estructura del repositorio
 
 ```
-Monitoreo-de-variables-ambientales/
-├── docker-compose.dev.yml          ← Orquestación de los 5 servicios
-├── README.md
-├── Informe_Tecnico.md              ← Arquitectura y decisiones técnicas
-├── Manual_Usuario.md               ← Guía de uso para el usuario final
-├── Manual_Pruebas.md               ← Casos de prueba y resultados
-│
-├── Backend/
-│   ├── Dockerfile                  ← Build multietapa JDK Alpine → JRE Alpine
-│   ├── build.gradle.kts
-│   ├── src/main/java/ti/mdva/
-│   │   ├── controller/             ← AuthController, ViajeController, WeatherController, LocationController
-│   │   ├── usecases/               ← ViajeUseCase (orquesta el flujo completo)
-│   │   ├── service/
-│   │   │   ├── impl/
-│   │   │   │   ├── GoogleMapsServiceImpl.java   ← Directions + Geocoding API
-│   │   │   │   └── WeatherMLServiceImpl.java    ← Weather API + FastAPI ML
-│   │   │   └── TripPlannerOrchestrator.java     ← Reglas de ajuste por lluvia
-│   │   ├── repositories/
-│   │   ├── model/dto/              ← DTOs de entrada y salida
-│   │   ├── model/valueobjects/
-│   │   │   └── Placa.java          ← Value object con validación de placa colombiana
-│   │   ├── security/               ← JwtUtil, JwtAuthenticationFilter
-│   │   └── exception/
-│   └── src/main/resources/
-│       ├── application.yml
-│       ├── application-dev.yml     ← Credenciales de desarrollo
-│       └── db/migration/
-│           └── V2__viajes_lat_lng.sql
-│
-├── Data-science/
-│   ├── Dockerfile                  ← Python 3.11-slim, scikit-learn 1.4.2
-│   ├── main.py                     ← FastAPI ML Service (puerto 8081)
-│   ├── requirements.txt
-│   ├── models/
-│   │   ├── random_forest.pkl
-│   │   └── regresion_logistica.pkl
-│   ├── notebooks/                  ← Notebooks de entrenamiento
-│   └── enrutamiento_ambiental/
-│       ├── Dockerfile              ← Routing Service (puerto 8000)
-│       └── ...                     ← OSMnx + NetworkX + caché de grafo
-│
-├── DB/
-│   ├── init-docker.sql             ← Script de inicialización (estado post-V2)
-│   ├── TIC1DB.sql
-│   └── TIC1DB.backup
-│
-└── Frontend/
-    ├── Dockerfile                  ← Node 24 Alpine (build) → nginx (serve)
-    ├── nginx.conf                  ← SPA fallback
-    ├── .env                        ← Variables para desarrollo local
-    ├── .env.production             ← Variables para build Docker
-    └── src/
-        ├── api/client.js           ← Llamadas al backend (axios)
-        ├── components/
-        │   ├── AlertaClimatica.jsx
-        │   ├── WeatherHeatmapLayer.jsx  ← Capa de calor meteorológico
-        │   ├── CenterButton.jsx
-        │   └── ...
-        ├── hooks/
-        │   ├── useNavigationCamera.js  ← Cámara 3D en navegación
-        │   └── useWeatherGrid.js       ← Datos de cuadrícula para heatmap
-        └── pages/
-            ├── PlanificarViaje.jsx
-            ├── ResultadoViaje.jsx
-            ├── EnRuta.jsx          ← Navegación 3D paso a paso
-            ├── MapaCiudad.jsx      ← Mapa panorámico + heatmap
-            ├── HistorialViajes.jsx
-            ├── Login.jsx
-            └── Register.jsx
+Monitoreo-de-variables-ambientales/      (Cookiecutter Data Science v2)
+├── docker-compose.dev.yml  docker-compose.prod.yml   ← Orquestación de los 5 servicios
+├── data/                    ← raw / interim / processed / external (no se versiona)
+├── docs/                    ← Informe técnico, manuales y planes de sprint
+├── models/                  ← Modelos entrenados (random_forest.pkl, regresion_logistica.pkl)
+├── notebooks/               ← Exploración (convención <n>.<m>-<iniciales>-<descripcion>)
+├── references/              ← Informe del curso y wiki en PDF
+├── reports/figures/         ← Figuras generadas
+├── mdva/                    ← Paquete de ciencia de datos (config de rutas, entrenamiento)
+├── services/
+│   ├── ml_api/              ← FastAPI de predicción de lluvia (puerto 8081)
+│   └── routing_api/         ← FastAPI de enrutamiento OSMnx + NetworkX (puerto 8000)
+├── apps/
+│   ├── backend/             ← Spring Boot + JOOQ + Flyway (puerto 8080)
+│   └── frontend/            ← React + Vite servido con nginx (puerto 8090)
+├── db/                      ← init-docker.sql, seeds/ (CSV) y scripts/
+├── tests/e2e/               ← Smoke test de punta a punta del stack
+├── specs/  .specify/        ← Spec-Driven Development (constitución, charter y specs)
 ```
 
 ---
@@ -251,7 +199,7 @@ curl -X POST http://localhost:8081/predecir/ambos \
 ### Backend
 
 ```bash
-cd Backend
+cd apps/backend
 # Windows
 .\gradlew.bat bootRun --args="--spring.profiles.active=dev"
 
@@ -259,17 +207,17 @@ cd Backend
 ./gradlew bootRun --args="--spring.profiles.active=dev"
 ```
 
-Requiere PostgreSQL corriendo en `localhost:5436` con la BD `mdva` inicializada (`DB/init-docker.sql`).
+Requiere PostgreSQL corriendo en `localhost:5436` con la BD `mdva` inicializada (`db/init-docker.sql`).
 
 ### Frontend
 
 ```bash
-cd Frontend
+cd apps/frontend
 npm install
 npm run dev    # http://localhost:5173
 ```
 
-Variables necesarias en `Frontend/.env`:
+Variables necesarias en `apps/frontend/.env` (plantilla en `apps/frontend/.env.example`):
 ```
 VITE_GOOGLE_MAPS_KEY=<tu_api_key>
 VITE_API_BASE_URL=http://localhost:8080
@@ -280,7 +228,7 @@ VITE_API_BASE_URL=http://localhost:8080
 Con PostgreSQL corriendo en el puerto 5436:
 
 ```bash
-cd Backend
+cd apps/backend
 .\gradlew.bat generateJooq   # Windows
 ./gradlew generateJooq        # Linux/Mac
 ```
@@ -322,8 +270,8 @@ Los modelos se sirven vía `http://localhost:8081` (FastAPI).
 
 | Modelo | Archivo | AUC | F1 | Uso |
 |---|---|---|---|---|
-| Random Forest | `Data-science/models/random_forest.pkl` | 0.82 | ~0.78 | Decisión principal de alerta |
-| Regresión Logística | `Data-science/models/regresion_logistica.pkl` | — | 0.78 | Referencia complementaria |
+| Random Forest | `models/random_forest.pkl` | 0.82 | ~0.78 | Decisión principal de alerta |
+| Regresión Logística | `models/regresion_logistica.pkl` | — | 0.78 | Referencia complementaria |
 
 - Entrenados con datos del SIATA + Open-Meteo (Valle de Aburrá).
 - Versión scikit-learn **1.4.2** fijada — no cambiar sin re-entrenar.
@@ -343,10 +291,10 @@ Configurado parcialmente con GitHub Actions (`./github/workflows/release.yml`). 
 
 | Documento | Descripción |
 |---|---|
-| [Informe_Tecnico.md](Informe_Tecnico.md) | Arquitectura, esquema de BD, flujo de datos, decisiones técnicas |
-| [Manual_Usuario.md](Manual_Usuario.md) | Guía de uso con flujos paso a paso y escenarios cotidianos |
-| [Manual_Pruebas.md](Manual_Pruebas.md) | Casos de prueba, resultados de validación ML y pruebas piloto UX |
-| [Backend/MDVA_Documentacion_Sprint3.md](Backend/MDVA_Documentacion_Sprint3.md) | Documentación detallada del Sprint 3 (Camilo Ardila) |
+| [docs/informe-tecnico.md](docs/informe-tecnico.md) | Arquitectura, esquema de BD, flujo de datos, decisiones técnicas |
+| [docs/manual-usuario.md](docs/manual-usuario.md) | Guía de uso con flujos paso a paso y escenarios cotidianos |
+| [docs/manual-pruebas.md](docs/manual-pruebas.md) | Casos de prueba, resultados de validación ML y pruebas piloto UX |
+| [docs/sprints/sprint-3-documentacion.md](docs/sprints/sprint-3-documentacion.md) | Documentación detallada del Sprint 3 (Camilo Ardila) |
 
 ---
 

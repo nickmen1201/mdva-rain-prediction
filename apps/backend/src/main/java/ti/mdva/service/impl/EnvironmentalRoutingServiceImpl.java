@@ -17,7 +17,7 @@ import java.util.HashMap;
 
 /**
  * Implementación de EnvironmentalRoutingService que llama al microservicio
- * FastAPI de enrutamiento ambiental (Data-science/enrutamiento_ambiental).
+ * FastAPI de enrutamiento ambiental (services/routing_api).
  *
  * Endpoint utilizado:
  *   POST http://routing-service:8000/api/v1/route/spring

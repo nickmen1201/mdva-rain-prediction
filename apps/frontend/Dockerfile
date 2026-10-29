@@ -1,5 +1,5 @@
 # =============================================================================
-# Frontend/Dockerfile — React + Vite (build estático servido con nginx)
+# apps/frontend/Dockerfile — React + Vite (build estático servido con nginx)
 # =============================================================================
 # Etapa 1: build con Node
 FROM node:24-alpine AS builder

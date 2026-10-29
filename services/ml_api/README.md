@@ -9,8 +9,8 @@ Servicio FastAPI que sirve los modelos de `models/` (raíz del repo).
 docker compose -f docker-compose.dev.yml up --build ml-service
 
 # Local, desde la raíz del repo
-pip install -r services/ml_api/requirements.txt
-uvicorn main:app --app-dir services/ml_api --port 8081
+uv sync --project services/ml_api
+uv run --project services/ml_api uvicorn main:app --app-dir services/ml_api --port 8081
 ```
 
 La carpeta de modelos se toma de `MDVA_MODELS_DIR` (en el contenedor: `/app/models`); si no está definida, usa `models/` en la raíz del repo.

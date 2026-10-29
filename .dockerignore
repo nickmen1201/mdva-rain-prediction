@@ -3,5 +3,7 @@
 *
 !services/ml_api/
 !models/
+**/.venv
 **/__pycache__
+**/tests
 **/*.pyc

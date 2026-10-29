@@ -38,7 +38,7 @@ description: "Task list for 003-openmeteo-dataset"
 
 - [X] T004 [US1] Catálogo de estaciones y etapa raw en `mdva/dataset.py` (deriva `data/external/siata_stations.csv` del CSV crudo, registra los CSV de SIATA en el manifiesto, descarga 2 fuentes × 4 años)
 - [X] T005 [US1] Etapas interim y processed en `mdva/dataset.py` (formato largo, unión, descarte de filas incompletas, etiqueta con `LABEL_THRESHOLD_MM`, huella de contenido) con tests sobre respuestas sintéticas en `tests/test_dataset.py`
-- [ ] T006 [US1] Ejecutar `make data` desde cero y dos veces seguidas; registrar tiempos, filas, descargas y huellas en `specs/003-openmeteo-dataset/quickstart.md`
+- [X] T006 [US1] Ejecutar `make data` desde cero y dos veces seguidas; registrar tiempos, filas, descargas y huellas en `specs/003-openmeteo-dataset/quickstart.md`
 
 ---
 

@@ -25,7 +25,7 @@ description: "Task list for 001-ccds-restructure"
 
 **Purpose**: prueba de regresión y línea base antes de tocar la estructura
 
-- [ ] T001 Crear el smoke test del stack en `tests/e2e/smoke_stack.py` (stdlib: health de ml/routing/backend, registro + login, `POST /predecir/ambos`, `POST /api/v1/route`, `POST /api/viajes/planificar`; salida JSON con el estado de cada verificación)
+- [X] T001 Crear el smoke test del stack en `tests/e2e/smoke_stack.py` (stdlib: health de ml/routing/backend, registro + login, `POST /predecir/ambos`, `POST /api/v1/route`, `POST /api/viajes/planificar`; salida JSON con el estado de cada verificación)
 - [ ] T002 Ejecutar la línea base con el stack actual y registrar el resultado y el conteo de usuarios en `specs/001-ccds-restructure/quickstart.md` (sección "Línea base registrada")
 
 ---

@@ -36,7 +36,7 @@ services:
       - "5436:5432"
     volumes:
       # Script de inicialización: crea tablas + datos base al primer arranque
-      - ./DB/init-docker.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+      - ./db/init-docker.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
       # Volumen persistente para no perder datos entre reinicios
       - postgres_data:/var/lib/postgresql/data
     healthcheck:

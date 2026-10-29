@@ -75,7 +75,7 @@ description: "Task list for 001-ccds-restructure"
 
 **Independent Test**: `docker compose -f docker-compose.prod.yml --env-file .env.example config -q` y build de la imagen del Backend
 
-- [ ] T013 [US4] Cambiar el Backend en `docker-compose.prod.yml` a `context: ./apps/backend` + `dockerfile: Dockerfile` (R7) y validar la configuración
+- [X] T013 [US4] Cambiar el Backend en `docker-compose.prod.yml` a `context: ./apps/backend` + `dockerfile: Dockerfile` (R7) y validar la configuración
 
 ---
 

@@ -65,7 +65,7 @@ description: "Task list for 001-ccds-restructure"
 
 **Independent Test**: los archivos de la tabla "Eliminaciones" de `contracts/repo-layout.md` no aparecen en `git ls-files`
 
-- [ ] T012 [US3] Eliminar D-02 (`services/routing_api/scripts/train_rain_model.py`), D-04 (`services/routing_api/infrastructure/siata_live_service.py`), D-07 (`db/TIC1DB.sql`, `db/TIC1DB.backup`) y D-13 (`CONTEXT.md`); sacar del índice D-08 (`apps/backend/.idea/`, `apps/backend/.claude/`, `.vscode/settings.json`)
+- [X] T012 [US3] Eliminar D-02 (`services/routing_api/scripts/train_rain_model.py`), D-04 (`services/routing_api/infrastructure/siata_live_service.py`), D-07 (`db/TIC1DB.sql`, `db/TIC1DB.backup`) y D-13 (`CONTEXT.md`); sacar del índice D-08 (`apps/backend/.idea/`, `apps/backend/.claude/`, `.vscode/settings.json`)
 
 ---
 

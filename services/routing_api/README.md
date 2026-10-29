@@ -121,7 +121,6 @@ routing_api/
 │   ├── osmnx_map_repository.py    ← Grafo OSM Valle de Aburrá
 │   ├── networkx_routing_service.py ← Algoritmos de ruta con MDVA
 │   ├── weather_service.py         ← Bridge MDVA ML + SIATA + Open-Meteo
-│   └── siata_live_service.py      ← Datos en tiempo real SIATA
 ├── presentation/
 │   ├── api.py                 ← Endpoints REST
 │   └── dependencies.py        ← Inyección de dependencias

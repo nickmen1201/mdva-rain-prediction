@@ -31,6 +31,6 @@
 
 ## Notes
 
-- Iteraci髇 1 (2026-10-28): todos los 韙ems pasan.
-- La spec nombra "lockfile", "lint" y "CI" porque son el resultado pedido (calidad automatizada), no una elecci髇 de herramienta; las herramientas concretas se eligen en el plan.
-- Las clarificaciones se resolvieron en la misma sesi髇 (secci髇 Clarifications).
+- Iteraci贸n 1 (2026-10-28): todos los 铆tems pasan.
+- La spec nombra "lockfile", "lint" y "CI" porque son el resultado pedido (calidad automatizada), no una elecci贸n de herramienta; las herramientas concretas se eligen en el plan.
+- Las clarificaciones se resolvieron en la misma sesi贸n (secci贸n Clarifications).

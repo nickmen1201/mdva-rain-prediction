@@ -24,3 +24,18 @@ docker-compose.local.yml
 docker-compose.*.local.yml
 **/Dockerfile.local
 **/nginx.local.conf
+
+# Datos (Cookiecutter Data Science v2): nunca se versionan, solo los marcadores de carpeta
+/data/**
+!/data/**/
+!/data/**/.gitkeep
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+
+# Jupyter
+.ipynb_checkpoints/
+# Figuras exportadas por notebooks (las figuras finales van a reports/figures/)
+/notebooks/**/*.png

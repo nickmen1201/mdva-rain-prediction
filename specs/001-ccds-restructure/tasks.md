@@ -35,7 +35,7 @@ description: "Task list for 001-ccds-restructure"
 **Purpose**: garantías que deben existir antes de mover carpetas
 
 - [X] T003 Fijar `name: monitoreo-de-variables-ambientales` en `docker-compose.dev.yml` y `docker-compose.prod.yml` (R1)
-- [ ] T004 Crear el esqueleto CCDS (`data/{raw,interim,processed,external}/.gitkeep`, `reports/figures/.gitkeep`), fusionar `Data-science/.gitignore` en `.gitignore` con reglas para `data/**`, y mover los CSV de SIATA a `data/raw/siata/` y `data/interim/siata/`
+- [X] T004 Crear el esqueleto CCDS (`data/{raw,interim,processed,external}/.gitkeep`, `reports/figures/.gitkeep`), fusionar `Data-science/.gitignore` en `.gitignore` con reglas para `data/**`, y mover los CSV de SIATA a `data/raw/siata/` y `data/interim/siata/`
 
 **Checkpoint**: volúmenes con nombre fijo y datos ignorados; se puede empezar a mover
 

@@ -1,0 +1,548 @@
+{
+  "stations_without_valid_siata_data": [
+    205
+  ],
+  "stations_below_min_validation_hours": {
+    "206": 9
+  },
+  "min_validation_hours_per_station": 250,
+  "siata_period_utc": [
+    "2022-06-07T23:00:00+00:00",
+    "2022-07-07T22:00:00+00:00"
+  ],
+  "split_utc": "2022-06-22T22:30:00+00:00",
+  "siata_summary": {
+    "minutes_total": 561613,
+    "minutes_discarded": 91370,
+    "hours_total": 7855,
+    "hours_discarded_low_coverage": 21
+  },
+  "obs_rain_threshold_mm": 0.1,
+  "calibration": {
+    "rows": 3943,
+    "rate_obs": 0.2138,
+    "label_threshold_mm": 0.5,
+    "label_grid": [
+      {
+        "threshold_mm": 0.1,
+        "rate": 0.6442
+      },
+      {
+        "threshold_mm": 0.2,
+        "rate": 0.4497
+      },
+      {
+        "threshold_mm": 0.3,
+        "rate": 0.3338
+      },
+      {
+        "threshold_mm": 0.5,
+        "rate": 0.2397
+      },
+      {
+        "threshold_mm": 0.7,
+        "rate": 0.1841
+      },
+      {
+        "threshold_mm": 1.0,
+        "rate": 0.1354
+      },
+      {
+        "threshold_mm": 1.5,
+        "rate": 0.0878
+      },
+      {
+        "threshold_mm": 2.0,
+        "rate": 0.0596
+      }
+    ],
+    "forecast_threshold_mm": 0.3,
+    "forecast_grid": [
+      {
+        "threshold_mm": 0.1,
+        "rate": 0.512
+      },
+      {
+        "threshold_mm": 0.2,
+        "rate": 0.3122
+      },
+      {
+        "threshold_mm": 0.3,
+        "rate": 0.2348
+      },
+      {
+        "threshold_mm": 0.5,
+        "rate": 0.1687
+      },
+      {
+        "threshold_mm": 0.7,
+        "rate": 0.1377
+      },
+      {
+        "threshold_mm": 1.0,
+        "rate": 0.1065
+      },
+      {
+        "threshold_mm": 1.5,
+        "rate": 0.0814
+      },
+      {
+        "threshold_mm": 2.0,
+        "rate": 0.0626
+      }
+    ]
+  },
+  "config_label_threshold_mm": 0.5,
+  "config_matches_calibration": true,
+  "validation": {
+    "rows": 3891,
+    "rain_label": {
+      "total": {
+        "1h": {
+          "n": 3891,
+          "rate_obs": 0.1735,
+          "rate_pred": 0.2025,
+          "precision": 0.2119,
+          "recall": 0.2474,
+          "f1": 0.2283,
+          "kappa": 0.0509
+        },
+        "3h": {
+          "n": 1312,
+          "rate_obs": 0.3079,
+          "rate_pred": 0.3384,
+          "precision": 0.3896,
+          "recall": 0.4282,
+          "f1": 0.408,
+          "kappa": 0.1263
+        },
+        "6h": {
+          "n": 662,
+          "rate_obs": 0.4562,
+          "rate_pred": 0.4789,
+          "precision": 0.5521,
+          "recall": 0.5795,
+          "f1": 0.5654,
+          "kappa": 0.1843
+        }
+      },
+      "by_station_1h": {
+        "59": {
+          "n": 359,
+          "rate_obs": 0.1727,
+          "rate_pred": 0.2256,
+          "precision": 0.1728,
+          "recall": 0.2258,
+          "f1": 0.1958,
+          "kappa": 0.0002
+        },
+        "68": {
+          "n": 290,
+          "rate_obs": 0.1414,
+          "rate_pred": 0.2034,
+          "precision": 0.1695,
+          "recall": 0.2439,
+          "f1": 0.2,
+          "kappa": 0.0398
+        },
+        "73": {
+          "n": 359,
+          "rate_obs": 0.1755,
+          "rate_pred": 0.2256,
+          "precision": 0.1975,
+          "recall": 0.254,
+          "f1": 0.2222,
+          "kappa": 0.0309
+        },
+        "82": {
+          "n": 354,
+          "rate_obs": 0.2147,
+          "rate_pred": 0.0876,
+          "precision": 0.3226,
+          "recall": 0.1316,
+          "f1": 0.1869,
+          "kappa": 0.0714
+        },
+        "83": {
+          "n": 360,
+          "rate_obs": 0.1556,
+          "rate_pred": 0.2278,
+          "precision": 0.2195,
+          "recall": 0.3214,
+          "f1": 0.2609,
+          "kappa": 0.0932
+        },
+        "105": {
+          "n": 360,
+          "rate_obs": 0.175,
+          "rate_pred": 0.2,
+          "precision": 0.2639,
+          "recall": 0.3016,
+          "f1": 0.2815,
+          "kappa": 0.1166
+        },
+        "122": {
+          "n": 360,
+          "rate_obs": 0.2056,
+          "rate_pred": 0.1556,
+          "precision": 0.3929,
+          "recall": 0.2973,
+          "f1": 0.3385,
+          "kappa": 0.1961
+        },
+        "201": {
+          "n": 360,
+          "rate_obs": 0.1667,
+          "rate_pred": 0.225,
+          "precision": 0.1728,
+          "recall": 0.2333,
+          "f1": 0.1986,
+          "kappa": 0.0088
+        },
+        "202": {
+          "n": 360,
+          "rate_obs": 0.1694,
+          "rate_pred": 0.225,
+          "precision": 0.1728,
+          "recall": 0.2295,
+          "f1": 0.1972,
+          "kappa": 0.0048
+        },
+        "203": {
+          "n": 360,
+          "rate_obs": 0.1556,
+          "rate_pred": 0.225,
+          "precision": 0.1852,
+          "recall": 0.2679,
+          "f1": 0.219,
+          "kappa": 0.0429
+        },
+        "206": {
+          "n": 9,
+          "rate_obs": 0.0,
+          "rate_pred": 0.2222,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "kappa": 0.0
+        },
+        "207": {
+          "n": 360,
+          "rate_obs": 0.175,
+          "rate_pred": 0.225,
+          "precision": 0.1852,
+          "recall": 0.2381,
+          "f1": 0.2083,
+          "kappa": 0.0143
+        }
+      }
+    },
+    "rain_forecast": {
+      "total": {
+        "1h": {
+          "n": 3891,
+          "rate_obs": 0.1735,
+          "rate_pred": 0.1802,
+          "precision": 0.2368,
+          "recall": 0.2459,
+          "f1": 0.2413,
+          "kappa": 0.0784
+        },
+        "3h": {
+          "n": 1312,
+          "rate_obs": 0.3079,
+          "rate_pred": 0.3392,
+          "precision": 0.4022,
+          "recall": 0.4431,
+          "f1": 0.4217,
+          "kappa": 0.146
+        },
+        "6h": {
+          "n": 662,
+          "rate_obs": 0.4562,
+          "rate_pred": 0.4834,
+          "precision": 0.5531,
+          "recall": 0.5861,
+          "f1": 0.5691,
+          "kappa": 0.188
+        }
+      },
+      "by_station_1h": {
+        "59": {
+          "n": 359,
+          "rate_obs": 0.1727,
+          "rate_pred": 0.1838,
+          "precision": 0.2273,
+          "recall": 0.2419,
+          "f1": 0.2344,
+          "kappa": 0.0685
+        },
+        "68": {
+          "n": 290,
+          "rate_obs": 0.1414,
+          "rate_pred": 0.1138,
+          "precision": 0.3333,
+          "recall": 0.2683,
+          "f1": 0.2973,
+          "kappa": 0.1959
+        },
+        "73": {
+          "n": 359,
+          "rate_obs": 0.1755,
+          "rate_pred": 0.1671,
+          "precision": 0.3333,
+          "recall": 0.3175,
+          "f1": 0.3252,
+          "kappa": 0.1858
+        },
+        "82": {
+          "n": 354,
+          "rate_obs": 0.2147,
+          "rate_pred": 0.2514,
+          "precision": 0.2584,
+          "recall": 0.3026,
+          "f1": 0.2788,
+          "kappa": 0.0614
+        },
+        "83": {
+          "n": 360,
+          "rate_obs": 0.1556,
+          "rate_pred": 0.2111,
+          "precision": 0.1579,
+          "recall": 0.2143,
+          "f1": 0.1818,
+          "kappa": 0.0033
+        },
+        "105": {
+          "n": 360,
+          "rate_obs": 0.175,
+          "rate_pred": 0.2361,
+          "precision": 0.2471,
+          "recall": 0.3333,
+          "f1": 0.2838,
+          "kappa": 0.1036
+        },
+        "122": {
+          "n": 360,
+          "rate_obs": 0.2056,
+          "rate_pred": 0.15,
+          "precision": 0.1852,
+          "recall": 0.1351,
+          "f1": 0.1562,
+          "kappa": -0.0208
+        },
+        "201": {
+          "n": 360,
+          "rate_obs": 0.1667,
+          "rate_pred": 0.2111,
+          "precision": 0.1579,
+          "recall": 0.2,
+          "f1": 0.1765,
+          "kappa": -0.012
+        },
+        "202": {
+          "n": 360,
+          "rate_obs": 0.1694,
+          "rate_pred": 0.1833,
+          "precision": 0.2273,
+          "recall": 0.2459,
+          "f1": 0.2362,
+          "kappa": 0.073
+        },
+        "203": {
+          "n": 360,
+          "rate_obs": 0.1556,
+          "rate_pred": 0.1278,
+          "precision": 0.3043,
+          "recall": 0.25,
+          "f1": 0.2745,
+          "kappa": 0.1561
+        },
+        "206": {
+          "n": 9,
+          "rate_obs": 0.0,
+          "rate_pred": 0.4444,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "kappa": 0.0
+        },
+        "207": {
+          "n": 360,
+          "rate_obs": 0.175,
+          "rate_pred": 0.1278,
+          "precision": 0.2826,
+          "recall": 0.2063,
+          "f1": 0.2385,
+          "kappa": 0.1066
+        }
+      }
+    }
+  },
+  "offset_kappa_label_1h": {
+    "-8h": 0.1375,
+    "-7h": 0.119,
+    "-6h": 0.1274,
+    "-5h": 0.1259,
+    "-4h": 0.0943,
+    "-3h": 0.0703,
+    "-2h": 0.0451,
+    "-1h": 0.0542,
+    "+0h": 0.0521,
+    "+1h": 0.0237,
+    "+2h": -0.0012,
+    "+3h": -0.0451,
+    "+4h": -0.0597,
+    "+5h": -0.0557,
+    "+6h": -0.04,
+    "+7h": -0.0225,
+    "+8h": -0.0379
+  },
+  "diurnal_rain_rate_by_local_hour": {
+    "0": {
+      "siata": 0.3896,
+      "label": 0.0123,
+      "forecast": 0.1411
+    },
+    "1": {
+      "siata": 0.3405,
+      "label": 0.0061,
+      "forecast": 0.181
+    },
+    "2": {
+      "siata": 0.3025,
+      "label": 0.108,
+      "forecast": 0.1327
+    },
+    "3": {
+      "siata": 0.3098,
+      "label": 0.0982,
+      "forecast": 0.089
+    },
+    "4": {
+      "siata": 0.181,
+      "label": 0.092,
+      "forecast": 0.0767
+    },
+    "5": {
+      "siata": 0.1963,
+      "label": 0.0675,
+      "forecast": 0.089
+    },
+    "6": {
+      "siata": 0.1631,
+      "label": 0.0677,
+      "forecast": 0.0831
+    },
+    "7": {
+      "siata": 0.1662,
+      "label": 0.0123,
+      "forecast": 0.0246
+    },
+    "8": {
+      "siata": 0.0646,
+      "label": 0.0062,
+      "forecast": 0.0738
+    },
+    "9": {
+      "siata": 0.0642,
+      "label": 0.0092,
+      "forecast": 0.0336
+    },
+    "10": {
+      "siata": 0.0489,
+      "label": 0.0398,
+      "forecast": 0.0826
+    },
+    "11": {
+      "siata": 0.0395,
+      "label": 0.1733,
+      "forecast": 0.1915
+    },
+    "12": {
+      "siata": 0.079,
+      "label": 0.2948,
+      "forecast": 0.3495
+    },
+    "13": {
+      "siata": 0.1463,
+      "label": 0.4482,
+      "forecast": 0.4573
+    },
+    "14": {
+      "siata": 0.2195,
+      "label": 0.7591,
+      "forecast": 0.4573
+    },
+    "15": {
+      "siata": 0.2287,
+      "label": 0.6402,
+      "forecast": 0.6067
+    },
+    "16": {
+      "siata": 0.2073,
+      "label": 0.6707,
+      "forecast": 0.4665
+    },
+    "17": {
+      "siata": 0.1871,
+      "label": 0.5245,
+      "forecast": 0.4018
+    },
+    "18": {
+      "siata": 0.1564,
+      "label": 0.362,
+      "forecast": 0.2638
+    },
+    "19": {
+      "siata": 0.1442,
+      "label": 0.3129,
+      "forecast": 0.2086
+    },
+    "20": {
+      "siata": 0.1662,
+      "label": 0.3262,
+      "forecast": 0.1538
+    },
+    "21": {
+      "siata": 0.2669,
+      "label": 0.1871,
+      "forecast": 0.1472
+    },
+    "22": {
+      "siata": 0.2607,
+      "label": 0.0245,
+      "forecast": 0.1411
+    },
+    "23": {
+      "siata": 0.3252,
+      "label": 0.0552,
+      "forecast": 0.1227
+    }
+  },
+  "stations_by_era5_cell": {
+    "6.0,-75.75": [
+      105
+    ],
+    "6.25,-75.5": [
+      59,
+      68,
+      73,
+      201,
+      202,
+      203,
+      205,
+      207
+    ],
+    "6.25,-75.75": [
+      83,
+      206
+    ],
+    "6.5,-75.25": [
+      82
+    ],
+    "6.5,-75.5": [
+      122
+    ]
+  }
+}

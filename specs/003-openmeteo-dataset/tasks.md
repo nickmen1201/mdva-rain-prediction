@@ -59,7 +59,7 @@ description: "Task list for 003-openmeteo-dataset"
 **Independent Test**: quickstart §4
 
 - [X] T008 [US3] `mdva/label_validation.py`: horas SIATA (UTC−5 → UTC, ≥ 50 minutos, calidad 1), división en mitades, calibración por igualación de frecuencias, métricas (precisión, sensibilidad, F1, kappa) por estación y totales para la etiqueta y el pronóstico crudo en ventanas 1/3/6 h, desfases −8…+8 h, ciclo diurno y estaciones por celda; tests con datos sintéticos en `tests/test_label_validation.py`
-- [ ] T009 [US3] Ejecutar `make validate-labels`, fijar el umbral resultante en `mdva/config.py`, reconstruir el dataset con ese umbral y versionar `reports/metrics/label_validation.json` y `reports/data_quality.json`
+- [X] T009 [US3] Ejecutar `make validate-labels`, fijar el umbral resultante en `mdva/config.py`, reconstruir el dataset con ese umbral y versionar `reports/metrics/label_validation.json` y `reports/data_quality.json`
 
 ---
 

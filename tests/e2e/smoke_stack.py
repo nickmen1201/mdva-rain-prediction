@@ -14,6 +14,7 @@ Variables opcionales: ML_URL, ROUTING_URL, BACKEND_URL.
 import json
 import os
 import sys
+import time
 import urllib.error
 import urllib.request
 import uuid
@@ -74,6 +75,31 @@ def main():
     modelos = sorted(p.get("modelo") for p in body) if isinstance(body, list) else None
     results["ml_predecir_ambos"] = {"status": status, "modelos": modelos}
 
+    # ML API v2 (spec 006)
+    status, body = request("GET", f"{ML_URL}/v2/health")
+    results["ml_v2_health"] = {"status": status, "ready": bool(isinstance(body, dict) and body.get("ready"))}
+    entrada_v2 = {
+        "time_utc": "2026-10-28T20:00:00Z",
+        "temperature_2m": 19.0,
+        "relative_humidity_2m": 85.0,
+        "dew_point_2m": 16.4,
+        "cloud_cover": 90.0,
+        "wind_speed_10m": 2.0,
+        "wind_direction_10m": 180.0,
+        "pressure_msl": 1013.0,
+        "precipitation": 0.4,
+        "cape": 300.0,
+    }
+    status, body = request("POST", f"{ML_URL}/v2/predict", entrada_v2)
+    results["ml_v2_predict"] = {"status": status, "has_alert": bool(isinstance(body, dict) and body.get("alert_level"))}
+    inicio = time.perf_counter()
+    status, body = request("POST", f"{ML_URL}/v2/predict/batch", {"records": [entrada_v2] * 81})
+    results["ml_v2_batch_81"] = {
+        "status": status,
+        "count": len(body["predictions"]) if isinstance(body, dict) and "predictions" in body else None,
+        "under_1s": time.perf_counter() - inicio < 1.0,
+    }
+
     route_req = {
         "origin": {"latitude": ORIGEN["lat"], "longitude": ORIGEN["lng"]},
         "destination": {"latitude": DESTINO["lat"], "longitude": DESTINO["lng"]},
@@ -112,6 +138,14 @@ def main():
         token=token,
     )
     results["weather_forecast"] = {"status": status}
+
+    # Heatmap: 81 puntos (9 × 9) sobre el valle → 1 consulta de clima + 1 de predicción (spec 007, SC-002)
+    grilla = [{"lat": 6.12 + i * 0.03, "lng": -75.68 + j * 0.03} for i in range(9) for j in range(9)]
+    t0 = time.perf_counter()
+    status, body = request("POST", f"{BACKEND_URL}/api/weather/predict-grid", {"puntos": grilla}, token=token)
+    elapsed = time.perf_counter() - t0
+    resultados = body.get("resultados", []) if isinstance(body, dict) else []
+    results["weather_predict_grid_81"] = {"status": status, "count": len(resultados), "under_3s": elapsed < 3}
 
     trip = {
         "tipoVehiculo": "CARRO",

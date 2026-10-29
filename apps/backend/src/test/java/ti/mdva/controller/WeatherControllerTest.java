@@ -9,6 +9,7 @@ import ti.mdva.model.dto.WeatherGridPointDTO;
 import ti.mdva.model.dto.WeatherGridResponseDTO;
 import ti.mdva.model.dto.WeatherGridResultadoDTO;
 import ti.mdva.service.WeatherMLService;
+import ti.mdva.service.weather.HourlyInputs;
 
 import java.time.Instant;
 import java.time.OffsetDateTime;
@@ -17,10 +18,11 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class WeatherControllerTest {
 
-    /** Stub del WeatherMLService para evitar llamadas reales a Google/ML en tests. */
+    /** Stub del WeatherMLService para evitar llamadas reales a Open-Meteo/ML en tests. */
     private static class StubWeatherService implements WeatherMLService {
         final AtomicInteger callsPredict = new AtomicInteger();
         final AtomicInteger callsForecast = new AtomicInteger();
@@ -37,6 +39,11 @@ class WeatherControllerTest {
                     .temperaturaC(20.0)
                     .humedadPct(80.0)
                     .build();
+        }
+
+        @Override
+        public HourlyInputs currentInputs(double lat, double lng) {
+            throw new UnsupportedOperationException("no se usa en estos tests");
         }
 
         @Override
@@ -112,43 +119,23 @@ class WeatherControllerTest {
     }
 
     @Test
-    @DisplayName("predict-grid: si una predicción individual falla, ese punto retorna prob=0 (no rompe el batch)")
-    void predictGridContinuaSiUnPuntoFalla() {
-        WeatherMLService stubFailOnce = new WeatherMLService() {
-            int n = 0;
-            @Override public RainPredictionDTO predictRainForLocation(double lat, double lng) {
-                if (++n == 2) throw new RuntimeException("ML caido para este punto");
-                return RainPredictionDTO.builder().probabilidadRf(0.5).build();
-            }
+    @DisplayName("predict-grid: un fallo del servicio se propaga; nunca se inventan probabilidades (spec 007, H-22)")
+    void predictGridPropagaFallos() {
+        WeatherMLService stubFalla = new WeatherMLService() {
+            @Override public RainPredictionDTO predictRainForLocation(double lat, double lng) { return null; }
+            @Override public HourlyInputs currentInputs(double lat, double lng) { return null; }
             @Override public List<HourlyForecastDTO> getHourlyForecast(double lat, double lng, int horas) { return List.of(); }
             @Override public WeatherGridResponseDTO predictGridForArea(List<WeatherGridPointDTO> puntos) {
-                return new WeatherGridResponseDTO(
-                    List.of(
-                        new WeatherGridResultadoDTO(6.24, -75.58, 0.5),
-                        new WeatherGridResultadoDTO(6.25, -75.59, 0.0),
-                        new WeatherGridResultadoDTO(6.26, -75.60, 0.5)
-                    ),
-                    Instant.now(),
-                    "TEST",
-                    180
-                );
+                throw new IllegalStateException("Open-Meteo no respondió");
             }
         };
-        WeatherController c = new WeatherController(stubFailOnce);
+        WeatherController c = new WeatherController(stubFalla);
 
         Map<String, List<Map<String, Double>>> body = Map.of(
-            "puntos", List.of(
-                Map.of("lat", 6.24, "lng", -75.58),
-                Map.of("lat", 6.25, "lng", -75.59),
-                Map.of("lat", 6.26, "lng", -75.60)
-            )
+            "puntos", List.of(Map.of("lat", 6.24, "lng", -75.58))
         );
 
-        var resp = c.predictGrid(body);
-        var resultados = resp.getBody().resultados();
-
-        assertThat(resultados).hasSize(3);
-        assertThat(resultados.stream().anyMatch(r -> r.probabilidadRf() == 0.0)).isTrue();
+        assertThatThrownBy(() -> c.predictGrid(body)).isInstanceOf(IllegalStateException.class);
     }
 
     @Test

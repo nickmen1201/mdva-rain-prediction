@@ -14,12 +14,18 @@ import numpy as np
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 
+import monitoring
+import v2
+
 # ── App ────────────────────────────────────────────────────────────────────────
 app = FastAPI(
     title="MDVA Predicción de Lluvia",
     description="Servicio de predicción binaria de lluvia para el Valle de Aburrá.",
     version="1.0.0",
+    lifespan=v2.lifespan,
 )
+app.include_router(v2.router)
+v2.install_error_handlers(app)
 
 # ── Model loading ──────────────────────────────────────────────────────────────
 # models/ en la raíz del repo (CCDS v2); el contenedor define MDVA_MODELS_DIR=/app/models
@@ -216,22 +222,8 @@ def monitorear_trayecto(req: MonitoreoRequest):
 
     con_latencia = minutos_latencia > 15
 
-    # 4. Determinar nivel de cambio
-    nivel_cambio = "ESTABLE"
-    if delta >= 0.10 and delta <= 0.25:
-        nivel_cambio = "MODERADO"
-    elif delta > 0.25:
-        nivel_cambio = "SIGNIFICATIVO"
-
-    if con_latencia and nivel_cambio != "CRITICO":
-        # Sube un nivel si hay latencia
-        niveles = ["ESTABLE", "MODERADO", "SIGNIFICATIVO", "CRITICO"]
-        idx = niveles.index(nivel_cambio)
-        if idx < len(niveles) - 1:
-            nivel_cambio = niveles[idx + 1]
-
-    if prob_actual > 0.85:
-        nivel_cambio = "CRITICO"
+    # 4. Determinar nivel de cambio (reglas RF-17, compartidas con v2)
+    nivel_cambio = monitoring.change_level(req.snapshot.probabilidad_rf_inicio, prob_actual, minutos_latencia)
 
     return MonitoreoResponse(
         probabilidad_rf_actual=prob_actual,

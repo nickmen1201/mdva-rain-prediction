@@ -5,8 +5,9 @@ La probabilidad actual se fija con monkeypatch para que las reglas no dependan d
 
 from datetime import datetime, timedelta, timezone
 
-import main
 import pytest
+
+import main
 
 
 def _iso_hace(minutos):

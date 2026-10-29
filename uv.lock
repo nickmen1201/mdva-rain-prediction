@@ -210,12 +210,16 @@ version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "joblib" },
-    { name = "matplotlib" },
     { name = "numpy" },
     { name = "pandas" },
+    { name = "scikit-learn" },
+]
+
+[package.optional-dependencies]
+pipeline = [
+    { name = "matplotlib" },
     { name = "pyarrow" },
     { name = "requests" },
-    { name = "scikit-learn" },
 ]
 
 [package.dev-dependencies]
@@ -227,13 +231,14 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "joblib", specifier = "==1.5.2" },
-    { name = "matplotlib", specifier = "==3.11.2" },
+    { name = "matplotlib", marker = "extra == 'pipeline'", specifier = "==3.11.2" },
     { name = "numpy", specifier = "==2.4.6" },
     { name = "pandas", specifier = "==3.1.0" },
-    { name = "pyarrow", specifier = "==26.0.0" },
-    { name = "requests", specifier = "==2.34.2" },
+    { name = "pyarrow", marker = "extra == 'pipeline'", specifier = "==26.0.0" },
+    { name = "requests", marker = "extra == 'pipeline'", specifier = "==2.34.2" },
     { name = "scikit-learn", specifier = "==1.8.0" },
 ]
+provides-extras = ["pipeline"]
 
 [package.metadata.requires-dev]
 dev = [

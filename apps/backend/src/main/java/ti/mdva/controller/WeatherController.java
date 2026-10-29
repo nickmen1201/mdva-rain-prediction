@@ -36,7 +36,7 @@ public class WeatherController {
     @GetMapping("/current")
     @Operation(
         summary = "Variables ambientales actuales + predicción de lluvia (HU014)",
-        description = "Pipeline: Google Weather (variables actuales) → modelo ML (random_forest preferido, regresion_logistica fallback)."
+        description = "Pipeline: Open-Meteo (hora UTC en curso, 9 variables del contrato de features) → ML API v2 (rain_classifier). Incluye el instante UTC del dato."
     )
     public ResponseEntity<RainPredictionDTO> getCurrent(
             @RequestParam double latitude,

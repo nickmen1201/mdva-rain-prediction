@@ -1,0 +1,182 @@
+openapi: 3.1.0
+info:
+  title: MDVA ML API
+  version: 2.0.0
+  description: >
+    Predicción de lluvia apreciable (≥ 0.5 mm/h en la celda ERA5) para el Valle de Aburrá con el modelo
+    rain_classifier (spec 005). Las entradas siguen el contrato de features v1.0.0 (spec 004).
+    Cambio aditivo: los endpoints v1 (/predecir/*, /monitorear/trayecto) siguen disponibles hasta la spec 007.
+paths:
+  /v2/health:
+    get:
+      operationId: healthV2
+      summary: Estado del servicio y del modelo cargado
+      responses:
+        "200":
+          description: Servicio listo
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/HealthV2"}
+  /v2/predict:
+    post:
+      operationId: predictV2
+      summary: Probabilidad de lluvia para un punto y una hora
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/PredictionInput"}
+      responses:
+        "200":
+          description: Predicción
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/Prediction"}
+        "422": {$ref: "#/components/responses/Invalid"}
+        "500": {$ref: "#/components/responses/Internal"}
+  /v2/predict/batch:
+    post:
+      operationId: predictBatchV2
+      summary: Probabilidades para varios puntos u horas (hasta 200 registros)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/BatchInput"}
+      responses:
+        "200":
+          description: Una predicción por registro, en el mismo orden
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/BatchPrediction"}
+        "422": {$ref: "#/components/responses/Invalid"}
+        "500": {$ref: "#/components/responses/Internal"}
+  /v2/monitor/trip:
+    post:
+      operationId: monitorTripV2
+      summary: Cambio de condiciones durante un trayecto (reglas RF-17)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/MonitorInput"}
+      responses:
+        "200":
+          description: Nivel de cambio
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/MonitorResult"}
+        "422": {$ref: "#/components/responses/Invalid"}
+        "500": {$ref: "#/components/responses/Internal"}
+components:
+  responses:
+    Invalid:
+      description: Entrada inválida
+      content:
+        application/problem+json:
+          schema: {$ref: "#/components/schemas/Problem"}
+    Internal:
+      description: Error interno (sin detalles internos)
+      content:
+        application/problem+json:
+          schema: {$ref: "#/components/schemas/Problem"}
+  schemas:
+    PredictionInput:
+      type: object
+      required: [time_utc, temperature_2m, relative_humidity_2m, dew_point_2m, cloud_cover, wind_speed_10m,
+                 wind_direction_10m, pressure_msl, precipitation, cape]
+      properties:
+        time_utc: {type: string, format: date-time, description: "Instante objetivo con zona horaria (se normaliza a UTC)"}
+        temperature_2m: {type: number, minimum: -5, maximum: 45, description: "°C"}
+        relative_humidity_2m: {type: number, minimum: 0, maximum: 100, description: "%"}
+        dew_point_2m: {type: number, minimum: -20, maximum: 35, description: "°C"}
+        cloud_cover: {type: number, minimum: 0, maximum: 100, description: "%"}
+        wind_speed_10m: {type: number, minimum: 0, maximum: 60, description: "m/s"}
+        wind_direction_10m: {type: number, minimum: 0, maximum: 360, description: "°"}
+        pressure_msl: {type: number, minimum: 950, maximum: 1050, description: "hPa"}
+        precipitation: {type: number, minimum: 0, maximum: 200, description: "mm/h pronosticados"}
+        cape: {type: number, minimum: 0, maximum: 10000, description: "J/kg"}
+    AlertLevel:
+      type: string
+      enum: [VERDE, AMARILLO, ROJO]
+    Prediction:
+      type: object
+      required: [probability, alert_level, model_version]
+      properties:
+        probability: {type: number, minimum: 0, maximum: 1}
+        alert_level: {$ref: "#/components/schemas/AlertLevel"}
+        model_version: {type: string}
+    BatchInput:
+      type: object
+      required: [records]
+      properties:
+        records:
+          type: array
+          minItems: 1
+          maxItems: 200
+          items: {$ref: "#/components/schemas/PredictionInput"}
+    BatchItem:
+      type: object
+      required: [probability, alert_level]
+      properties:
+        probability: {type: number, minimum: 0, maximum: 1}
+        alert_level: {$ref: "#/components/schemas/AlertLevel"}
+    BatchPrediction:
+      type: object
+      required: [model_version, predictions]
+      properties:
+        model_version: {type: string}
+        predictions:
+          type: array
+          items: {$ref: "#/components/schemas/BatchItem"}
+    MonitorInput:
+      type: object
+      required: [probability_start, weather_timestamp_utc, current]
+      properties:
+        probability_start: {type: number, minimum: 0, maximum: 1}
+        weather_timestamp_utc: {type: string, format: date-time, description: "Instante del dato meteorológico del inicio, con zona horaria"}
+        current: {$ref: "#/components/schemas/PredictionInput"}
+    ChangeLevel:
+      type: string
+      enum: [ESTABLE, MODERADO, SIGNIFICATIVO, CRITICO]
+    MonitorResult:
+      type: object
+      required: [probability_now, delta, latency_minutes, stale_data, change_level, model_version]
+      properties:
+        probability_now: {type: number, minimum: 0, maximum: 1}
+        delta: {type: number}
+        latency_minutes: {type: integer, minimum: 0}
+        stale_data: {type: boolean}
+        change_level: {$ref: "#/components/schemas/ChangeLevel"}
+        model_version: {type: string}
+    HealthV2:
+      type: object
+      required: [status, ready, model]
+      properties:
+        status: {type: string, enum: [ok]}
+        ready: {type: boolean}
+        model:
+          type: object
+          required: [name, version, calibration]
+          properties:
+            name: {type: string}
+            version: {type: string}
+            calibration: {type: string}
+    Problem:
+      type: object
+      description: RFC 7807 Problem Details
+      required: [type, title, status]
+      properties:
+        type: {type: string}
+        title: {type: string}
+        status: {type: integer}
+        detail: {type: string}
+        instance: {type: string}
+        errors:
+          type: array
+          items:
+            type: object
+            required: [field, rule]
+            properties:
+              field: {type: string}
+              rule: {type: string}

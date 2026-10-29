@@ -1,35 +1,34 @@
 package ti.mdva.service.impl;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.test.util.ReflectionTestUtils;
-import org.springframework.web.client.RestTemplate;
 
 import ti.mdva.model.dto.MonitoreoResponseDTO;
 import ti.mdva.model.dto.RainPredictionDTO;
 import ti.mdva.repositories.AlertaViajeRepository;
 import ti.mdva.repositories.CondicionesSnapshotRepository;
 import ti.mdva.service.WeatherMLService;
+import ti.mdva.service.weather.HourlyInputs;
+import ti.mdva.service.weather.MlApiV2Client;
 
+import java.time.Instant;
 import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 /**
- * Tests del orquestador del monitoreo activo (Sprint 5.2A / HU031).
+ * Tests del orquestador del monitoreo activo (HU031, specs/007-backend-weather-openmeteo).
  *
- * El RestTemplate interno se sustituye via ReflectionTestUtils para no tocar la red.
+ * Las reglas RF-17 viven en el ML API (/v2/monitor/trip); aquí el cliente se sustituye por un mock.
  */
 @ExtendWith(MockitoExtension.class)
 @DisplayName("TripMonitorServiceImpl — orquestación del monitoreo (HU031)")
@@ -38,19 +37,20 @@ class TripMonitorServiceImplTest {
     @Mock private CondicionesSnapshotRepository snapshotRepo;
     @Mock private AlertaViajeRepository         alertaRepo;
     @Mock private WeatherMLService              weatherMLService;
-    @Mock private RestTemplate                  restTemplate;
+    @Mock private MlApiV2Client                 mlApi;
 
     private TripMonitorServiceImpl service;
 
     private static final int    ID_VIAJE = 42;
     private static final double LAT      = 6.2442;
     private static final double LNG      = -75.5812;
-    private static final String ML_URL   = "http://ml:8081";
+    private static final OffsetDateTime INSTANTE_DATO = OffsetDateTime.of(2026, 10, 29, 14, 0, 0, 0, ZoneOffset.UTC);
+    private static final HourlyInputs ACTUAL = new HourlyInputs(
+            Instant.parse("2026-10-29T15:00:00Z"), 20.0, 75.0, 15.5, 60.0, 2.0, 180.0, 1013.0, 0.0, 120.0);
 
     @BeforeEach
     void setup() {
-        service = new TripMonitorServiceImpl(snapshotRepo, alertaRepo, weatherMLService, ML_URL);
-        ReflectionTestUtils.setField(service, "restTemplate", restTemplate);
+        service = new TripMonitorServiceImpl(snapshotRepo, alertaRepo, weatherMLService, mlApi);
     }
 
     @Test
@@ -64,17 +64,18 @@ class TripMonitorServiceImplTest {
         assertThat(r.getAlertaNueva()).isNull();
         assertThat(r.getCondicionesActuales()).isNotNull();
         assertThat(r.getCondicionesActuales().getProbabilidadRf()).isEqualTo(0.3);
-        verifyNoInteractions(restTemplate);
+        verifyNoInteractions(mlApi);
         verifyNoInteractions(alertaRepo);
     }
 
     @Test
     @DisplayName("Nivel ESTABLE sin latencia: no genera alerta y no persiste nada")
-    void nivelEstableSinLatenciaNoGeneraAlerta() throws Exception {
+    void nivelEstableSinLatenciaNoGeneraAlerta() {
         when(snapshotRepo.findByViajeId(ID_VIAJE)).thenReturn(Optional.of(snapshotBase()));
         when(weatherMLService.predictRainForLocation(LAT, LNG)).thenReturn(condicionesActuales(0.3));
-        when(restTemplate.postForEntity(anyString(), any(), eq(JsonNode.class)))
-                .thenReturn(jsonResp("{\"nivel_cambio\":\"ESTABLE\",\"probabilidad_rf_actual\":0.32,\"dato_con_latencia\":false}"));
+        when(weatherMLService.currentInputs(LAT, LNG)).thenReturn(ACTUAL);
+        when(mlApi.monitorTrip(0.3, INSTANTE_DATO, ACTUAL))
+                .thenReturn(resultado("ESTABLE", 0.32));
 
         MonitoreoResponseDTO r = service.evaluarPosicion(ID_VIAJE, LAT, LNG);
 
@@ -84,11 +85,12 @@ class TripMonitorServiceImplTest {
 
     @Test
     @DisplayName("Nivel SIGNIFICATIVO prob<0.6: alerta PELIGRO/NUEVA_RUTA persistida con id generado")
-    void nivelSignificativoGeneraAlertaPersistida() throws Exception {
+    void nivelSignificativoGeneraAlertaPersistida() {
         when(snapshotRepo.findByViajeId(ID_VIAJE)).thenReturn(Optional.of(snapshotBase()));
         when(weatherMLService.predictRainForLocation(LAT, LNG)).thenReturn(condicionesActuales(0.5));
-        when(restTemplate.postForEntity(anyString(), any(), eq(JsonNode.class)))
-                .thenReturn(jsonResp("{\"nivel_cambio\":\"SIGNIFICATIVO\",\"probabilidad_rf_actual\":0.55,\"dato_con_latencia\":false}"));
+        when(weatherMLService.currentInputs(LAT, LNG)).thenReturn(ACTUAL);
+        when(mlApi.monitorTrip(0.3, INSTANTE_DATO, ACTUAL))
+                .thenReturn(resultado("SIGNIFICATIVO", 0.55));
         when(alertaRepo.save(any(), anyInt(), anyDouble(), anyDouble(), anyDouble(), anyBoolean())).thenReturn(99);
 
         MonitoreoResponseDTO r = service.evaluarPosicion(ID_VIAJE, LAT, LNG);
@@ -103,11 +105,12 @@ class TripMonitorServiceImplTest {
 
     @Test
     @DisplayName("Nivel CRITICO: alerta CRISIS con mensaje literal de cancelación")
-    void nivelCriticoGeneraCrisis() throws Exception {
+    void nivelCriticoGeneraCrisis() {
         when(snapshotRepo.findByViajeId(ID_VIAJE)).thenReturn(Optional.of(snapshotBase()));
         when(weatherMLService.predictRainForLocation(LAT, LNG)).thenReturn(condicionesActuales(0.9));
-        when(restTemplate.postForEntity(anyString(), any(), eq(JsonNode.class)))
-                .thenReturn(jsonResp("{\"nivel_cambio\":\"CRITICO\",\"probabilidad_rf_actual\":0.92,\"dato_con_latencia\":false}"));
+        when(weatherMLService.currentInputs(LAT, LNG)).thenReturn(ACTUAL);
+        when(mlApi.monitorTrip(0.3, INSTANTE_DATO, ACTUAL))
+                .thenReturn(resultado("CRITICO", 0.92));
         when(alertaRepo.save(any(), anyInt(), anyDouble(), anyDouble(), anyDouble(), anyBoolean())).thenReturn(100);
 
         MonitoreoResponseDTO r = service.evaluarPosicion(ID_VIAJE, LAT, LNG);
@@ -118,18 +121,31 @@ class TripMonitorServiceImplTest {
     }
 
     @Test
-    @DisplayName("ML responde body null: retorna condiciones actuales, sin alerta, sin persistir")
-    void mlBodyNullNoGeneraAlerta() {
+    @DisplayName("El ML API rechaza la petición: error explícito, sin alerta inventada ni persistida")
+    void rechazoDelMlApiSePropaga() {
         when(snapshotRepo.findByViajeId(ID_VIAJE)).thenReturn(Optional.of(snapshotBase()));
         when(weatherMLService.predictRainForLocation(LAT, LNG)).thenReturn(condicionesActuales(0.4));
-        when(restTemplate.postForEntity(anyString(), any(), eq(JsonNode.class)))
-                .thenReturn(new ResponseEntity<>(null, HttpStatus.OK));
+        when(weatherMLService.currentInputs(LAT, LNG)).thenReturn(ACTUAL);
+        when(mlApi.monitorTrip(anyDouble(), any(), any()))
+                .thenThrow(new IllegalStateException("El ML API rechazó la petición a /v2/monitor/trip (422)"));
 
-        MonitoreoResponseDTO r = service.evaluarPosicion(ID_VIAJE, LAT, LNG);
-
-        assertThat(r.getAlertaNueva()).isNull();
-        assertThat(r.getCondicionesActuales()).isNotNull();
+        assertThatThrownBy(() -> service.evaluarPosicion(ID_VIAJE, LAT, LNG))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("422");
         verifyNoInteractions(alertaRepo);
+    }
+
+    @Test
+    @DisplayName("Usa el instante real del dato del snapshot, no el del snapshot ni \"ahora\"")
+    void usaElInstanteDelDatoDelSnapshot() {
+        when(snapshotRepo.findByViajeId(ID_VIAJE)).thenReturn(Optional.of(snapshotBase()));
+        when(weatherMLService.predictRainForLocation(LAT, LNG)).thenReturn(condicionesActuales(0.3));
+        when(weatherMLService.currentInputs(LAT, LNG)).thenReturn(ACTUAL);
+        when(mlApi.monitorTrip(anyDouble(), any(), any())).thenReturn(resultado("ESTABLE", 0.3));
+
+        service.evaluarPosicion(ID_VIAJE, LAT, LNG);
+
+        verify(mlApi).monitorTrip(0.3, INSTANTE_DATO, ACTUAL);
     }
 
     // ── Helpers ────────────────────────────────────────────────────────────────
@@ -137,7 +153,6 @@ class TripMonitorServiceImplTest {
     private RainPredictionDTO condicionesActuales(double prob) {
         return RainPredictionDTO.builder()
                 .probabilidadRf(prob)
-                .probabilidadRl(prob)
                 .llueve(prob >= 0.5)
                 .temperaturaC(20.0)
                 .humedadPct(75.0)
@@ -150,12 +165,12 @@ class TripMonitorServiceImplTest {
         return new CondicionesSnapshotRepository.SnapshotData(
                 0.3,
                 20.0,
-                OffsetDateTime.now(),
-                OffsetDateTime.now()
+                INSTANTE_DATO.plusMinutes(20), // timestamp del snapshot (al planificar)
+                INSTANTE_DATO                  // instante del dato meteorológico
         );
     }
 
-    private ResponseEntity<JsonNode> jsonResp(String json) throws Exception {
-        return new ResponseEntity<>(new ObjectMapper().readTree(json), HttpStatus.OK);
+    private static MlApiV2Client.MonitorResult resultado(String nivel, double prob) {
+        return new MlApiV2Client.MonitorResult(prob, prob - 0.3, 60, false, nivel);
     }
 }

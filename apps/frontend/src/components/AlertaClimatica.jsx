@@ -2,8 +2,8 @@ export default function AlertaClimatica({ prediccion, alertaNivel, alertaMensaje
   const iconos = { VERDE: '●', AMARILLO: '◆', ROJO: '▲' };
   const labels = { VERDE: 'Sin riesgo', AMARILLO: 'Precaución', ROJO: 'Riesgo alto' };
 
-  const rfPct   = prediccion ? Math.round((prediccion.probabilidadRf ?? 0) * 100) : 0;
-  const rlPct   = prediccion ? Math.round((prediccion.probabilidadRl ?? 0) * 100) : 0;
+  // Una sola probabilidad: la del modelo de lluvia (spec 007); sin dato se muestra "—", nunca 0 %
+  const probPct = prediccion?.probabilidadRf != null ? Math.round(prediccion.probabilidadRf * 100) : null;
   const tempC   = prediccion?.temperaturaC?.toFixed(1) ?? '—';
   const humedad = prediccion?.humedadPct?.toFixed(0) ?? '—';
   const viento  = prediccion?.velocidadVientoMs?.toFixed(1) ?? '—';
@@ -27,15 +27,9 @@ export default function AlertaClimatica({ prediccion, alertaNivel, alertaMensaje
 
       <div className="pred-grid">
         <div className="pred-item">
-          <div className="pred-label">Random Forest</div>
-          <div className="pred-value" style={{ color: rfPct > 70 ? 'var(--danger)' : rfPct > 40 ? 'var(--accent2)' : 'var(--accent)' }}>
-            {rfPct}%
-          </div>
-        </div>
-        <div className="pred-item">
-          <div className="pred-label">Reg. Logística</div>
-          <div className="pred-value" style={{ color: rlPct > 70 ? 'var(--danger)' : rlPct > 40 ? 'var(--accent2)' : 'var(--accent)' }}>
-            {rlPct}%
+          <div className="pred-label">Probabilidad de lluvia</div>
+          <div className="pred-value" style={{ color: probPct == null ? 'var(--muted)' : probPct > 70 ? 'var(--danger)' : probPct > 40 ? 'var(--accent2)' : 'var(--accent)' }}>
+            {probPct == null ? '—' : `${probPct}%`}
           </div>
         </div>
         <div className="pred-item">

@@ -201,7 +201,7 @@ Requisitos: [uv](https://docs.astral.sh/uv/) (instala Python 3.11 si hace falta)
 
 | Objetivo | Comando equivalente | Qué hace |
 |---|---|---|
-| `make requirements` | `uv sync` · `uv sync --project services/ml_api` · `uv sync --project services/routing_api` | Entornos de los 3 proyectos Python desde sus lockfiles |
+| `make requirements` | `uv sync --all-extras` · `uv sync --project services/ml_api` · `uv sync --project services/routing_api` | Entornos de los 3 proyectos Python desde sus lockfiles |
 | `make lint` | `uv run ruff check .` · `uv run ruff format --check .` | Lint y formato |
 | `make format` | `uv run ruff check --fix .` · `uv run ruff format .` | Corrige y formatea |
 | `make test` | `uv run pytest` · `uv run --project services/ml_api pytest services/ml_api/tests` · `uv run --project services/routing_api pytest services/routing_api/tests` | Tests de Python |

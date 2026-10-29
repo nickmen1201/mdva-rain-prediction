@@ -217,7 +217,8 @@ public class ViajeUseCase {
                 prediccion.getCoberturaAnubosaPct(),
                 prediccion.getVelocidadVientoMs(),
                 response.getAlertaNivel() != null ? response.getAlertaNivel().name() : "VERDE",
-                OffsetDateTime.now() // idealmente vendría de weather API, usamos now()
+                // Instante real del dato meteorológico (H-23); now() solo si la predicción no lo trae
+                prediccion.getTimestampDatoUtc() != null ? prediccion.getTimestampDatoUtc() : OffsetDateTime.now()
         );
 
         // 5.2 Guardar paradas (Sprint 5.3)

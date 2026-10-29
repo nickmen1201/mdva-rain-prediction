@@ -4,14 +4,20 @@ version = "0.1.0"
 description = "Predicción de lluvia para la movilidad en el Valle de Aburrá (Cookiecutter Data Science v2)"
 readme = "README.md"
 requires-python = ">=3.11,<3.12"
+# Base: lo que necesita la predicción (mdva.features, mdva.modeling.predict); lo usa el ML API
 dependencies = [
     "joblib==1.5.2",
-    "matplotlib==3.11.2",
     "numpy==2.4.6",
     "pandas==3.1.0",
+    "scikit-learn==1.8.0",
+]
+
+[project.optional-dependencies]
+# Pipeline de datos, entrenamiento y figuras (make data / validate-labels / train)
+pipeline = [
+    "matplotlib==3.11.2",
     "pyarrow==26.0.0",
     "requests==2.34.2",
-    "scikit-learn==1.8.0",
 ]
 
 [dependency-groups]
@@ -36,7 +42,7 @@ extend-exclude = ["notebooks", ".specify", "*.md"]  # fragmentos ilustrativos en
 select = ["E", "F", "W", "I"]
 
 [tool.ruff.lint.isort]
-known-first-party = ["mdva"]
+known-first-party = ["mdva", "main", "monitoring", "v2"]  # + módulos de services/ml_api
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

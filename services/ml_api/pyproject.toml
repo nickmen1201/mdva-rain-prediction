@@ -6,6 +6,8 @@ requires-python = ">=3.11,<3.12"
 # Versiones fijadas a las que corrían en el contenedor el 2026-10-28 (spec 002, R2)
 dependencies = [
     "fastapi==0.115.6",
+    # Paquete de ciencia de datos del repo: features (spec 004) y carga del modelo (spec 005)
+    "mdva",
     "joblib==1.5.2",
     "numpy==2.4.6",
     "pydantic==2.10.3",
@@ -16,8 +18,13 @@ dependencies = [
 [dependency-groups]
 dev = [
     "httpx==0.28.1",
+    "openapi-spec-validator==0.9.0",
     "pytest==9.2.0",
+    "pyyaml==6.0.3",
 ]
 
 [tool.uv]
 package = false
+
+[tool.uv.sources]
+mdva = { path = "../..", editable = false }

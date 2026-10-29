@@ -1,5 +1,7 @@
 package ti.mdva.model.dto;
 
+import java.time.OffsetDateTime;
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -15,13 +17,13 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class RainPredictionDTO {
 
-    /** Si alguno de los modelos predice lluvia */
+    /** Probabilidad ≥ 0.5 */
     private Boolean llueve;
 
-    /** Probabilidad del modelo random_forest (mayor AUC: 0.82) */
+    /** Probabilidad de lluvia del modelo rain_classifier (ML API v2); conserva el nombre por compatibilidad */
     private Double probabilidadRf;
 
-    /** Probabilidad del modelo regresión logística */
+    /** Ya no se calcula (el modelo v2 no tiene segundo clasificador); siempre null */
     private Double probabilidadRl;
 
     /** Temperatura actual en °C (de Open-Meteo) */
@@ -35,4 +37,6 @@ public class RainPredictionDTO {
 
     /** Velocidad del viento m/s (de Open-Meteo) */
     private Double velocidadVientoMs;
+    /** Instante UTC de la hora del pronóstico usada (spec 007) */
+    private OffsetDateTime timestampDatoUtc;
 }

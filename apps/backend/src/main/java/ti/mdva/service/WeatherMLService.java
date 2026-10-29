@@ -4,28 +4,27 @@ import ti.mdva.model.dto.HourlyForecastDTO;
 import ti.mdva.model.dto.RainPredictionDTO;
 import ti.mdva.model.dto.WeatherGridPointDTO;
 import ti.mdva.model.dto.WeatherGridResponseDTO;
+import ti.mdva.service.weather.HourlyInputs;
 
 import java.util.List;
 
 /**
- * Puerto para la integración clima → modelo ML.
+ * Puerto para la integración clima → modelo ML (specs/007-backend-weather-openmeteo).
  *
- * Flujo principal (predictRainForLocation):
- *   1. Obtiene variables meteorológicas actuales (Google Weather)
- *   2. Las envía al microservicio FastAPI (/predecir/ambos)
- *   3. Retorna el resultado consolidado
- *
- * Flujo horario (getHourlyForecast):
- *   1. Obtiene variables meteorológicas hora-por-hora (Open-Meteo, gratis)
- *   2. Para cada hora futura, llama al ML con esas variables → probabilidad
- *   3. Retorna lista de predicciones horarias
+ * Todas las operaciones obtienen las 9 variables del pronóstico de Open-Meteo (la misma
+ * fuente del entrenamiento) y predicen con el ML API v2.
  */
 public interface WeatherMLService {
 
     /**
-     * Predicción puntual ahora mismo en lat/lng.
+     * Predicción para la hora en curso en lat/lng.
      */
     RainPredictionDTO predictRainForLocation(double lat, double lng);
+
+    /**
+     * Entradas del modelo para la hora en curso en lat/lng (las usa el monitoreo de trayecto).
+     */
+    HourlyInputs currentInputs(double lat, double lng);
 
     /**
      * Predicción horaria para las próximas N horas en lat/lng.

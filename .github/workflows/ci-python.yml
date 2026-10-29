@@ -48,7 +48,7 @@ jobs:
           version: "0.12.5"
 
       - name: Install environment (from lock)
-        run: uv sync --frozen --project ${{ matrix.project }}
+        run: uv sync --frozen --project ${{ matrix.project }} ${{ matrix.project == '.' && '--all-extras' || '' }}
 
       - name: Pytest
         run: uv run --project ${{ matrix.project }} pytest ${{ matrix.project == '.' && 'tests' || format('{0}/tests', matrix.project) }}

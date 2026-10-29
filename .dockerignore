@@ -3,6 +3,9 @@
 *
 !services/ml_api/
 !models/
+!mdva/
+!pyproject.toml
+!README.md
 **/.venv
 **/__pycache__
 **/tests

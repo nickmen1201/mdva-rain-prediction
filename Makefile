@@ -3,7 +3,6 @@
 # En Windows sin `make`, ver la tabla de comandos equivalentes en el README.
 #################################################################################
 
-PYTHON_PROJECTS = . services/ml_api services/routing_api
 COMPOSE = docker compose -f docker-compose.dev.yml
 GITLEAKS_IMAGE = ghcr.io/gitleaks/gitleaks:v8.30.1
 
@@ -11,7 +10,8 @@ GITLEAKS_IMAGE = ghcr.io/gitleaks/gitleaks:v8.30.1
 
 ## Instalar los entornos de los 3 proyectos Python desde sus lockfiles
 requirements:
-	@for p in $(PYTHON_PROJECTS); do uv sync --frozen --project $$p || exit 1; done
+	uv sync --frozen --all-extras
+	@for p in services/ml_api services/routing_api; do uv sync --frozen --project $$p || exit 1; done
 
 ## Lint y chequeo de formato (ruff)
 lint:

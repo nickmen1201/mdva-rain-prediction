@@ -8,7 +8,8 @@ plugins {
 }
 
 // Valores locales desde el .env de la raíz del repo (gitignored)
-val rootEnv: Map<String, String> = rootProject.file("../.env").takeIf { it.exists() }
+// (isFile: dentro del contenedor la ruta queda fuera del contexto de build y no es un archivo)
+val rootEnv: Map<String, String> = rootProject.file("../../.env").takeIf { it.isFile }
     ?.readLines()
     ?.map { it.trim() }
     ?.filter { it.isNotEmpty() && !it.startsWith("#") && "=" in it }

@@ -1,0 +1,24 @@
+# =============================================================================
+# .dockerignore — contexto apps/backend/ (usado por apps/backend/Dockerfile)
+# =============================================================================
+# application-dev.yml NO se excluye: la imagen arranca con el perfil dev y ese
+# archivo ya no contiene secretos (se leen de variables de entorno).
+
+# Gradle cache y salidas locales
+.gradle/
+build/
+bin/
+out/
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# Archivos de entorno local (nunca al contenedor)
+.env*
+
+# Documentación y archivos que no participan del build
+wiki/
+*.md
+railway.toml

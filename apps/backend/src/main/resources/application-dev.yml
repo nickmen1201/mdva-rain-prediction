@@ -7,8 +7,8 @@
 
 spring:
   config:
-    # .env de la raíz del repo (gitignored) al correr con bootRun desde Backend/
-    import: optional:file:../.env[.properties]
+    # .env de la raíz del repo (gitignored) al correr con bootRun desde apps/backend/
+    import: optional:file:../../.env[.properties]
   datasource:
     url: jdbc:postgresql://localhost:5432/mdva
     username: postgres

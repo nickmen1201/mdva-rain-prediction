@@ -14,7 +14,7 @@ permissions:
 
 defaults:
   run:
-    working-directory: Backend
+    working-directory: apps/backend
 
 jobs:
   build:
@@ -56,7 +56,7 @@ jobs:
           path: |
             ~/.gradle/caches
             ~/.gradle/wrapper
-          key: ${{ runner.os }}-gradle-${{ hashFiles('**/Backend/*.gradle*', '**/gradle-wrapper.properties') }}
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/apps/backend/*.gradle*', '**/gradle-wrapper.properties') }}
           restore-keys: |
             ${{ runner.os }}-gradle-
 
@@ -79,7 +79,7 @@ jobs:
         if: success() || failure()
         with:
           name: Test Results
-          path: Backend/build/test-results/test/*.xml
+          path: apps/backend/build/test-results/test/*.xml
           reporter: java-junit
 
       - name: Upload build artifacts
@@ -87,7 +87,7 @@ jobs:
         if: success()
         with:
           name: build-artifacts
-          path: Backend/build/libs/*.jar
+          path: apps/backend/build/libs/*.jar
           retention-days: 7
 
   code-quality:

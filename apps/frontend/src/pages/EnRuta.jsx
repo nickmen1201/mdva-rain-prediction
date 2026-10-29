@@ -550,7 +550,6 @@ export default function EnRuta() {
     ? { lat: (viaje.origen.lat + viaje.destino.lat) / 2, lng: (viaje.origen.lng + viaje.destino.lng) / 2 }
     : { lat: 6.2442, lng: -75.5812 };
   const pasoActualData = viaje?.pasos?.[pasoActivo] ?? null;
-  const heatmapCenter = posicion ?? centro;
   const { points: heatmapPoints, loading: heatmapLoading, error: heatmapError } = useWeatherGrid({
     enabled: heatmapEnabled,
     center: { lat: 6.266, lng: -75.570 },

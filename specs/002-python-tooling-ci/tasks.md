@@ -25,7 +25,7 @@ description: "Task list for 002-python-tooling-ci"
 
 ## Phase 2: Foundational
 
-- [ ] T002 Crear el `Makefile` raíz con los objetivos de `contracts/developer-commands.md`
+- [X] T002 Crear el `Makefile` raíz con los objetivos de `contracts/developer-commands.md`
 
 **Checkpoint**: `make requirements` (o `uv sync`) instala el entorno raíz
 

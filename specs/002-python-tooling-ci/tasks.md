@@ -39,7 +39,7 @@ description: "Task list for 002-python-tooling-ci"
 
 - [X] T003 [US1] `services/ml_api/pyproject.toml` + `uv.lock` con las versiones de R2; `services/ml_api/Dockerfile` instala con `uv sync --frozen --no-dev` (R3); eliminar `services/ml_api/requirements.txt`; ajustar `.dockerignore` raíz para excluir `.venv`
 - [X] T004 [US1] `services/routing_api/pyproject.toml` + `uv.lock` con las versiones de R2; `services/routing_api/Dockerfile` con uv (R3); `services/routing_api/.dockerignore` (excluye `.venv`, `__pycache__`, `tests`); eliminar `services/routing_api/requirements.txt`
-- [ ] T005 [US1] Reconstruir las imágenes y comparar `pip freeze` con los freezes del 2026-10-28; registrar el resultado en `specs/002-python-tooling-ci/quickstart.md`
+- [X] T005 [US1] Reconstruir las imágenes y comparar `pip freeze` con los freezes del 2026-10-28; registrar el resultado en `specs/002-python-tooling-ci/quickstart.md`
 
 ---
 
@@ -73,7 +73,7 @@ description: "Task list for 002-python-tooling-ci"
 
 **Independent Test**: `make secrets` y prueba negativa del quickstart
 
-- [ ] T012 [US3] Agregar `.gitleaksignore` (falso positivo de R6) y el job `secrets` en `.github/workflows/ci-python.yml`; ejecutar la prueba negativa local
+- [ ] T012 [US3] Agregar `.gitleaksignore` (falso positivo de R6) y `.github/workflows/ci-secrets.yml`; ejecutar la prueba negativa local
 
 ---
 

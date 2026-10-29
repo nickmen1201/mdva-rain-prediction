@@ -38,3 +38,10 @@ make smoke                            # comparar con la línea base de la spec 0
 ```
 
 Esperado: mismas versiones de las librerías principales y smoke test idéntico.
+
+## Verificación registrada de US1 (2026-10-28)
+
+- `services/ml_api`: los 22 paquetes instalados en la imagen reconstruida desde `uv.lock` son idénticos (nombre y versión) al `pip freeze` del contenedor anterior.
+- `services/routing_api`: los 76 paquetes son idénticos (antes sin ninguna versión fijada).
+- Se excluyen de la comparación `pip`, `setuptools`, `wheel` y `packaging`, que vienen con la imagen base de Python, y `colorama` (solo Windows).
+- Smoke test: idéntico a la línea base de la spec 001.

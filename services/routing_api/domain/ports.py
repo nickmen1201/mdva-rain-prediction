@@ -1,12 +1,15 @@
 import abc
 from typing import Any
+
 from domain.entities import Location, Route
+
 
 class MapRepository(abc.ABC):
     @abc.abstractmethod
     def load_graph(self) -> Any:
         """Carga o descarga el grafo de la ciudad."""
         pass
+
 
 class RoutingService(abc.ABC):
     @abc.abstractmethod

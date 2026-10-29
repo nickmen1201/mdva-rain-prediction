@@ -1,7 +1,8 @@
-import requests
-from bs4 import BeautifulSoup
 import csv
 import unicodedata
+
+import requests
+from bs4 import BeautifulSoup
 
 
 def quitar_acentos(texto):
@@ -10,10 +11,10 @@ def quitar_acentos(texto):
     Ej: "José" → "Jose", "niño" → "nino", "Sebastián" → "Sebastian"
     """
     # Normaliza y elimina marcas diacríticas
-    texto_normalizado = unicodedata.normalize('NFD', texto)
-    sin_acentos = ''.join(c for c in texto_normalizado if unicodedata.category(c) != 'Mn')
+    texto_normalizado = unicodedata.normalize("NFD", texto)
+    sin_acentos = "".join(c for c in texto_normalizado if unicodedata.category(c) != "Mn")
     # Reemplazos adicionales comunes en español colombiano
-    sin_acentos = sin_acentos.replace('ñ', 'n').replace('Ñ', 'N')
+    sin_acentos = sin_acentos.replace("ñ", "n").replace("Ñ", "N")
     return sin_acentos
 
 
@@ -37,7 +38,7 @@ for sec in secciones:
     if not sec:
         continue
 
-    lineas = [l.strip() for l in sec.split("\n") if l.strip() != ""]
+    lineas = [ln.strip() for ln in sec.split("\n") if ln.strip() != ""]
     if not lineas:
         continue
 
@@ -47,7 +48,7 @@ for sec in secciones:
         parte_id, parte_nombre = encabezado.split(" - ", 1)
         id_comuna_raw = parte_id.strip().split()[-1].zfill(2)
         id_comuna = f"MED{id_comuna_raw}"
-    except:
+    except (ValueError, IndexError):
         continue
 
     for linea in lineas[1:]:
@@ -60,33 +61,21 @@ for sec in secciones:
                 # ← Aquí quitamos acentos al nombre del barrio
                 nombre_barrio_limpio = quitar_acentos(nombre_barrio.strip())
 
-                barrios_data.append({
-                    "id_barrio": id_barrio,
-                    "Nombre": nombre_barrio_limpio,
-                    "id_comuna": id_comuna
-                })
-            except:
+                barrios_data.append({"id_barrio": id_barrio, "Nombre": nombre_barrio_limpio, "id_comuna": id_comuna})
+            except ValueError:
                 pass
 
 # 🔵 Agregar corregimientos (también sin acentos)
-corregimientos = [
-    "San Sebastian de Palmitas",
-    "San Cristobal",
-    "Altavista",
-    "San Antonio de Prado",
-    "Santa Elena"
-]
+corregimientos = ["San Sebastian de Palmitas", "San Cristobal", "Altavista", "San Antonio de Prado", "Santa Elena"]
 
 for i, nombre in enumerate(corregimientos, start=1):
     id_corregimiento = f"MEDC{str(i).zfill(2)}"
     # ← Quitamos acentos también aquí
     nombre_limpio = quitar_acentos(nombre)
 
-    barrios_data.append({
-        "id_barrio": id_corregimiento,
-        "Nombre": f"Barrios_{nombre_limpio}",
-        "id_comuna": id_corregimiento
-    })
+    barrios_data.append(
+        {"id_barrio": id_corregimiento, "Nombre": f"Barrios_{nombre_limpio}", "id_comuna": id_corregimiento}
+    )
 
 # 📁 Exportar CSV (con encoding utf-8, pero ahora el contenido ya no tiene caracteres problemáticos)
 with open("barrios.csv", "w", newline="", encoding="utf-8") as f:

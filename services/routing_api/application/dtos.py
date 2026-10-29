@@ -1,19 +1,25 @@
-from pydantic import BaseModel, ConfigDict
 from typing import List, Optional
+
+from pydantic import BaseModel, ConfigDict
+
 
 class Coordinate(BaseModel):
     latitude: float
     longitude: float
 
+
 class RouteRequest(BaseModel):
     origin: Coordinate
     destination: Coordinate
-    vehicle_type: str = "car" # car, motorcycle, bike
+    vehicle_type: str = "car"  # car, motorcycle, bike
+
 
 class MultiStopRouteRequest(BaseModel):
     """Solicitud de ruta con paradas intermedias."""
+
     waypoints: List[Coordinate]  # Mínimo 2 (origin + destination), las del medio son paradas
     vehicle_type: str = "car"
+
 
 class RouteOption(BaseModel):
     distance_meters: float
@@ -38,13 +44,16 @@ class RouteOption(BaseModel):
     alerta_mensaje: str = ""
     sugerir_ruta_alterna: bool = False
 
+
 class RouteResponse(BaseModel):
     options: List[RouteOption]
-    
+
     model_config = ConfigDict(from_attributes=True)
+
 
 class MultiStopLeg(BaseModel):
     """Un tramo de la ruta multi-parada."""
+
     from_index: int
     to_index: int
     distance_meters: float
@@ -60,8 +69,10 @@ class MultiStopLeg(BaseModel):
     mdva_probabilidad_rl: float = 0.0
     alerta_nivel: str = "VERDE"
 
+
 class MultiStopRouteResponse(BaseModel):
     """Respuesta completa para ruta multi-parada."""
+
     legs: List[MultiStopLeg]
     total_distance_meters: float
     total_travel_time_seconds: float
@@ -77,17 +88,21 @@ class MultiStopRouteResponse(BaseModel):
     alerta_mensaje: str = ""
     sugerir_ruta_alterna: bool = False
 
+
 # ── DTOs para compatibilidad con Backend Spring Boot ──
 class SpringRouteRequest(BaseModel):
     """Request que viene del Backend Spring Boot (mismo formato que TripRequestDTO)."""
+
     origen: Coordinate
     destino: Coordinate
     paradas: Optional[List[Coordinate]] = None
     vehicle_type: str = "car"
     route_type: str = "fastest"  # fastest | dryest | shortest
 
+
 class SpringRouteStep(BaseModel):
     """Paso de navegación compatible con RouteStepDTO de Spring Boot."""
+
     instruccion: str
     distanciaMetros: int
     duracionSegundos: int
@@ -96,8 +111,10 @@ class SpringRouteStep(BaseModel):
     endLat: float
     endLng: float
 
+
 class SpringRouteResponse(BaseModel):
     """Respuesta compatible con lo que espera el Backend Spring Boot."""
+
     distanciaMetros: int
     duracionSegundos: int
     overviewPolyline: str  # encoded polyline compatible con Google Maps frontend
@@ -120,6 +137,7 @@ class SpringRouteResponse(BaseModel):
     sugerir_ruta_alterna: bool = False
     # ── Rutas alternativas ──
     alternativas: Optional[List["SpringRouteResponse"]] = None
+
 
 # Allow self-reference for alternativas
 SpringRouteResponse.model_rebuild()

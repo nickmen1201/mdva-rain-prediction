@@ -14,29 +14,31 @@ Features de inferencia (deben coincidir con EntradaPrediccion en main.py):
 Uso (desde la raíz del repo):
   python -m mdva.modeling.train
 """
-import time
-import math
+
 import glob
 import sys
-import requests
+import time
+
+import joblib
 import numpy as np
 import pandas as pd
-import joblib
+import requests
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import cross_val_score
 
 from mdva.config import MODELS_DIR, RAW_DATA_DIR
 
-PLUVIO_DIR  = RAW_DATA_DIR / "siata"
+PLUVIO_DIR = RAW_DATA_DIR / "siata"
 MODELS_DIR.mkdir(parents=True, exist_ok=True)
 
-LLUVIA_UMBRAL_MM = 0.1   # mm/hora → llueve=1
+LLUVIA_UMBRAL_MM = 0.1  # mm/hora → llueve=1
 # Rango con mejor cobertura SIATA
 DATE_START = "2018-01-01"
-DATE_END   = "2025-12-31"
+DATE_END = "2025-12-31"
 
 # ── Paso 1: Agregar pluviometría SIATA a promedios horarios del Valle ─────────
+
 
 def cargar_siata_hourly() -> pd.DataFrame:
     """
@@ -44,7 +46,7 @@ def cargar_siata_hourly() -> pd.DataFrame:
     y luego promedia entre estaciones para obtener precipitación del Valle.
     """
     pattern = str(PLUVIO_DIR / "*.csv")
-    files   = sorted(glob.glob(pattern))
+    files = sorted(glob.glob(pattern))
 
     if not files:
         print("ERROR: No se encontraron CSVs de pluviometría. Verifica PLUVIO_DIR.", file=sys.stderr)
@@ -75,11 +77,11 @@ def cargar_siata_hourly() -> pd.DataFrame:
             hourly["station"] = df["codigo"].iloc[0]
             station_dfs.append(hourly)
             ok += 1
-        except Exception as e:
+        except Exception:
             pass  # Ignorar estaciones con problemas
 
         if (i + 1) % 30 == 0:
-            print(f"  {i+1}/{len(files)} procesadas ({ok} OK)...")
+            print(f"  {i + 1}/{len(files)} procesadas ({ok} OK)...")
 
     print(f"  Estaciones cargadas con éxito: {ok}")
 
@@ -90,10 +92,7 @@ def cargar_siata_hourly() -> pd.DataFrame:
 
     # Promedio del Valle por hora (media entre estaciones activas)
     valle_hourly = (
-        all_st.groupby("hora")["precip_mm_h"]
-        .mean()
-        .reset_index()
-        .rename(columns={"precip_mm_h": "precip_valle_mm_h"})
+        all_st.groupby("hora")["precip_mm_h"].mean().reset_index().rename(columns={"precip_mm_h": "precip_valle_mm_h"})
     )
     valle_hourly = valle_hourly.sort_values("hora").reset_index(drop=True)
 
@@ -104,11 +103,12 @@ def cargar_siata_hourly() -> pd.DataFrame:
     valle_hourly["precip_lag_1h_mm"] = valle_hourly["precip_valle_mm_h"].shift(1).fillna(0.0)
 
     print(f"Horas con datos SIATA: {len(valle_hourly):,}")
-    print(f"Llueve en {valle_hourly['llueve'].mean()*100:.1f}% de las horas")
+    print(f"Llueve en {valle_hourly['llueve'].mean() * 100:.1f}% de las horas")
     return valle_hourly
 
 
 # ── Paso 2: Descargar features de Open-Meteo (solo La Candelaria) ─────────────
+
 
 def descargar_openmeteo(lat: float = 6.2518, lon: float = -75.5636) -> pd.DataFrame:
     """
@@ -121,12 +121,14 @@ def descargar_openmeteo(lat: float = 6.2518, lon: float = -75.5636) -> pd.DataFr
         "longitude": lon,
         "start_date": DATE_START,
         "end_date": DATE_END,
-        "hourly": ",".join([
-            "temperature_2m",
-            "relative_humidity_2m",
-            "cloud_cover",
-            "wind_speed_10m",
-        ]),
+        "hourly": ",".join(
+            [
+                "temperature_2m",
+                "relative_humidity_2m",
+                "cloud_cover",
+                "wind_speed_10m",
+            ]
+        ),
         "timezone": "America/Bogota",
     }
     print(f"Descargando Open-Meteo ({DATE_START} → {DATE_END}) para La Candelaria...")
@@ -144,18 +146,21 @@ def descargar_openmeteo(lat: float = 6.2518, lon: float = -75.5636) -> pd.DataFr
     data = resp.json()["hourly"]
     df = pd.DataFrame(data)
     df["hora"] = pd.to_datetime(df["time"]).dt.tz_localize(None)
-    df = df.rename(columns={
-        "temperature_2m": "temperatura_c",
-        "relative_humidity_2m": "humedad_relativa_pct",
-        "cloud_cover": "cobertura_nubosa_pct",
-        "wind_speed_10m": "velocidad_viento_ms",
-    })
+    df = df.rename(
+        columns={
+            "temperature_2m": "temperatura_c",
+            "relative_humidity_2m": "humedad_relativa_pct",
+            "cloud_cover": "cobertura_nubosa_pct",
+            "wind_speed_10m": "velocidad_viento_ms",
+        }
+    )
     df = df.drop(columns=["time"])
     print(f"Open-Meteo: {len(df):,} registros horarios")
     return df
 
 
 # ── Paso 3: Unir y entrenar ───────────────────────────────────────────────────
+
 
 def main():
     # Cargar SIATA
@@ -174,11 +179,11 @@ def main():
     # Feature engineering temporal (cyclic encoding)
     df["hora_sin"] = np.sin(2 * np.pi * df["hora"].dt.hour / 24)
     df["hora_cos"] = np.cos(2 * np.pi * df["hora"].dt.hour / 24)
-    df["mes_sin"]  = np.sin(2 * np.pi * df["hora"].dt.month / 12)
-    df["mes_cos"]  = np.cos(2 * np.pi * df["hora"].dt.month / 12)
+    df["mes_sin"] = np.sin(2 * np.pi * df["hora"].dt.month / 12)
+    df["mes_cos"] = np.cos(2 * np.pi * df["hora"].dt.month / 12)
 
     df = df.dropna()
-    print(f"Registros tras dropna: {len(df):,} | Llueve: {df['llueve'].mean()*100:.1f}%")
+    print(f"Registros tras dropna: {len(df):,} | Llueve: {df['llueve'].mean() * 100:.1f}%")
 
     FEATURES = [
         "temperatura_c",

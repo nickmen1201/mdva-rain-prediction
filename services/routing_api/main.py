@@ -14,7 +14,7 @@ app = FastAPI(
         "- `POST /api/v1/route/multi` — Ruta multi-parada\n"
         "- `POST /api/v1/route/spring` — Compatible con Backend Spring Boot (reemplaza Google Directions)\n"
     ),
-    version="2.0.0"
+    version="2.0.0",
 )
 
 app.add_middleware(
@@ -27,6 +27,7 @@ app.add_middleware(
 
 app.include_router(router)
 
+
 @app.get("/")
 def root():
     return {
@@ -36,8 +37,9 @@ def root():
             "POST /api/v1/route — Ruta simple",
             "POST /api/v1/route/multi — Ruta multi-parada",
             "POST /api/v1/route/spring — Compatible Spring Boot",
-        ]
+        ],
     }
+
 
 @app.get("/health")
 def health():

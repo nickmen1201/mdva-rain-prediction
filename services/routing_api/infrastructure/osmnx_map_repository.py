@@ -1,6 +1,8 @@
 import os
+
 import osmnx as ox
 from domain.ports import MapRepository
+
 
 class OSMnxMapRepository(MapRepository):
     def __init__(self, place_name=None, cache_file="valle_aburra.graphml"):
@@ -16,7 +18,7 @@ class OSMnxMapRepository(MapRepository):
                 "Caldas, Antioquia, Colombia",
                 "Copacabana, Antioquia, Colombia",
                 "Girardota, Antioquia, Colombia",
-                "Barbosa, Antioquia, Colombia"
+                "Barbosa, Antioquia, Colombia",
             ]
         else:
             self.place_name = place_name
@@ -26,17 +28,17 @@ class OSMnxMapRepository(MapRepository):
     def load_graph(self) -> any:
         if self._cached_graph is not None:
             return self._cached_graph
-            
+
         if os.path.exists(self.cache_file):
             print(f"Cargando grafo desde caché local: {self.cache_file}")
             G = ox.load_graphml(self.cache_file)
             self._cached_graph = G
             return G
-        
-        print(f"Descargando grafo del Valle de Aburrá (esto puede tomar varios minutos)...")
+
+        print("Descargando grafo del Valle de Aburrá (esto puede tomar varios minutos)...")
         # Descargamos el área completa del Valle de Aburrá
         G = ox.graph_from_place(self.place_name, network_type="drive")
-        
+
         print("Grafo descargado. Añadiendo elevaciones (topografía)...")
         # Intentamos añadir elevaciones si es posible (usando un raster público)
         try:
@@ -51,5 +53,5 @@ class OSMnxMapRepository(MapRepository):
         print("Guardando en caché local...")
         ox.save_graphml(G, self.cache_file)
         self._cached_graph = G
-        
+
         return G

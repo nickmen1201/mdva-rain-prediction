@@ -126,7 +126,7 @@ services:
   # ---------------------------------------------------------------------------
   frontend:
     build:
-      context: ./Frontend
+      context: ./apps/frontend
       dockerfile: Dockerfile
     container_name: mdva-frontend
     restart: unless-stopped

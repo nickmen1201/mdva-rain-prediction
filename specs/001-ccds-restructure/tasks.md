@@ -48,7 +48,7 @@ description: "Task list for 001-ccds-restructure"
 **Independent Test**: `ls` de la raíz y `git log --follow` sobre archivos movidos (quickstart §4)
 
 - [X] T005 [US1] Mover `Backend/` → `apps/backend/`; actualizar `docker-compose.dev.yml`, `.github/workflows/ci.yml` → `.github/workflows/ci-backend.yml`, `.github/workflows/release.yml`; ajustar la ruta del `.env` en `apps/backend/src/main/resources/application-dev.yml` y `apps/backend/build.gradle.kts` (`../../.env`); reemplazar `apps/backend/dockerignore` por `apps/backend/.dockerignore` (R6)
-- [ ] T006 [US1] Mover `Frontend/` → `apps/frontend/`; actualizar `docker-compose.dev.yml`, `docker-compose.prod.yml`, el job de Frontend en `.github/workflows/ci-backend.yml` y la nota de `.env.example`
+- [X] T006 [US1] Mover `Frontend/` → `apps/frontend/`; actualizar `docker-compose.dev.yml`, `docker-compose.prod.yml`, el job de Frontend en `.github/workflows/ci-backend.yml` y la nota de `.env.example`
 - [ ] T007 [US1] Mover `Data-science/enrutamiento_ambiental/` → `services/routing_api/`; actualizar contextos en ambos compose
 - [ ] T008 [US1] Mover el servicio ML a `services/ml_api/` y los modelos a `models/`; `MDVA_MODELS_DIR` en `services/ml_api/main.py` (R4); Dockerfile con contexto raíz y `.dockerignore` de permitidos (R3); `services/ml_api/railway.toml` (R8); `services/ml_api/README.md` en reemplazo de los dos READMEs duplicados (D-05); contextos en ambos compose
 - [ ] T009 [US1] Crear `mdva/__init__.py`, `mdva/config.py` y `mdva/modeling/__init__.py`; mover `Data-science/train_models.py` → `mdva/modeling/train.py` resolviendo rutas con `mdva.config` y sin la ruta absoluta (R5); mover el notebook a `notebooks/1.0-nm-analisis-espacial-siata-vs-openmeteo.ipynb`

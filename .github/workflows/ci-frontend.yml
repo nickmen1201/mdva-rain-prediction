@@ -1,0 +1,52 @@
+name: CI Frontend
+
+on:
+  push:
+    branches: [ main, development, 'feature/**' ]
+    paths: [ 'apps/frontend/**', '.github/workflows/ci-frontend.yml' ]
+  pull_request:
+    branches: [ main, development ]
+    paths: [ 'apps/frontend/**', '.github/workflows/ci-frontend.yml' ]
+
+permissions:
+  contents: read
+
+jobs:
+  frontend:
+    name: Lint and Build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/frontend
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: apps/frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: ESLint
+        run: npm run lint
+
+      - name: Vite production build
+        run: npm run build
+        env:
+          # Google Maps key no es necesaria en build time (Vite no la valida)
+          VITE_GOOGLE_MAPS_KEY: build-placeholder
+          VITE_API_URL: http://localhost:8080
+
+      - name: Upload frontend dist
+        uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: frontend-dist
+          path: apps/frontend/dist
+          retention-days: 7

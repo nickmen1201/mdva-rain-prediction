@@ -1,0 +1,54 @@
+name: CI Python
+
+on:
+  push:
+    branches: [ main, development, 'feature/**' ]
+  pull_request:
+    branches: [ main, development ]
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: Ruff (lint y formato)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.12.5"
+
+      - name: Install root environment (from lock)
+        run: uv sync --frozen
+
+      - name: Ruff check
+        run: uv run ruff check .
+
+      - name: Ruff format
+        run: uv run ruff format --check .
+
+  test:
+    name: Tests (${{ matrix.project }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        project: [ ".", "services/ml_api", "services/routing_api" ]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.12.5"
+
+      - name: Install environment (from lock)
+        run: uv sync --frozen --project ${{ matrix.project }}
+
+      - name: Pytest
+        run: uv run --project ${{ matrix.project }} pytest ${{ matrix.project == '.' && 'tests' || format('{0}/tests', matrix.project) }}

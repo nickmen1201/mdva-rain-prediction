@@ -63,7 +63,7 @@ description: "Task list for 002-python-tooling-ci"
 
 - [X] T009 [US2] Aplicar `ruff check --fix` y `ruff format` a todo el código Python y corregir a mano los hallazgos restantes, sin cambiar comportamiento (verificado con `make test`)
 - [X] T010 [P] [US2] Eliminar la variable sin uso `heatmapCenter` en `apps/frontend/src/pages/EnRuta.jsx` (R9)
-- [ ] T011 [US2] Separar `.github/workflows/ci-frontend.yml` (lint + build) de `ci-backend.yml`; crear `.github/workflows/ci-python.yml` con jobs `lint` y `test` (matriz de 3 proyectos)
+- [X] T011 [US2] Separar `.github/workflows/ci-frontend.yml` (lint + build) de `ci-backend.yml`; crear `.github/workflows/ci-python.yml` con jobs `lint` y `test` (matriz de 3 proyectos)
 
 ---
 

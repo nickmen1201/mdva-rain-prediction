@@ -57,3 +57,12 @@ git status --ignored data/                             # esperado: CSV de SIATA 
 | `viajes_planificar` | **500** — Google Directions sin facturación (H-19) |
 
 Usuarios en la base de desarrollo: **6** (cada corrida del smoke test agrega un usuario `smoke_*`).
+
+## Verificación registrada (2026-10-28, después de la reestructura)
+
+- Smoke test: **idéntico** a la línea base (`diff` sin diferencias).
+- Usuarios en la base de desarrollo antes de correr el smoke test: **6** (volúmenes reutilizados).
+- Backend: 152/153 tests (falla solo `BackendApplicationTests.contextLoads`, que requiere la base de pruebas de CI; igual que antes).
+- Frontend: build OK.
+- Producción: `docker compose -f docker-compose.prod.yml --env-file .env.example config -q` OK y la imagen del Backend construye.
+- Defecto encontrado y corregido durante la verificación: el valor por defecto de `MDVA_MODELS_DIR` se evaluaba aunque la variable existiera, y en el contenedor (`/app/main.py`) no hay dos carpetas por encima → `IndexError` al arrancar el servicio ML.

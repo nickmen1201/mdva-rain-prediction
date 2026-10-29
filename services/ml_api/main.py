@@ -22,7 +22,8 @@ app = FastAPI(
 
 # ── Model loading ──────────────────────────────────────────────────────────────
 # models/ en la raíz del repo (CCDS v2); el contenedor define MDVA_MODELS_DIR=/app/models
-MODELS_DIR = Path(os.environ.get("MDVA_MODELS_DIR", Path(__file__).resolve().parents[2] / "models"))
+_models_env = os.environ.get("MDVA_MODELS_DIR")
+MODELS_DIR = Path(_models_env) if _models_env else Path(__file__).resolve().parents[2] / "models"
 
 def load_models():
     models = {}

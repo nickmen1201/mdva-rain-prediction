@@ -85,7 +85,7 @@ description: "Task list for 001-ccds-restructure"
 
 **Independent Test**: quickstart §2 y §3
 
-- [ ] T014 [US2] Reconstruir el stack, repetir el smoke test y el conteo de usuarios, correr `./gradlew test` en `apps/backend` y `npm run build` en `apps/frontend`; registrar los resultados en `specs/001-ccds-restructure/quickstart.md` (sección "Verificación registrada")
+- [X] T014 [US2] Reconstruir el stack, repetir el smoke test y el conteo de usuarios, correr `./gradlew test` en `apps/backend` y `npm run build` en `apps/frontend`; registrar los resultados en `specs/001-ccds-restructure/quickstart.md` (sección "Verificación registrada")
 
 ---
 

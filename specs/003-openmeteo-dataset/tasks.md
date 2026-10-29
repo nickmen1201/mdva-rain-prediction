@@ -17,7 +17,7 @@ description: "Task list for 003-openmeteo-dataset"
 
 ## Phase 1: Setup
 
-- [ ] T001 Agregar `pyarrow` a `pyproject.toml` (versión fijada), actualizar `uv.lock`; agregar a `mdva/config.py` las constantes del dataset (periodo, variables, `LABEL_THRESHOLD_MM`, rutas `REPORTS_DIR/metrics`) y los objetivos `data` y `validate-labels` al `Makefile`
+- [X] T001 Agregar `pyarrow` a `pyproject.toml` (versión fijada), actualizar `uv.lock`; agregar a `mdva/config.py` las constantes del dataset (periodo, variables, `LABEL_THRESHOLD_MM`, rutas `REPORTS_DIR/metrics`) y los objetivos `data` y `validate-labels` al `Makefile`
 
 ---
 

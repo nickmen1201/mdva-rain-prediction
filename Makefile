@@ -7,7 +7,7 @@ PYTHON_PROJECTS = . services/ml_api services/routing_api
 COMPOSE = docker compose -f docker-compose.dev.yml
 GITLEAKS_IMAGE = ghcr.io/gitleaks/gitleaks:v8.30.1
 
-.PHONY: requirements lint format test secrets up down smoke clean help
+.PHONY: requirements lint format test secrets data validate-labels up down smoke clean help
 
 ## Instalar los entornos de los 3 proyectos Python desde sus lockfiles
 requirements:
@@ -32,6 +32,14 @@ test:
 ## Escaneo de secretos en el historial de la rama actual (gitleaks)
 secrets:
 	docker run --rm -v "$(CURDIR):/repo" $(GITLEAKS_IMAGE) git /repo --no-banner --redact --log-opts=HEAD
+
+## Construir el dataset de modelado (descarga con caché + quality gates)
+data:
+	uv run python -m mdva.dataset
+
+## Validar la etiqueta contra pluviómetros SIATA y calibrar el umbral
+validate-labels:
+	uv run python -m mdva.label_validation
 
 ## Levantar el stack de desarrollo
 up:

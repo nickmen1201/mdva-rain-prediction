@@ -1,0 +1,28 @@
+{
+  "$comment": "Contrato del dataset de modelado data/processed/rain_hourly.parquet. Fuente de verdad en código: mdva/data_contract.py (DATASET_CONTRACT_VERSION). Cambios aditivos → MINOR; quitar/renombrar columnas o cambiar unidades → MAJOR.",
+  "name": "rain_hourly",
+  "version": "1.0.0",
+  "primary_key": ["station_id", "time_utc"],
+  "timezone": "UTC",
+  "period": {"start": "2022-01-01T00:00:00Z", "end": "2025-12-31T23:00:00Z", "freq": "1h"},
+  "min_coverage_per_station": 0.99,
+  "max_null_fraction_per_column": 0.01,
+  "columns": [
+    {"name": "station_id", "dtype": "int64", "nullable": false},
+    {"name": "time_utc", "dtype": "datetime64[us, UTC]", "nullable": false},
+    {"name": "latitude", "dtype": "float64", "unit": "deg", "min": 6.0, "max": 6.6, "nullable": false},
+    {"name": "longitude", "dtype": "float64", "unit": "deg", "min": -75.8, "max": -75.2, "nullable": false},
+    {"name": "temperature_2m", "dtype": "float64", "unit": "degC", "min": -5, "max": 45, "nullable": false},
+    {"name": "relative_humidity_2m", "dtype": "float64", "unit": "%", "min": 0, "max": 100, "nullable": false},
+    {"name": "dew_point_2m", "dtype": "float64", "unit": "degC", "min": -20, "max": 35, "nullable": false},
+    {"name": "cloud_cover", "dtype": "float64", "unit": "%", "min": 0, "max": 100, "nullable": false},
+    {"name": "wind_speed_10m", "dtype": "float64", "unit": "m/s", "min": 0, "max": 60, "nullable": false},
+    {"name": "wind_direction_10m", "dtype": "float64", "unit": "deg", "min": 0, "max": 360, "nullable": false},
+    {"name": "pressure_msl", "dtype": "float64", "unit": "hPa", "min": 950, "max": 1050, "nullable": false},
+    {"name": "precipitation", "dtype": "float64", "unit": "mm/h", "min": 0, "max": 200, "nullable": false},
+    {"name": "cape", "dtype": "float64", "unit": "J/kg", "min": 0, "max": 10000, "nullable": false},
+    {"name": "precipitation_ref", "dtype": "float64", "unit": "mm/h", "min": 0, "max": 200, "nullable": false},
+    {"name": "era5_cell", "dtype": "str", "nullable": false},
+    {"name": "rain", "dtype": "bool", "nullable": false}
+  ]
+}

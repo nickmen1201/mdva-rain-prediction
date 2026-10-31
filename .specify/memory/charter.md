@@ -4,7 +4,7 @@
 > mandatos de cambio y requisitos funcionales a preservar. Está **subordinado** a
 > `.specify/memory/constitution.md`: si chocan, gana la constitución.
 
-- **Versión:** 1.1.0 (ver registro de cambios al final)
+- **Versión:** 1.2.0 (ver registro de cambios al final)
 - **Objetivo de la refactorización:** convertir MDVA en un proyecto de portafolio de **Ciencia de Datos / ML** reproducible, metodológicamente defendible y con la estructura **Cookiecutter Data Science v2 (CCDS v2)**, sin perder la funcionalidad de producto que ya existe y sin depender de APIs de pago.
 
 ---
@@ -263,6 +263,16 @@ Tras mover: actualizar *build contexts* en ambos `docker-compose`, `working-dire
 - R-43: Actualizar `CLAUDE.md` a la nueva estructura y a las versiones reales; eliminar cifras que no salgan de `reports/metrics/`.
 - R-44: Una sola fuente de verdad para métricas: README y model card **citan** `metrics.json`; prohibido escribir AUC a mano.
 
+#### I. Profundidad de ML (el centro del portafolio)
+
+- R-45: **Búsqueda de hiperparámetros defendible**: espacio de búsqueda y presupuesto declarados, validación cruzada temporal *rolling-origin* con *gap* ≥ 24 h sobre los años de desarrollo (no un único split), semilla fija, tabla completa de ensayos persistida y análisis de sensibilidad por hiperparámetro.
+- R-46: **Interpretabilidad**: importancia por permutación (con IC) y dependencia parcial/ICE de las features principales, contrastadas con la física de la lluvia; sin dependencias nuevas si scikit-learn basta.
+- R-47: **Ablación y curva de aprendizaje**: aporte de cada grupo de features (reentrenar sin el grupo) y desempeño vs tamaño de entrenamiento, para justificar el contrato de features y el volumen de datos.
+- R-48: **Análisis de errores**: métricas y confiabilidad por hora del día, mes/temporada, ubicación y nivel de lluvia pronosticada; casos de falla documentados.
+- R-49: **Calibración re-evaluada** con evidencia solo de desarrollo (meta ECE < 0.03) y **umbrales justificados** con análisis de decisión (costo de falsa alarma vs lluvia no avisada), conservando 0.40/0.70 salvo evidencia en contra (RF-10).
+- R-50: **Holdout fresco**: el modelo final se evalúa una sola vez en un periodo nunca usado (2026), además de 2025, y se registra qué decisiones tocaron cada periodo.
+- R-51: Notebook `3.0-nm-evaluacion-y-calibracion.ipynb` que narra el proceso leyendo **solo** artefactos generados (`reports/`), sin lógica propia (E-02).
+
 ---
 
 ## 4. Requisitos funcionales que el sistema ya cumple y deben preservarse
@@ -333,7 +343,8 @@ Cada spec recorre specify → clarify → plan → tasks → analyze → impleme
 | 009 | Routing service: limpieza (regresor, caché, fallbacks, tiempos reales) | R-25, R-28–R-33 |
 | 010 | Routing service: ruta `dryest` espacial real y elevaciones | R-26, R-27 |
 | 011 | Frontend sin Google (MapLibre + Nominatim) | R-35c |
-| 012 | Documentación de portafolio y model card | R-42–R-44, P8 |
+| 012 | Profundidad de ML: búsqueda, interpretabilidad, ablación, errores, calibración y holdout fresco | R-45–R-51 |
+| 013 | Documentación de portafolio y model card | R-42–R-44, P8 |
 
 ---
 
@@ -364,3 +375,4 @@ Cada spec recorre specify → clarify → plan → tasks → analyze → impleme
 ### Registro de cambios
 - **1.0.0 (2026-10-28):** versión inicial (como `CONSTITUTION.md`).
 - **1.1.0 (2026-10-28):** pasa a ser charter subordinado a `.specify/memory/constitution.md`; agrega H-19 (Google sin facturación) y H-20 (datos SIATA perdidos); fuente de datos Open-Meteo con SIATA como validación externa; retiro de Google (R-35, R-35b, R-35c); D-01 y R-37 hechos; nuevo orden de specs.
+- **1.2.0 (2026-10-31):** agrega §3.3.I (R-45–R-51, profundidad de ML) y la spec 012 correspondiente; la documentación de portafolio pasa a ser la spec 013.

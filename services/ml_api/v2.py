@@ -107,6 +107,12 @@ def _probabilities(records: list[BaseModel]) -> list[float]:
     return [float(p) for p in _model().predict_proba(filas)]
 
 
+def current_model_info() -> dict:
+    """Nombre y versión del modelo cargado (para `/` y `/health`)."""
+    m = _model().metadata
+    return {"name": m["model_name"], "version": m["model_version"]}
+
+
 router = APIRouter(prefix="/v2", tags=["v2"])
 
 

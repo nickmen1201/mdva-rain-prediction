@@ -92,9 +92,16 @@ def test_campo_faltante_es_problem_details(api):
     assert r.status_code == 422 and any(e["field"] == "pressure_msl" for e in r.json()["errors"])
 
 
-def test_v1_conserva_su_formato_de_error(api):
-    r = api.post("/predecir/random_forest", json={"temperatura_c": 1})
-    assert r.status_code == 422 and "detail" in r.json() and "type" not in r.json()
+@pytest.mark.parametrize("ruta", ["/predecir/random_forest", "/predecir/ambos", "/monitorear/trayecto"])
+def test_v1_retirado(api, ruta):
+    assert api.post(ruta, json={}).status_code == 404
+
+
+def test_health_y_raiz_reportan_el_modelo_v2(api):
+    for ruta in ("/health", "/"):
+        body = api.get(ruta).json()
+        assert body["modelo"] == {"name": "rain_classifier", "version": v2.MODEL_VERSION}
+    assert api.get("/health").json()["status"] == "ok"
 
 
 def test_monitoreo_v2(api, monkeypatch):

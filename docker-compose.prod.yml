@@ -69,7 +69,6 @@ services:
     environment:
       MDVA_ML_URL:      http://ml-service:8081
       GRAPH_CACHE_FILE: /app/cache/valle_aburra.graphml
-      RAIN_MODEL_PATH:  /app/cache/rain_model.joblib
     volumes:
       - routing_graph_cache:/app/cache
     depends_on:

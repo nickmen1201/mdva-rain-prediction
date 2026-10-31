@@ -23,7 +23,7 @@ COPY services/ml_api/pyproject.toml services/ml_api/uv.lock ./
 RUN uv sync --frozen --no-dev --no-install-project --no-cache
 ENV PATH="/app/services/ml_api/.venv/bin:$PATH"
 
-# Código del servicio y modelos (v1: *.pkl; v2: rain_classifier/)
+# Código del servicio y modelo evaluado (models/rain_classifier/<versión>/)
 COPY services/ml_api/main.py services/ml_api/v2.py services/ml_api/monitoring.py ./
 COPY models/ /app/models/
 ENV MDVA_MODELS_DIR=/app/models

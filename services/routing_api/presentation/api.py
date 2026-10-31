@@ -1,4 +1,7 @@
+import logging
+
 from application.dtos import (
+    MetricsResponse,
     MultiStopRouteRequest,
     MultiStopRouteResponse,
     RouteRequest,
@@ -11,84 +14,47 @@ from domain.exceptions import DomainException
 from fastapi import APIRouter, Depends, HTTPException
 from presentation.dependencies import get_find_best_route_use_case
 
+log = logging.getLogger(__name__)
+
 router = APIRouter(prefix="/api/v1")
+
+
+def _run(fn, request):
+    try:
+        return fn(request)
+    except (DomainException, ValueError) as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+    except Exception as e:
+        # El detalle interno se loguea; al cliente, un mensaje genérico (constitución IV)
+        log.exception("Error calculando la ruta")
+        raise HTTPException(status_code=500, detail="Error interno calculando la ruta") from e
 
 
 @router.post("/route", response_model=RouteResponse)
 def calculate_route(request: RouteRequest, use_case: FindBestRouteUseCase = Depends(get_find_best_route_use_case)):
-    try:
-        response = use_case.execute(request)
-        return response
-    except DomainException as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
+    """Opciones `fastest`, `shortest` y, si hay grilla de lluvia, `dryest`."""
+    return _run(use_case.execute, request)
 
 
 @router.post("/route/multi", response_model=MultiStopRouteResponse)
 def calculate_multi_stop_route(
     request: MultiStopRouteRequest, use_case: FindBestRouteUseCase = Depends(get_find_best_route_use_case)
 ):
-    """Calcula una ruta que pasa por múltiples paradas intermedias."""
-    try:
-        response = use_case.execute_multi_stop(request)
-        return response
-    except DomainException as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
-
-
-# ══════════════════════════════════════════════════════════════════════════════
-# ENDPOINT PRINCIPAL PARA INTEGRACIÓN CON BACKEND SPRING BOOT
-# ══════════════════════════════════════════════════════════════════════════════
-# Este endpoint reemplaza la llamada a Google Directions API.
-# El Backend Spring Boot llama a este en vez de Google, y recibe:
-#   - Ruta calculada con OSMnx (grafo vial real del Valle de Aburrá)
-#   - Variables ambientales integradas (MDVA ML + SIATA + Open-Meteo)
-#   - Encoded polyline compatible con Google Maps frontend
-#   - Pasos de navegación turn-by-turn
-#   - Alerta de nivel climático (VERDE/AMARILLO/ROJO)
+    """Ruta que pasa por múltiples paradas en el orden recibido."""
+    return _run(use_case.execute_multi_stop, request)
 
 
 @router.post("/route/spring", response_model=SpringRouteResponse)
 def calculate_spring_route(
     request: SpringRouteRequest, use_case: FindBestRouteUseCase = Depends(get_find_best_route_use_case)
 ):
-    """
-    Endpoint compatible con el Backend Spring Boot (MDVA).
-    Reemplaza Google Directions API con enrutamiento ambiental inteligente.
-
-    Recibe el mismo formato que TripRequestDTO y retorna un formato
-    compatible con GoogleMapsService.RouteResult enriquecido con
-    variables ambientales.
-    """
-    try:
-        response = use_case.execute_spring(request)
-        return response
-    except DomainException as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
+    """Endpoint que consume el Backend (spec 008): geometría, duración base, pasos y alternativas."""
+    return _run(use_case.execute_spring, request)
 
 
-@router.post("/route/metrics")
+@router.post("/route/metrics", response_model=MetricsResponse)
 def get_environmental_metrics(
     request: SpringRouteRequest, use_case: FindBestRouteUseCase = Depends(get_find_best_route_use_case)
 ):
-    """
-    Retorna ÚNICAMENTE las métricas ambientales (SIATA + Elevación + MDVA ML)
-    sin calcular rutas en OSMnx.
-    Ideal para enriquecer rutas provenientes de Google Maps en tiempo real.
-    """
-    try:
-        # Usamos el weather_service inyectado
-        ws = use_case.routing_svc.weather_service
-        stats = ws.get_weather_stats(request.origen.latitude, request.origen.longitude)
-        return stats
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
+    """Solo la señal de lluvia del origen (modelo v2), sin calcular rutas."""
+    return _run(use_case.metrics, request)

@@ -1,9 +1,8 @@
 # =============================================================================
 # services/routing_api/Dockerfile — FastAPI Routing Service
 # =============================================================================
-# Sistema de enrutamiento inteligente con variables ambientales integradas.
-# Usa OSMnx + NetworkX para cálculo de rutas en el Valle de Aburrá.
-# Se conecta al microservicio ML (ml-service) para predicción de lluvia MDVA.
+# Rutas sobre el grafo vial OSM del Valle de Aburrá (OSMnx + NetworkX) con tiempos por
+# tipo de vía y la probabilidad de lluvia del modelo evaluado (ML API v2, ml-service).
 #
 # Puerto: 8000
 # Nota: el primer arranque puede tardar varios minutos si descarga el grafo OSM.
@@ -31,7 +30,6 @@ EXPOSE 8000
 # Variables de entorno para integración con MDVA
 ENV MDVA_ML_URL=http://ml-service:8081
 ENV GRAPH_CACHE_FILE=/app/cache/valle_aburra.graphml
-ENV RAIN_MODEL_PATH=/app/cache/rain_model.joblib
 
 HEALTHCHECK --interval=15s --timeout=10s --retries=8 --start-period=120s \
     CMD curl -f http://localhost:8000/health || exit 1

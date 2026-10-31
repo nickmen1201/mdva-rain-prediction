@@ -4,7 +4,7 @@
 
 **Created**: 2026-10-31
 
-**Status**: Draft
+**Status**: Implemented (2026-10-31)
 
 **Input**: User description: "Spec 009 (charter R-25, R-28–R-33; H-10, H-11, H-12, H-15): eliminar el regresor de intensidad del routing service y sus derivados; la probabilidad de lluvia sale solo del ML API v2 con datos de Open-Meteo; caché con vencimiento por clave; sin valores de respaldo inventados (clima_disponible=false); tiempos de viaje desde velocidades por tipo de vía; zona horaria explícita; CORS configurable. Retirar los endpoints v1 del ML API y los modelos heredados (spec 007, Clarifications)."
 

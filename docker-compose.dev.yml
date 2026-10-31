@@ -66,7 +66,7 @@ services:
       start_period: 15s
 
   # ---------------------------------------------------------------------------
-  # FastAPI — Enrutamiento Ambiental (OSMnx + NetworkX + MDVA ML)
+  # FastAPI — Enrutamiento (OSMnx + NetworkX, lluvia del ML API v2)
   # ---------------------------------------------------------------------------
   routing-service:
     build:
@@ -79,7 +79,6 @@ services:
     environment:
       MDVA_ML_URL:        http://ml-service:8081
       GRAPH_CACHE_FILE:   /app/cache/valle_aburra.graphml
-      RAIN_MODEL_PATH:    /app/cache/rain_model.joblib
     volumes:
       # Persistir el grafo OSM descargado entre reinicios
       - routing_graph_cache:/app/cache

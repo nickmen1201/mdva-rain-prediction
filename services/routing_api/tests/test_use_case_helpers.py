@@ -28,37 +28,3 @@ def test_polyline_acepta_entidades_location(use_case):
 
 def test_polyline_vacia(use_case):
     assert use_case._encode_polyline([]) == ""
-
-
-def test_haversine_parque_berrio_a_el_poblado():
-    distancia = FindBestRouteUseCase._haversine(6.2502, -75.5684, 6.2088, -75.5672)
-    assert distancia == pytest.approx(4605, abs=5)
-
-
-def test_haversine_mismo_punto_es_cero():
-    assert FindBestRouteUseCase._haversine(6.25, -75.57, 6.25, -75.57) == 0
-
-
-@pytest.mark.parametrize(
-    "lat2,lon2,esperado",
-    [(1, 0, 0), (0, 1, 90), (-1, 0, 180), (0, -1, 270)],
-)
-def test_bearing_puntos_cardinales(lat2, lon2, esperado):
-    assert FindBestRouteUseCase._bearing(0, 0, lat2, lon2) == pytest.approx(esperado)
-
-
-@pytest.mark.parametrize(
-    "bearing,direccion",
-    [
-        (0, "norte"),
-        (22.4, "norte"),
-        (22.5, "noreste"),
-        (90, "este"),
-        (180, "sur"),
-        (270, "oeste"),
-        (337.5, "norte"),
-        (359.9, "norte"),
-    ],
-)
-def test_bearing_a_direccion(bearing, direccion):
-    assert FindBestRouteUseCase._bearing_to_direction(bearing) == direccion

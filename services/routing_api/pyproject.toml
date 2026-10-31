@@ -1,18 +1,18 @@
 [project]
 name = "mdva-routing-api"
-version = "2.0.0"
+version = "3.0.0"
 description = "Servicio FastAPI de enrutamiento ambiental sobre OSMnx + NetworkX (MDVA)"
 requires-python = ">=3.11,<3.12"
-# Versiones fijadas a las que corrían en el contenedor el 2026-10-28 (spec 002, R2)
+# Versiones fijadas a las que corrían en el contenedor el 2026-10-28 (spec 002, R2).
+# Spec 009: sin scikit-learn/joblib/pandas directos (el regresor de intensidad se retiró).
 dependencies = [
     "fastapi[standard]==0.162.0",
-    "joblib==1.6.0",
     "networkx==3.6.1",
+    # numpy: índice de nodo más cercano e interpolación de la grilla de lluvia (specs 009 y 010)
+    "numpy==2.4.6",
     "osmnx==2.1.1",
-    "pandas==3.1.0",
     "pydantic==2.14.1",
     "requests==2.34.2",
-    "scikit-learn==1.9.1",
     "shapely==2.2.0",
     "uvicorn==0.54.0",
 ]

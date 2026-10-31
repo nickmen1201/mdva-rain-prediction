@@ -1,3 +1,9 @@
+"""DTOs del routing service (contrato: specs/009-routing-cleanup/contracts/routing-api.md y spec 010).
+
+Los campos de lluvia salen de una sola señal (modelo v2 vía ML API); si no hay clima,
+`clima_disponible=false` y los campos de probabilidad/alerta son nulos (nunca valores por defecto).
+"""
+
 from typing import List, Optional
 
 from pydantic import BaseModel, ConfigDict
@@ -8,45 +14,41 @@ class Coordinate(BaseModel):
     longitude: float
 
 
+class RainInfo(BaseModel):
+    """Señal de lluvia usada para la ruta (aplanada en cada respuesta)."""
+
+    clima_disponible: bool = False
+    rain_probability: Optional[float] = None  # [0, 1], modelo v2 en el origen
+    alerta_nivel: Optional[str] = None  # VERDE | AMARILLO | ROJO (RF-10)
+    model_version: Optional[str] = None
+    rain_factor: float = 1.0  # factor RF-10 aplicado al tiempo
+
+
 class RouteRequest(BaseModel):
     origin: Coordinate
     destination: Coordinate
-    vehicle_type: str = "car"  # car, motorcycle, bike
+    vehicle_type: str = "car"  # car | motorcycle | bike
 
 
 class MultiStopRouteRequest(BaseModel):
     """Solicitud de ruta con paradas intermedias."""
 
-    waypoints: List[Coordinate]  # Mínimo 2 (origin + destination), las del medio son paradas
+    waypoints: List[Coordinate]  # mínimo 2 (origen + destino); las del medio son paradas
     vehicle_type: str = "car"
 
 
-class RouteOption(BaseModel):
+class RouteOption(RainInfo):
     distance_meters: float
     travel_time_seconds: float
     path: List[Coordinate]
     geometry_wkt: str
-    rain_factor: float = 1.0
-    rain_probability: float = 0.0
-    rain_intensity_avg: float = 0.0
-    elevation_avg: float = 1500.0
     route_type: str = "fastest"
-    # ── Campos MDVA integrados ──
-    mdva_llueve: bool = False
-    mdva_probabilidad_rf: float = 0.0
-    mdva_probabilidad_rl: float = 0.0
-    mdva_temperatura_c: float = 0.0
-    mdva_humedad_pct: float = 0.0
-    mdva_cobertura_nubosa_pct: float = 0.0
-    mdva_velocidad_viento_ms: float = 0.0
-    # ── Alerta nivel MDVA ──
-    alerta_nivel: str = "VERDE"  # VERDE, AMARILLO, ROJO
-    alerta_mensaje: str = ""
-    sugerir_ruta_alterna: bool = False
+    rain_exposure: Optional[float] = None  # P(lluvia) media ponderada por tiempo (spec 010)
 
 
 class RouteResponse(BaseModel):
     options: List[RouteOption]
+    dryest_available: bool = False
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -59,39 +61,20 @@ class MultiStopLeg(BaseModel):
     distance_meters: float
     travel_time_seconds: float
     path: List[Coordinate]
-    rain_factor: float = 1.0
-    rain_probability: float = 0.0
-    rain_intensity_avg: float = 0.0
-    elevation_avg: float = 1500.0
-    # ── Campos MDVA integrados ──
-    mdva_llueve: bool = False
-    mdva_probabilidad_rf: float = 0.0
-    mdva_probabilidad_rl: float = 0.0
-    alerta_nivel: str = "VERDE"
 
 
-class MultiStopRouteResponse(BaseModel):
-    """Respuesta completa para ruta multi-parada."""
+class MultiStopRouteResponse(RainInfo):
+    """Respuesta completa para ruta multi-parada (la señal de lluvia es la del origen del viaje)."""
 
     legs: List[MultiStopLeg]
     total_distance_meters: float
     total_travel_time_seconds: float
-    total_rain_factor: float
-    total_rain_probability: float
-    total_rain_intensity_avg: float
     waypoints: List[Coordinate]
-    # ── Campos MDVA integrados ──
-    mdva_llueve: bool = False
-    mdva_probabilidad_rf: float = 0.0
-    mdva_probabilidad_rl: float = 0.0
-    alerta_nivel: str = "VERDE"
-    alerta_mensaje: str = ""
-    sugerir_ruta_alterna: bool = False
 
 
-# ── DTOs para compatibilidad con Backend Spring Boot ──
+# ── DTOs para compatibilidad con el Backend Spring Boot ──
 class SpringRouteRequest(BaseModel):
-    """Request que viene del Backend Spring Boot (mismo formato que TripRequestDTO)."""
+    """Request que viene del Backend Spring Boot."""
 
     origen: Coordinate
     destino: Coordinate
@@ -112,32 +95,23 @@ class SpringRouteStep(BaseModel):
     endLng: float
 
 
-class SpringRouteResponse(BaseModel):
-    """Respuesta compatible con lo que espera el Backend Spring Boot."""
+class SpringRouteResponse(RainInfo):
+    """Respuesta que consume el Backend: geometría, duración base y pasos (spec 008)."""
 
     distanciaMetros: int
-    duracionSegundos: int
-    overviewPolyline: str  # encoded polyline compatible con Google Maps frontend
+    duracionSegundos: int  # base: el ajuste RF-10 lo aplica el Backend
+    overviewPolyline: str  # encoded polyline (precisión 5)
     pasos: List[SpringRouteStep]
-    # ── Variables ambientales enriquecidas ──
-    rain_factor: float = 1.0
-    rain_probability: float = 0.0
-    rain_intensity_avg: float = 0.0
-    elevation_avg: float = 1500.0
     route_type: str = "fastest"
-    mdva_llueve: bool = False
-    mdva_probabilidad_rf: float = 0.0
-    mdva_probabilidad_rl: float = 0.0
-    mdva_temperatura_c: float = 0.0
-    mdva_humedad_pct: float = 0.0
-    mdva_cobertura_nubosa_pct: float = 0.0
-    mdva_velocidad_viento_ms: float = 0.0
-    alerta_nivel: str = "VERDE"
-    alerta_mensaje: str = ""
-    sugerir_ruta_alterna: bool = False
-    # ── Rutas alternativas ──
+    rain_exposure: Optional[float] = None
+    dryest_available: bool = False
     alternativas: Optional[List["SpringRouteResponse"]] = None
 
 
-# Allow self-reference for alternativas
 SpringRouteResponse.model_rebuild()
+
+
+class MetricsResponse(RainInfo):
+    """Solo la señal de lluvia para un punto (RF-15 `/route/metrics`)."""
+
+    time_utc: Optional[str] = None

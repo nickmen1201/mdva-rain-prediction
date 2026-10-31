@@ -27,16 +27,6 @@ BACKEND_URL = os.environ.get("BACKEND_URL", "http://localhost:8080")
 ORIGEN = {"lat": 6.2502, "lng": -75.5684}
 DESTINO = {"lat": 6.2088, "lng": -75.5672}
 
-ML_PAYLOAD = {
-    "temperatura_c": 19.0,
-    "humedad_relativa_pct": 85.0,
-    "cobertura_nubosa_pct": 90.0,
-    "velocidad_viento_ms": 2.0,
-    "hora": 15,
-    "mes": 10,
-    "precip_lag_1h_mm": 0.0,
-}
-
 
 def request(method, url, body=None, token=None, timeout=180):
     """Devuelve (status, json_o_None). Nunca lanza por códigos HTTP de error."""
@@ -71,9 +61,9 @@ def main():
         status, _ = request("GET", url)
         results[name] = {"status": status}
 
-    status, body = request("POST", f"{ML_URL}/predecir/ambos", ML_PAYLOAD)
-    modelos = sorted(p.get("modelo") for p in body) if isinstance(body, list) else None
-    results["ml_predecir_ambos"] = {"status": status, "modelos": modelos}
+    # v1 retirado en la spec 009
+    status, _ = request("POST", f"{ML_URL}/predecir/ambos", {})
+    results["ml_v1_retirado"] = {"status": status}
 
     # ML API v2 (spec 006)
     status, body = request("GET", f"{ML_URL}/v2/health")
@@ -106,8 +96,17 @@ def main():
         "vehicle_type": "car",
     }
     status, body = request("POST", f"{ROUTING_URL}/api/v1/route", route_req)
-    has_routes = bool(isinstance(body, dict) and body.get("options"))
-    results["routing_route"] = {"status": status, "has_routes": has_routes}
+    opciones = body.get("options", []) if isinstance(body, dict) else []
+    rapida = opciones[0] if opciones else {}
+    results["routing_route"] = {
+        "status": status,
+        "has_routes": bool(opciones),
+        "tipos": [o.get("route_type") for o in opciones],
+        "clima_disponible": rapida.get("clima_disponible"),
+        "minutos_fastest": round(rapida.get("travel_time_seconds", 0) / 60, 1),
+        "km_fastest": round(rapida.get("distance_meters", 0) / 1000, 2),
+        "dryest_available": body.get("dryest_available") if isinstance(body, dict) else None,
+    }
 
     username = f"smoke_{uuid.uuid4().hex[:8]}"
     password = "Smoke12345!"

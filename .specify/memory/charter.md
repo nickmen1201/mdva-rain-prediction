@@ -4,7 +4,7 @@
 > mandatos de cambio y requisitos funcionales a preservar. Está **subordinado** a
 > `.specify/memory/constitution.md`: si chocan, gana la constitución.
 
-- **Versión:** 1.2.0 (ver registro de cambios al final)
+- **Versión:** 2.0.0 (ver registro de cambios al final)
 - **Objetivo de la refactorización:** convertir MDVA en un proyecto de portafolio de **Ciencia de Datos / ML** reproducible, metodológicamente defendible y con la estructura **Cookiecutter Data Science v2 (CCDS v2)**, sin perder la funcionalidad de producto que ya existe y sin depender de APIs de pago.
 
 ---
@@ -309,7 +309,7 @@ Ninguna spec puede romper estos comportamientos sin enmendar este charter. Son l
 
 ### 4.4 Monitoreo en trayecto
 - RF-16: `POST /api/viajes/{id}/posicion`, `GET /api/viajes/{id}/alertas`, `PATCH /api/viajes/{id}/alertas/{idAlerta}/leer`, `GET /api/viajes/{id}/alerta-actual`.
-- RF-17: Snapshot de condiciones al iniciar (tabla `condiciones_snapshot`) y `POST /monitorear/trayecto` en ml_api con estas reglas:
+- RF-17: Snapshot de condiciones al iniciar (tabla `condiciones_snapshot`) y `POST /v2/monitor/trip` en ml_api con estas reglas:
   - `delta = p_actual − p_inicio`; `0.10 ≤ delta ≤ 0.25` → MODERADO; `delta > 0.25` → SIGNIFICATIVO; en otro caso ESTABLE.
   - Latencia del dato meteorológico > 15 min → sube un nivel (ESTABLE→MODERADO→SIGNIFICATIVO→CRITICO).
   - `p_actual > 0.85` → CRITICO (prevalece).
@@ -321,8 +321,8 @@ Ninguna spec puede romper estos comportamientos sin enmendar este charter. Son l
 - RF-21: Frontend: rutas `/login`, `/register`, `/` (mapa de ciudad con heatmap), `/planificar`, `/viaje/:id`, `/viaje/:id/en-ruta` (navegación 3D con cámara inclinada y orientación del dispositivo), `/historial/:idUsuario`; tema claro/oscuro; UI mobile-first.
 
 ### 4.6 ML
-- RF-22: `ml_api` expone `/predecir/{modelo}` (`random_forest`, `regresion_logistica`) y `/predecir/ambos`, con codificación cíclica de hora y mes.
-- RF-23: El Random Forest (o su reemplazo justificado por R-12) es el modelo de decisión; la Regresión Logística se mantiene como baseline/validación cruzada.
+- RF-22: `ml_api` expone `POST /v2/predict`, `POST /v2/predict/batch` (≤ 200 registros) y `GET /v2/health` según `specs/006-ml-api-v2/contracts/openapi-v2.yaml`; las features (incluida la codificación cíclica de hora local y mes) las calcula `mdva/features.py`.
+- RF-23: El modelo de decisión es el elegido por la evaluación temporal (spec 005: `rain_classifier`); la regresión logística, la climatología y la persistencia se mantienen como baselines en `metrics.json`, no como endpoints.
 
 ---
 
@@ -376,3 +376,4 @@ Cada spec recorre specify → clarify → plan → tasks → analyze → impleme
 - **1.0.0 (2026-10-28):** versión inicial (como `CONSTITUTION.md`).
 - **1.1.0 (2026-10-28):** pasa a ser charter subordinado a `.specify/memory/constitution.md`; agrega H-19 (Google sin facturación) y H-20 (datos SIATA perdidos); fuente de datos Open-Meteo con SIATA como validación externa; retiro de Google (R-35, R-35b, R-35c); D-01 y R-37 hechos; nuevo orden de specs.
 - **1.2.0 (2026-10-31):** agrega §3.3.I (R-45–R-51, profundidad de ML) y la spec 012 correspondiente; la documentación de portafolio pasa a ser la spec 013.
+- **2.0.0 (2026-10-31):** MAJOR. RF-17, RF-22 y RF-23 pasan del API v1 (Random Forest + Regresión Logística heredados, sin evaluación temporal) al API v2 y al modelo evaluado; los endpoints v1 y los `.pkl` se retiran en la spec 009.

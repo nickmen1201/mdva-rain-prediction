@@ -28,13 +28,13 @@ La carpeta de modelos se toma de `MDVA_MODELS_DIR` (en el contenedor: `/app/mode
 
 Errores en Problem Details (RFC 7807, `application/problem+json`). El modelo se carga al arrancar; si no es compatible con el entorno (versión de scikit-learn o contrato de features), el servicio no arranca.
 
-### v1 (modelos heredados; se retiran en la spec 007)
+### Info
 
 | Método | Ruta | Descripción |
 |---|---|---|
-| GET | `/health` | Estado y modelos cargados |
-| POST | `/predecir/{modelo}` | `random_forest` o `regresion_logistica` |
-| POST | `/predecir/ambos` | Ambos modelos en una llamada |
-| POST | `/monitorear/trayecto` | Cambio de condiciones durante un viaje |
+| GET | `/health` | Healthcheck de los compose: estado y modelo cargado |
+| GET | `/` | Nombre del servicio, versión de la API y modelo |
+
+Los endpoints v1 (`/predecir/*`, `/monitorear/trayecto`) y los modelos heredados `random_forest.pkl` / `regresion_logistica.pkl` se retiraron en la spec 009.
 
 Documentación interactiva: http://localhost:8081/docs

@@ -1,5 +1,5 @@
-from dataclasses import dataclass
-from typing import List
+from dataclasses import dataclass, field
+from typing import Any, List
 
 
 @dataclass
@@ -10,20 +10,12 @@ class Location:
 
 @dataclass
 class Route:
+    """Ruta sobre el grafo. Sin campos del regresor de intensidad retirado (spec 009)."""
+
     distance_meters: float
-    travel_time_seconds: float
+    travel_time_seconds: float  # Σ tiempo de arista × factor RF-10
     path: List[Location]
-    geometry_wkt: str = ""
-    rain_factor: float = 1.0
-    rain_probability: float = 0.0  # Porcentaje 0-100
-    rain_intensity_avg: float = 0.0  # mm/h promedio
-    elevation_avg: float = 1500.0  # Metros sobre el nivel del mar
-    route_type: str = "fastest"  # fastest, dryest, balanced
-    # ── Campos MDVA integrados ──
-    mdva_llueve: bool = False
-    mdva_probabilidad_rf: float = 0.0  # Probabilidad Random Forest (0-1)
-    mdva_probabilidad_rl: float = 0.0  # Probabilidad Regresión Logística (0-1)
-    mdva_temperatura_c: float = 0.0
-    mdva_humedad_pct: float = 0.0
-    mdva_cobertura_nubosa_pct: float = 0.0
-    mdva_velocidad_viento_ms: float = 0.0
+    segments: List[Any] = field(default_factory=list)  # application.navigation.Segment
+    route_type: str = "fastest"  # fastest | shortest | dryest
+    rain_factor: float = 1.0  # factor RF-10 aplicado al tiempo (1.0 sin señal de lluvia)
+    rain_exposure: float | None = None  # P(lluvia) media ponderada por tiempo (spec 010)

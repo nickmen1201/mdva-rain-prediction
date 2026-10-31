@@ -115,18 +115,23 @@ public class RoutingApiClient {
         return out;
     }
 
-    /** Primera alternativa con geometría distinta de la principal (RF-14). */
+    /**
+     * Alternativa para el usuario (RF-14): la ruta más seca si el routing service la calculó (spec 010);
+     * si no, la primera con geometría distinta de la principal.
+     */
     private static RouteResult.Alternative alternative(JsonNode alternativas, String principal) {
+        RouteResult.Alternative primera = null;
         for (JsonNode a : alternativas) {
             String poly = a.path("overviewPolyline").asText("");
-            if (!poly.isEmpty() && !poly.equals(principal)) {
-                return new RouteResult.Alternative(
-                        a.path("route_type").asText("alternativa"),
-                        a.path("duracionSegundos").asInt(),
-                        a.path("distanciaMetros").asInt(),
-                        poly);
-            }
+            if (poly.isEmpty() || poly.equals(principal)) continue;
+            RouteResult.Alternative alt = new RouteResult.Alternative(
+                    a.path("route_type").asText("alternativa"),
+                    a.path("duracionSegundos").asInt(),
+                    a.path("distanciaMetros").asInt(),
+                    poly);
+            if ("dryest".equals(alt.routeType())) return alt;
+            if (primera == null) primera = alt;
         }
-        return null;
+        return primera;
     }
 }

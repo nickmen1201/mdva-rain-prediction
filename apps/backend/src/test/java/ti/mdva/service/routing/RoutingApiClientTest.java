@@ -94,6 +94,24 @@ class RoutingApiClientTest {
     }
 
     @Test
+    @DisplayName("si el routing service calculó la ruta más seca, esa es la alternativa (spec 010)")
+    void prefiereLaMasSeca() {
+        server.expect(requestTo(URL)).andRespond(withSuccess("""
+                {"distanciaMetros": 5400, "duracionSegundos": 720, "overviewPolyline": "abc", "pasos": [],
+                 "alternativas": [{"distanciaMetros": 5100, "duracionSegundos": 760, "overviewPolyline": "xyz",
+                                   "pasos": [], "route_type": "shortest"},
+                                  {"distanciaMetros": 6200, "duracionSegundos": 840, "overviewPolyline": "seca",
+                                   "pasos": [], "route_type": "dryest", "rain_exposure": 0.12}]}""",
+                MediaType.APPLICATION_JSON));
+
+        RouteResult r = client.route(ORIGEN, DESTINO, List.of(), TripRequestDTO.TipoVehiculo.CARRO);
+
+        assertThat(r.alternative().routeType()).isEqualTo("dryest");
+        assertThat(r.alternative().overviewPolyline()).isEqualTo("seca");
+        assertThat(r.alternative().durationSeconds()).isEqualTo(840);
+    }
+
+    @Test
     @DisplayName("sin paradas no envía el campo y sin alternativas distintas devuelve null")
     void sinParadasNiAlternativa() {
         server.expect(requestTo(URL))

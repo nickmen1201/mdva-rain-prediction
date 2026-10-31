@@ -10,7 +10,7 @@ import java.util.List;
 
 /**
  * Respuesta de planificación de viaje.
- * Incluye datos de ruta (Google), predicción ML y ajuste de tiempo.
+ * Incluye datos de ruta (routing service propio), predicción ML y ajuste de tiempo.
  *
  * toBuilder = true habilita response.toBuilder().idViaje(x).build()
  */
@@ -30,7 +30,7 @@ public class TripResponseDTO {
     private List<LocationPointDTO> paradasOrdenadas;
     private TripRequestDTO.ModoParadas modoParadas;
 
-    // ── Datos de Google Directions ─────────────────────────────────────────────
+    // ── Datos de la ruta (routing service) ─────────────────────────────────────
     private Integer tiempoBaseMin;
     private Integer distanciaMetros;
     private String overviewPolyline;

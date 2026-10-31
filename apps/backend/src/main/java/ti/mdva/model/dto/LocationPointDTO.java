@@ -10,7 +10,7 @@ import lombok.NoArgsConstructor;
 /**
  * Representa un punto geográfico que puede venir de:
  *  - Coordenadas directas (lat/lng) seleccionadas en el mapa
- *  - Un placeId de Google Places (desde Autocomplete)
+ *  - Un resultado de /api/geocoding/search (Nominatim), que ya trae lat/lng
  *
  * Al menos uno de los dos grupos debe estar presente.
  * Si viene placeId, el backend lo geocodifica para obtener lat/lng.
@@ -21,7 +21,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class LocationPointDTO {
 
-    /** Google Places placeId (ej: "ChIJN1t_tDeuEmsRUsoyG83frY4") */
+    /** Identificador de lugar heredado; ya no se resuelve: lat/lng son obligatorios al planificar (spec 008) */
     private String placeId;
 
     /** Nombre legible del lugar (ej: "Aeropuerto José María Córdova") */

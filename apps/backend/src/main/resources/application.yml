@@ -49,10 +49,6 @@ springdoc:
     operations-sorter: method
     tags-sorter: alpha
 
-google:
-  maps:
-    api-key: ${GOOGLE_MAPS_API_KEY:REEMPLAZAR}
-
 ml:
   service:
     url: ${ML_SERVICE_URL:http://localhost:8081}
@@ -60,6 +56,12 @@ ml:
 routing:
   service:
     url: ${ROUTING_SERVICE_URL:http://localhost:8000}
+
+# Nominatim (OSM): User-Agent identificable y ≤ 1 req/s (política de uso; spec 008)
+geocoding:
+  nominatim:
+    url: ${NOMINATIM_URL:https://nominatim.openstreetmap.org}
+    user-agent: ${NOMINATIM_USER_AGENT:MDVA/1.0 (+https://github.com/nickmen1201/mdva-rain-prediction)}
 
 mdva:
   jwt:

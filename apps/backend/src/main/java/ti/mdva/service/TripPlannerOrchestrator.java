@@ -5,7 +5,7 @@ import ti.mdva.model.dto.TripResponseDTO;
 import ti.mdva.model.dto.TripResponseDTO.AlertaNivel;
 
 /**
- * Orquesta la lógica de negocio que combina la ruta de Google con la predicción ML.
+ * Orquesta la lógica de negocio que combina la ruta con la predicción ML.
  *
  * Reglas de ajuste de tiempo por lluvia:
  *

@@ -43,7 +43,7 @@ public class ViajeController {
     @PostMapping("/planificar")
     @Operation(
         summary = "Planificar un viaje",
-        description = "Calcula la ruta óptima con Google Directions, predice lluvia con el modelo ML " +
+        description = "Calcula la ruta con el routing service propio, predice lluvia con el modelo ML " +
                       "y ajusta el tiempo estimado. Persiste el viaje en base de datos."
     )
     public ResponseEntity<TripResponseDTO> planificar(@Valid @RequestBody TripRequestDTO request, Principal principal) {

@@ -11,7 +11,7 @@ import java.time.OffsetDateTime;
  * Estado climático actual sobre un viaje ya planificado (HU031).
  *
  * Recalcula la predicción ML y el nivel de alerta usando las coordenadas
- * de origen del viaje guardado. No vuelve a llamar a Google Directions
+ * de origen del viaje guardado. No vuelve a calcular la ruta
  * — la ruta no cambia, solo el clima y, por tanto, la alerta.
  */
 @Data

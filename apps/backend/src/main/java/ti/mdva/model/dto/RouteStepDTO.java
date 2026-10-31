@@ -7,7 +7,7 @@ import lombok.NoArgsConstructor;
 
 /**
  * Un paso individual de la ruta (instrucción de giro).
- * Mapeado desde el campo "steps" de Google Directions API.
+ * Mapeado desde el campo "pasos" del routing service propio.
  */
 @Data
 @Builder

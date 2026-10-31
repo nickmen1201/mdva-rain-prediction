@@ -7,11 +7,12 @@ import org.springframework.stereotype.Service;
 import ti.mdva.jooq.tables.pojos.Viajes;
 import ti.mdva.model.dto.*;
 import ti.mdva.repositories.ViajeRepositoryImpl;
-import ti.mdva.service.GoogleMapsService;
-import ti.mdva.service.EnvironmentalRoutingService;
 import ti.mdva.service.TripPlannerOrchestrator;
 import ti.mdva.service.WeatherMLService;
 import ti.mdva.repositories.VehiculoRepositoryImpl;
+import ti.mdva.service.routing.RouteResult;
+import ti.mdva.service.routing.RoutingApiClient;
+import ti.mdva.service.routing.StopOrderOptimizer;
 
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -20,12 +21,10 @@ import java.util.Optional;
 /**
  * UseCase principal de viajes.
  *
- * Flujo de planificarViaje() (INTEGRADO CON ENRUTAMIENTO AMBIENTAL):
- *   1. Resolver coordenadas de origen y destino (Geocoding API si vienen como placeId)
- *   2. Intentar ruta con Enrutamiento Ambiental (OSMnx + MDVA ML + SIATA)
- *      - Si el servicio está disponible: la ruta ya incluye variables ambientales
- *      - Si falla: fallback a Google Directions + ML por separado
- *   3. Aplicar lógica de ajuste (TripPlannerOrchestrator)
+ * Flujo de planificarViaje() (spec 008):
+ *   1. Validar coordenadas de origen, destino y paradas; ordenar paradas si se pide
+ *   2. Ruta (geometría + duración base) del routing service propio, en una sola llamada
+ *   3. Probabilidad de lluvia del modelo evaluado y ajuste RF-10 (TripPlannerOrchestrator)
  *   4. Persistir el viaje en base de datos
  *   5. Retornar TripResponseDTO enriquecido al controller
  *
@@ -40,8 +39,7 @@ public class ViajeUseCase {
 
     private final ViajeRepositoryImpl viajeRepository;
     private final VehiculoRepositoryImpl vehiculoRepository;
-    private final GoogleMapsService   googleMapsService;
-    private final EnvironmentalRoutingService environmentalRoutingService;
+    private final RoutingApiClient    routingApiClient;
     private final WeatherMLService    weatherMLService;
     private final ti.mdva.repositories.CondicionesSnapshotRepository snapshotRepo;
     private final ti.mdva.repositories.ParadaViajeRepository paradaRepo;
@@ -49,16 +47,14 @@ public class ViajeUseCase {
     public ViajeUseCase(
             ViajeRepositoryImpl viajeRepository,
             VehiculoRepositoryImpl vehiculoRepository,
-            GoogleMapsService googleMapsService,
-            EnvironmentalRoutingService environmentalRoutingService,
+            RoutingApiClient routingApiClient,
             WeatherMLService weatherMLService,
             ti.mdva.repositories.CondicionesSnapshotRepository snapshotRepo,
             ti.mdva.repositories.ParadaViajeRepository paradaRepo
     ) {
         this.viajeRepository    = viajeRepository;
         this.vehiculoRepository = vehiculoRepository;
-        this.googleMapsService  = googleMapsService;
-        this.environmentalRoutingService = environmentalRoutingService;
+        this.routingApiClient   = routingApiClient;
         this.weatherMLService   = weatherMLService;
         this.snapshotRepo       = snapshotRepo;
         this.paradaRepo         = paradaRepo;
@@ -68,12 +64,9 @@ public class ViajeUseCase {
 
     public TripResponseDTO planificarViaje(Integer idUsuario, TripRequestDTO request) {
 
-        // 1. Resolver coordenadas
-        LocationPointDTO origen  = googleMapsService.resolveCoordinates(request.getOrigen());
-        LocationPointDTO destino = googleMapsService.resolveCoordinates(request.getDestino());
-
-        log.debug("Origen resuelto: lat={} lng={}", origen.getLat(), origen.getLng());
-        log.debug("Destino resuelto: lat={} lng={}", destino.getLat(), destino.getLng());
+        // 1. Coordenadas obligatorias (los placeId ya no se resuelven, spec 008)
+        LocationPointDTO origen  = requireCoordinates(request.getOrigen(), "origen");
+        LocationPointDTO destino = requireCoordinates(request.getDestino(), "destino");
 
         // Validar vehículo opcional
         String idVehiculo = request.getIdVehiculo();
@@ -92,94 +85,39 @@ public class ViajeUseCase {
             throw new IllegalArgumentException("El origen y el destino no pueden ser el mismo lugar.");
         }
 
-        // 2. Resolver paradas (waypoints)
-        List<LocationPointDTO> waypoints = null;
-        if (request.getParadas() != null && !request.getParadas().isEmpty()) {
-            waypoints = request.getParadas().stream()
-                    .map(googleMapsService::resolveCoordinates)
-                    .toList();
-        }
+        // 2. Paradas en el orden pedido (o el de mínima distancia en línea recta)
+        List<LocationPointDTO> paradas = request.getParadas() == null ? List.of()
+                : request.getParadas().stream().map(p -> requireCoordinates(p, "parada")).toList();
 
         TripRequestDTO.ModoParadas modoParadas = request.getModoParadas() != null
                 ? request.getModoParadas()
                 : TripRequestDTO.ModoParadas.ORDEN_INGRESADO;
-        boolean optimizarParadas = modoParadas == TripRequestDTO.ModoParadas.OPTIMIZAR_RUTA;
+        List<LocationPointDTO> paradasOrdenadas = paradas;
+        if (modoParadas == TripRequestDTO.ModoParadas.OPTIMIZAR_RUTA && paradas.size() > 1) {
+            paradasOrdenadas = StopOrderOptimizer.optimalOrder(origen, destino, paradas).stream()
+                    .map(paradas::get).toList();
+        }
 
-        // Parámetros de ruta por tipo de vehículo
         TripRequestDTO.TipoVehiculo tipoVehiculo = request.getTipoVehiculo() != null
                 ? request.getTipoVehiculo()
                 : TripRequestDTO.TipoVehiculo.CARRO;
-        String travelMode        = tipoVehiculo == TripRequestDTO.TipoVehiculo.BICICLETA ? "bicycling" : "driving";
-        boolean avoidTunelOriente = tipoVehiculo == TripRequestDTO.TipoVehiculo.MOTO;
 
-        // Mapear TipoVehiculo → vehicle_type del routing service
-        String vehicleTypeStr = switch (tipoVehiculo) {
-            case MOTO      -> "moto";
-            case BICICLETA -> "bicycle";
-            default        -> "car";
-        };
-
-        // 3. Ruta con Google Maps para tráfico en tiempo real y waypoints
-        GoogleMapsService.RouteResult route = googleMapsService.getOptimalRoute(origen, destino, waypoints, optimizarParadas, travelMode, avoidTunelOriente);
-        List<LocationPointDTO> paradasOrdenadas = ordenarWaypoints(waypoints, route.waypointOrder());
+        // 3. Una sola llamada al routing service propio: geometría y duración base
+        RouteResult route = routingApiClient.route(origen, destino, paradasOrdenadas, tipoVehiculo);
         int tiempoBaseMin = (int) Math.ceil(route.durationSeconds() / 60.0);
 
-        // Motos son más ágiles en tráfico urbano: ajuste de -15 % sobre el tiempo de Google
+        // Motos son más ágiles en tráfico urbano: ajuste de -15 % sobre el tiempo base (regla del equipo)
         if (tipoVehiculo == TripRequestDTO.TipoVehiculo.MOTO) {
             tiempoBaseMin = (int) Math.ceil(tiempoBaseMin * 0.85);
         }
 
         log.debug("Ruta: {}m, {}min, {} pasos", route.distanceMeters(), tiempoBaseMin, route.steps().size());
 
-        // 4. OBTENER MÉTRICAS AMBIENTALES (Python: ML + SIATA + Open-Meteo)
-        RainPredictionDTO prediccion;
-        String rutaAlternaPolyline = null;
-        Integer rutaAlternaTiempoMin = null;
-        String rutaAlternaTipo = null;
+        // 4. Probabilidad de lluvia del modelo evaluado (Open-Meteo + ML API v2, spec 007).
+        //    Si falla, la excepción se propaga: no se planifica con una probabilidad inventada.
+        RainPredictionDTO prediccion = weatherMLService.predictRainForLocation(origen.getLat(), origen.getLng());
 
-        try {
-            log.info("Obteniendo métricas ambientales para enriquecer ruta de Google...");
-            EnvironmentalRoutingService.EnvironmentalMetricsResult metrics =
-                    environmentalRoutingService.getEnvironmentalMetrics(origen);
-
-            prediccion = RainPredictionDTO.builder()
-                    .llueve(metrics.mdvaLlueve())
-                    .probabilidadRf(metrics.mdvaProbabilidadRf())
-                    .probabilidadRl(metrics.mdvaProbabilidadRl())
-                    .temperaturaC(metrics.mdvaTemperaturaC())
-                    .humedadPct(metrics.mdvaHumedadPct())
-                    .coberturaAnubosaPct(metrics.mdvaCoberturaNubosaPct())
-                    .velocidadVientoMs(metrics.mdvaVelocidadVientoMs())
-                    .build();
-
-            tiempoBaseMin = (int) Math.ceil(tiempoBaseMin * metrics.rainFactor());
-
-            log.info("Métricas obtenidas: probRF={}, factor_lluvia={}, elevacion={}",
-                    metrics.mdvaProbabilidadRf(), metrics.rainFactor(), metrics.elevationAvg());
-
-            // 4b. Calcular ruta más seca como alternativa (siempre, para que el usuario pueda elegir)
-            try {
-                log.info("Calculando ruta 'dryest' alternativa...");
-                EnvironmentalRoutingService.EnvironmentalRouteResult driest =
-                        environmentalRoutingService.getRoute(origen, destino, waypoints, "dryest", vehicleTypeStr);
-                // Solo mostrar si la polyline es diferente a la ruta principal de Google
-                if (driest.overviewPolyline() != null && !driest.overviewPolyline().isEmpty()
-                        && !driest.overviewPolyline().equals(route.overviewPolyline())) {
-                    rutaAlternaPolyline  = driest.overviewPolyline();
-                    rutaAlternaTiempoMin = (int) Math.ceil(driest.durationSeconds() / 60.0);
-                    rutaAlternaTipo      = "dryest";
-                    log.info("Ruta dryest: {}m en {}min", driest.distanceMeters(), rutaAlternaTiempoMin);
-                } else {
-                    log.info("Ruta dryest idéntica a principal, no se muestra alterna");
-                }
-            } catch (Exception ex) {
-                log.warn("No se pudo obtener ruta dryest ({}), se omite", ex.getMessage());
-            }
-
-        } catch (Exception e) {
-            log.warn("Métricas ambientales no disponibles ({}), fallback a ML clásico", e.getMessage());
-            prediccion = weatherMLService.predictRainForLocation(origen.getLat(), origen.getLng());
-        }
+        RouteResult.Alternative alterna = route.alternative();
 
         // 5. Ajuste por lluvia (TripPlannerOrchestrator)
         TripResponseDTO.TripResponseDTOBuilder builder = TripResponseDTO.builder()
@@ -191,9 +129,9 @@ public class ViajeUseCase {
                 .distanciaMetros(route.distanceMeters())
                 .overviewPolyline(route.overviewPolyline())
                 .pasos(route.steps())
-                .rutaAlternaPolyline(rutaAlternaPolyline)
-                .rutaAlternaTiempoMin(rutaAlternaTiempoMin)
-                .rutaAlternaTipo(rutaAlternaTipo);
+                .rutaAlternaPolyline(alterna != null ? alterna.overviewPolyline() : null)
+                .rutaAlternaTiempoMin(alterna != null ? (int) Math.ceil(alterna.durationSeconds() / 60.0) : null)
+                .rutaAlternaTipo(alterna != null ? alterna.routeType() : null);
 
         TripPlannerOrchestrator.apply(builder, prediccion, tiempoBaseMin, route.distanceMeters());
         TripResponseDTO response = builder.build();
@@ -311,7 +249,7 @@ public class ViajeUseCase {
     /**
      * Recalcula el clima sobre el origen del viaje y devuelve la alerta actualizada.
      *
-     * No vuelve a llamar a Google Directions: la ruta y la distancia ya están
+     * No vuelve a calcular la ruta: la ruta y la distancia ya están
      * persistidas en BD. Solo cambia la predicción de lluvia y, por tanto,
      * el nivel de alerta y la sugerencia de ruta alterna.
      *
@@ -394,13 +332,12 @@ public class ViajeUseCase {
         return 10;
     }
 
-    private List<LocationPointDTO> ordenarWaypoints(List<LocationPointDTO> waypoints, List<Integer> waypointOrder) {
-        if (waypoints == null || waypoints.isEmpty()) return List.of();
-        if (waypointOrder == null || waypointOrder.isEmpty()) return waypoints;
-        return waypointOrder.stream()
-                .filter(i -> i >= 0 && i < waypoints.size())
-                .map(waypoints::get)
-                .toList();
+    private static LocationPointDTO requireCoordinates(LocationPointDTO p, String campo) {
+        if (p == null || p.getLat() == null || p.getLng() == null) {
+            throw new IllegalArgumentException(
+                    "El " + campo + " debe traer lat y lng (busca la dirección con /api/geocoding/search).");
+        }
+        return p;
     }
 
     private boolean puntosCercanos(LocationPointDTO a, LocationPointDTO b) {

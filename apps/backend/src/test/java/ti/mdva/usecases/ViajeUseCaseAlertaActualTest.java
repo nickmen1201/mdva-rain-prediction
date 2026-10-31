@@ -14,7 +14,7 @@ import ti.mdva.model.dto.RainPredictionDTO;
 import ti.mdva.model.dto.TripResponseDTO.AlertaNivel;
 import ti.mdva.repositories.ViajeRepositoryImpl;
 import ti.mdva.repositories.VehiculoRepositoryImpl;
-import ti.mdva.service.GoogleMapsService;
+import ti.mdva.service.routing.RoutingApiClient;
 import ti.mdva.service.WeatherMLService;
 
 import java.util.Optional;
@@ -30,7 +30,7 @@ class ViajeUseCaseAlertaActualTest {
 
     @Mock private ViajeRepositoryImpl viajeRepository;
     @Mock private VehiculoRepositoryImpl vehiculoRepository;
-    @Mock private GoogleMapsService googleMapsService;
+    @Mock private RoutingApiClient routingApiClient;
     @Mock private WeatherMLService weatherMLService;
 
     @InjectMocks private ViajeUseCase useCase;

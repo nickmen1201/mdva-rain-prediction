@@ -22,12 +22,12 @@ public class TripRequestDTO {
 
     private TipoVehiculo tipoVehiculo;
 
-    /** Ubicación de origen con coordenadas o placeId de Google Places */
+    /** Ubicación de origen (lat/lng obligatorios) */
     @Valid
     @NotNull(message = "El origen es obligatorio")
     private LocationPointDTO origen;
 
-    /** Ubicación de destino con coordenadas o placeId de Google Places */
+    /** Ubicación de destino (lat/lng obligatorios) */
     @Valid
     @NotNull(message = "El destino es obligatorio")
     private LocationPointDTO destino;
@@ -36,7 +36,7 @@ public class TripRequestDTO {
     @Valid
     private java.util.List<LocationPointDTO> paradas;
 
-    /** ORDEN_INGRESADO respeta la lista; OPTIMIZAR_RUTA permite que Google sugiera el orden. */
+    /** ORDEN_INGRESADO respeta la lista; OPTIMIZAR_RUTA usa el orden de mínima distancia en línea recta. */
     private ModoParadas modoParadas;
 
     public enum ModoParadas {

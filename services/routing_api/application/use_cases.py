@@ -223,11 +223,9 @@ class FindBestRouteUseCase:
         alerta_nivel = "VERDE"
         alerta_mensaje = "Condiciones climáticas favorables para el viaje."
         sugerir_alterna = False
-        factor = 1.0
 
         if prob_rf >= 0.70:
             alerta_nivel = "ROJO"
-            factor = 1.35
             alerta_mensaje = (
                 f"Alta probabilidad de lluvia ({prob_rf * 100:.0f}%). Tiempo ajustado +35%. Conduce con precaución."
             )
@@ -235,11 +233,10 @@ class FindBestRouteUseCase:
                 sugerir_alterna = True
         elif prob_rf >= 0.40:
             alerta_nivel = "AMARILLO"
-            factor = 1.20
             alerta_mensaje = f"Probabilidad de lluvia moderada ({prob_rf * 100:.0f}%). Tiempo estimado ajustado +20%."
 
-        # Ajustar tiempo por lluvia (mismo cálculo que TripPlannerOrchestrator)
-        adjusted_duration = int(best.travel_time_seconds * factor)
+        # Duración base: el ajuste por lluvia (RF-10) lo aplica solo el Backend (spec 008, H-27)
+        base_duration = int(best.travel_time_seconds)
 
         # Construir alternativas
         alternativas = []
@@ -251,7 +248,7 @@ class FindBestRouteUseCase:
             alternativas.append(
                 SpringRouteResponse(
                     distanciaMetros=int(alt_route.distance_meters),
-                    duracionSegundos=int(alt_route.travel_time_seconds * factor),
+                    duracionSegundos=int(alt_route.travel_time_seconds),
                     overviewPolyline=alt_encoded,
                     pasos=alt_steps,
                     rain_factor=alt_route.rain_factor,
@@ -270,7 +267,7 @@ class FindBestRouteUseCase:
 
         return SpringRouteResponse(
             distanciaMetros=int(best.distance_meters),
-            duracionSegundos=adjusted_duration,
+            duracionSegundos=base_duration,
             overviewPolyline=encoded,
             pasos=steps,
             rain_factor=best.rain_factor,

@@ -152,8 +152,28 @@ def main():
         "origen": {**ORIGEN, "displayName": "Parque Berrio"},
         "destino": {**DESTINO, "displayName": "El Poblado"},
     }
-    status, _ = request("POST", f"{BACKEND_URL}/api/viajes/planificar", trip, token=token)
-    results["viajes_planificar"] = {"status": status}
+    t0 = time.perf_counter()
+    status, body = request("POST", f"{BACKEND_URL}/api/viajes/planificar", trip, token=token)
+    elapsed = time.perf_counter() - t0
+    ok = isinstance(body, dict)
+    results["viajes_planificar"] = {
+        "status": status,
+        "has_polyline": bool(ok and body.get("overviewPolyline")),
+        "alerta": body.get("alertaNivel") if ok else None,
+        "under_5s": elapsed < 5,
+    }
+    if ok and body.get("idViaje"):
+        status, _ = request("GET", f"{BACKEND_URL}/api/viajes/{body['idViaje']}", token=token)
+        results["viajes_get"] = {"status": status}
+
+    # Geocodificación con Nominatim (spec 008): búsqueda al enviar y reverso
+    status, body = request("GET", f"{BACKEND_URL}/api/geocoding/search?q=Parque%20Explora", token=token)
+    results["geocoding_search"] = {"status": status, "non_empty": bool(body)}
+    status, body = request(
+        "GET", f"{BACKEND_URL}/api/geocoding/reverse?lat={DESTINO['lat']}&lng={DESTINO['lng']}", token=token
+    )
+    has_name = bool(isinstance(body, dict) and body.get("displayName"))
+    results["geocoding_reverse"] = {"status": status, "has_name": has_name}
 
     json.dump(results, sys.stdout, indent=2, sort_keys=True)
     sys.stdout.write("\n")

@@ -11,6 +11,10 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.ResourceAccessException;
 
+import ti.mdva.service.geocoding.GeocodingUnavailableException;
+import ti.mdva.service.routing.NoRouteException;
+import ti.mdva.service.routing.RoutingUnavailableException;
+
 import java.net.URI;
 import java.time.Instant;
 import java.util.stream.Collectors;
@@ -73,7 +77,7 @@ public class GlobalExceptionHandler {
     // ── Errores de API externa ────────────────────────────────────────────────
 
     @ExceptionHandler(HttpClientErrorException.class)
-    public ProblemDetail handleGoogleApiClientError(HttpClientErrorException ex) {
+    public ProblemDetail handleExternalClientError(HttpClientErrorException ex) {
         log.error("Error HTTP llamando a API externa: {} {}", ex.getStatusCode(), ex.getMessage());
         ProblemDetail pd = ProblemDetail.forStatusAndDetail(
                 HttpStatus.BAD_GATEWAY,
@@ -90,10 +94,37 @@ public class GlobalExceptionHandler {
         log.error("No se pudo conectar con servicio externo: {}", ex.getMessage());
         ProblemDetail pd = ProblemDetail.forStatusAndDetail(
                 HttpStatus.SERVICE_UNAVAILABLE,
-                "No se pudo conectar con un servicio externo (Google Maps o ML). Reintenta en unos segundos."
+                "No se pudo conectar con un servicio externo (rutas, clima o ML). Reintenta en unos segundos."
         );
         pd.setTitle("Servicio no disponible");
         pd.setType(URI.create("https://mdva.ti/errors/service-unavailable"));
+        pd.setProperty("timestamp", Instant.now());
+        return pd;
+    }
+
+    // ── Rutas y geocodificación (spec 008) ─────────────────────────────────────
+
+    @ExceptionHandler({RoutingUnavailableException.class, GeocodingUnavailableException.class})
+    public ProblemDetail handleUnavailable(RuntimeException ex) {
+        // El detalle interno se loguea; al cliente solo un mensaje genérico (constitución IV, R-22)
+        log.error("Servicio de rutas/geocodificación no disponible: {}", ex.getMessage(), ex);
+        ProblemDetail pd = ProblemDetail.forStatusAndDetail(
+                HttpStatus.SERVICE_UNAVAILABLE,
+                ex instanceof RoutingUnavailableException
+                        ? "El servicio de rutas no está disponible. Reintenta en unos segundos."
+                        : "El servicio de búsqueda de direcciones no está disponible. Reintenta en unos segundos."
+        );
+        pd.setTitle("Servicio no disponible");
+        pd.setType(URI.create("https://mdva.ti/errors/service-unavailable"));
+        pd.setProperty("timestamp", Instant.now());
+        return pd;
+    }
+
+    @ExceptionHandler(NoRouteException.class)
+    public ProblemDetail handleNoRoute(NoRouteException ex) {
+        ProblemDetail pd = ProblemDetail.forStatusAndDetail(HttpStatus.UNPROCESSABLE_ENTITY, ex.getMessage());
+        pd.setTitle("Sin ruta");
+        pd.setType(URI.create("https://mdva.ti/errors/no-route"));
         pd.setProperty("timestamp", Instant.now());
         return pd;
     }

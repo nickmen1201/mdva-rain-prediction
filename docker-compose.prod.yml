@@ -97,10 +97,11 @@ services:
       DATABASE_USERNAME:          ${DATABASE_USERNAME}
       DATABASE_PASSWORD:          ${DATABASE_PASSWORD}
       JWT_SECRET:                 ${JWT_SECRET}
-      GOOGLE_MAPS_API_KEY:        ${GOOGLE_MAPS_API_KEY}
       CORS_ALLOWED_ORIGINS:       ${CORS_ALLOWED_ORIGINS}
       ML_SERVICE_URL:             ${ML_SERVICE_URL:-http://ml-service:8081}
       ROUTING_SERVICE_URL:        ${ROUTING_SERVICE_URL:-http://routing-service:8000}
+      NOMINATIM_URL:              ${NOMINATIM_URL:-https://nominatim.openstreetmap.org}
+      NOMINATIM_USER_AGENT:       "${NOMINATIM_USER_AGENT:-MDVA/1.0 (+https://github.com/nickmen1201/mdva-rain-prediction)}"
     depends_on:
       postgres:
         condition: service_healthy

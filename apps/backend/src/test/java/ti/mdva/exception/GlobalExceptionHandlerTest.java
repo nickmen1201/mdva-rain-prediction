@@ -59,7 +59,7 @@ class GlobalExceptionHandlerTest {
         HttpClientErrorException ex = HttpClientErrorException.create(
                 HttpStatus.NOT_FOUND, "Not Found", null, null, null);
 
-        ProblemDetail pd = handler.handleGoogleApiClientError(ex);
+        ProblemDetail pd = handler.handleExternalClientError(ex);
 
         assertThat(pd.getStatus()).isEqualTo(HttpStatus.BAD_GATEWAY.value());
         assertThat(pd.getTitle()).isEqualTo("Error de API externa");
@@ -111,5 +111,35 @@ class GlobalExceptionHandlerTest {
     // Helper para construir un MethodParameter válido
     static class DummyController {
         public void dummy(Object body) {}
+    }
+
+    @Test
+    @DisplayName("RoutingUnavailableException → 503 sin detalles internos (spec 008)")
+    void rutasNoDisponibles() {
+        ProblemDetail pd = handler.handleUnavailable(new ti.mdva.service.routing.RoutingUnavailableException(
+                "Connection refused: routing-service:8000", null));
+
+        assertThat(pd.getStatus()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE.value());
+        assertThat(pd.getDetail()).contains("rutas").doesNotContain("8000");
+    }
+
+    @Test
+    @DisplayName("GeocodingUnavailableException → 503 (spec 008)")
+    void geocodificacionNoDisponible() {
+        ProblemDetail pd = handler.handleUnavailable(
+                new ti.mdva.service.geocoding.GeocodingUnavailableException("timeout nominatim", null));
+
+        assertThat(pd.getStatus()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE.value());
+        assertThat(pd.getDetail()).contains("direcciones").doesNotContain("nominatim");
+    }
+
+    @Test
+    @DisplayName("NoRouteException → 422 'Sin ruta' (spec 008)")
+    void sinRuta() {
+        ProblemDetail pd = handler.handleNoRoute(
+                new ti.mdva.service.routing.NoRouteException("No existe una ruta entre los puntos indicados.", null));
+
+        assertThat(pd.getStatus()).isEqualTo(HttpStatus.UNPROCESSABLE_ENTITY.value());
+        assertThat(pd.getTitle()).isEqualTo("Sin ruta");
     }
 }

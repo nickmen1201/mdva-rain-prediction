@@ -4,7 +4,7 @@
 
 **Created**: 2026-10-31
 
-**Status**: Draft
+**Status**: Implemented (2026-10-31)
 
 **Input**: User description: "Spec 008 (charter R-35b, H-19): el Backend deja de usar Google Directions y Google Geocoding. Las rutas de POST /api/viajes/planificar (y multi-parada) se obtienen del routing service propio (/api/v1/route/spring y /route/multi), y la geocodificación de direcciones/autocompletado se hace con Nominatim (OSM) respetando su política (User-Agent identificable, ≤ 1 req/s, caché). Restablecer RF-09 de punta a punta sin ninguna API key."
 

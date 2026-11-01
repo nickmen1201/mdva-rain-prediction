@@ -299,14 +299,15 @@ export default function ResultadoViaje() {
             style={{ marginTop: 0, fontSize: '0.85rem', padding: '0.45rem 1rem' }}
             onClick={() => setMostrarAlterna(false)}
           >
-            Ver ruta mas rapida
+            Ver ruta más rápida
           </button>
           <button
             className={`btn${mostrarAlterna ? ' btn-primary' : ' btn-secondary'}`}
             style={{ marginTop: 0, fontSize: '0.85rem', padding: '0.45rem 1rem' }}
             onClick={() => setMostrarAlterna(true)}
           >
-            Ver ruta mas seca {viaje.rutaAlternaTiempoMin ? `(${viaje.rutaAlternaTiempoMin} min)` : ''}
+            {viaje.rutaAlternaTipo === 'dryest' ? 'Ver ruta más seca' : 'Ver ruta más corta'}{' '}
+            {viaje.rutaAlternaTiempoMin ? `(${viaje.rutaAlternaTiempoMin} min)` : ''}
           </button>
         </div>
       )}

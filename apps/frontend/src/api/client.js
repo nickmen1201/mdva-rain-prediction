@@ -55,3 +55,11 @@ export const predictWeatherGrid = (puntos, config = {}) =>
 // ── Predicción horaria (punto 5 feedback) ───────────────────────────────────
 export const getWeatherForecast = (latitude, longitude, hours = 6) =>
   api.get('/api/weather/forecast', { params: { latitude, longitude, hours } }).then((r) => r.data);
+
+// ── Geocodificación con Nominatim vía Backend (spec 008/011) ────────────────
+// Búsqueda al enviar el texto (no por tecla): la política de Nominatim prohíbe el autocompletado.
+export const searchPlaces = (q) =>
+  api.get('/api/geocoding/search', { params: { q } }).then((r) => r.data);
+
+export const reversePlace = (lat, lng) =>
+  api.get('/api/geocoding/reverse', { params: { lat, lng } }).then((r) => r.data);

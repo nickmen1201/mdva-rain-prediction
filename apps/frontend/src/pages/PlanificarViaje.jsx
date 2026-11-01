@@ -1,33 +1,24 @@
-import { useState, useRef, useEffect, createRef, useCallback } from 'react';
+import maplibregl from 'maplibre-gl';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { planificarViaje } from '../api/client';
-import { Map, useMap, useMapsLibrary } from '@vis.gl/react-google-maps';
+import { planificarViaje, reversePlace } from '../api/client';
 import ForecastHorario from '../components/ForecastHorario';
+import PlaceSearch from '../components/PlaceSearch';
 import WeatherHeatmapLayer from '../components/WeatherHeatmapLayer';
 import useWeatherGrid from '../hooks/useWeatherGrid';
+import { boundsOf } from '../map/geo';
+import MapView, { useMap } from '../map/MapView';
 
 const MEDELLIN_CENTRO = { lat: 6.2442, lng: -75.5812 };
 
-// ── Helper: reverse geocoding (lat/lng → dirección) ─────────────────────────
-function useReverseGeocoder() {
-  const geocodingLib = useMapsLibrary('geocoding');
-  const geocoderRef = useRef(null);
-
-  useEffect(() => {
-    if (geocodingLib && !geocoderRef.current) {
-      geocoderRef.current = new geocodingLib.Geocoder();
-    }
-  }, [geocodingLib]);
-
-  return useCallback(async (lat, lng) => {
-    if (!geocoderRef.current) return null;
-    try {
-      const { results } = await geocoderRef.current.geocode({ location: { lat, lng } });
-      return results?.[0]?.formatted_address ?? null;
-    } catch {
-      return null;
-    }
-  }, []);
+// ── Helper: reverse geocoding (lat/lng → dirección) con Nominatim vía Backend ─
+async function reverseGeocode(lat, lng) {
+  try {
+    const r = await reversePlace(lat, lng);
+    return r?.displayName?.split(',').slice(0, 2).join(',') ?? null;
+  } catch {
+    return null;
+  }
 }
 
 // ── Helper: GPS con retry y diagnóstico vía Permissions API ─────────────────
@@ -75,92 +66,66 @@ async function obtenerUbicacion() {
   });
 }
 
-// ── Subcomponente: mapa con pins draggables para origen/destino ─────────────
+// ── Subcomponente: mapa con pins arrastrables para origen/destino ───────────
+function pin(label, color) {
+  const el = document.createElement('div');
+  el.textContent = label;
+  Object.assign(el.style, {
+    width: '28px', height: '28px', borderRadius: '50%', background: color, color: '#0a0c10',
+    border: '2px solid #0a0c10', display: 'flex', alignItems: 'center', justifyContent: 'center',
+    fontWeight: '700', cursor: 'grab',
+  });
+  return el;
+}
+
+function useDraggablePin(map, point, label, color, title, onMove) {
+  const markerRef = useRef(null);
+  const onMoveRef = useRef(onMove);
+  useEffect(() => {
+    onMoveRef.current = onMove;
+  }, [onMove]);
+
+  useEffect(() => {
+    if (!map) return;
+    if (point.lat == null || point.lng == null) {
+      markerRef.current?.remove();
+      markerRef.current = null;
+      return;
+    }
+    if (!markerRef.current) {
+      const el = pin(label, color);
+      el.title = title;
+      markerRef.current = new maplibregl.Marker({ element: el, draggable: true })
+        .setLngLat([point.lng, point.lat])
+        .addTo(map);
+      markerRef.current.on('dragend', () => {
+        const { lat, lng } = markerRef.current.getLngLat();
+        onMoveRef.current(lat, lng);
+      });
+    } else {
+      markerRef.current.setLngLat([point.lng, point.lat]);
+    }
+  }, [map, point.lat, point.lng, label, color, title]);
+
+  useEffect(() => () => markerRef.current?.remove(), []);
+}
+
 function MapaSelector({ origen, destino, onMoveOrigen, onMoveDestino }) {
   const map = useMap();
-  const markerOrigenRef = useRef(null);
-  const markerDestinoRef = useRef(null);
+  useDraggablePin(map, origen, 'A', '#4af0a0', 'Origen — arrástrame', onMoveOrigen);
+  useDraggablePin(map, destino, 'B', '#f0a04a', 'Destino — arrástrame', onMoveDestino);
 
-  // Marker de origen
-  useEffect(() => {
-    if (!map || !window.google) return;
-    if (origen.lat == null || origen.lng == null) {
-      markerOrigenRef.current?.setMap(null);
-      markerOrigenRef.current = null;
-      return;
-    }
-    if (markerOrigenRef.current) {
-      markerOrigenRef.current.setPosition({ lat: origen.lat, lng: origen.lng });
-    } else {
-      markerOrigenRef.current = new window.google.maps.Marker({
-        position: { lat: origen.lat, lng: origen.lng },
-        map,
-        draggable: true,
-        title: 'Origen — arrastrame',
-        label: { text: 'A', color: '#0a0c10', fontWeight: 'bold' },
-        icon: {
-          path: window.google.maps.SymbolPath.CIRCLE,
-          scale: 14,
-          fillColor: '#4af0a0',
-          fillOpacity: 1,
-          strokeColor: '#0a0c10',
-          strokeWeight: 2,
-        },
-      });
-      markerOrigenRef.current.addListener('dragend', (e) => {
-        onMoveOrigen(e.latLng.lat(), e.latLng.lng());
-      });
-    }
-  }, [map, origen.lat, origen.lng, onMoveOrigen]);
-
-  // Marker de destino
-  useEffect(() => {
-    if (!map || !window.google) return;
-    if (destino.lat == null || destino.lng == null) {
-      markerDestinoRef.current?.setMap(null);
-      markerDestinoRef.current = null;
-      return;
-    }
-    if (markerDestinoRef.current) {
-      markerDestinoRef.current.setPosition({ lat: destino.lat, lng: destino.lng });
-    } else {
-      markerDestinoRef.current = new window.google.maps.Marker({
-        position: { lat: destino.lat, lng: destino.lng },
-        map,
-        draggable: true,
-        title: 'Destino — arrastrame',
-        label: { text: 'B', color: '#0a0c10', fontWeight: 'bold' },
-        icon: {
-          path: window.google.maps.SymbolPath.CIRCLE,
-          scale: 14,
-          fillColor: '#f0a04a',
-          fillOpacity: 1,
-          strokeColor: '#0a0c10',
-          strokeWeight: 2,
-        },
-      });
-      markerDestinoRef.current.addListener('dragend', (e) => {
-        onMoveDestino(e.latLng.lat(), e.latLng.lng());
-      });
-    }
-  }, [map, destino.lat, destino.lng, onMoveDestino]);
-
-  // Auto-fit cuando ambos puntos están definidos
+  // Auto-encuadre cuando ambos puntos están definidos
   useEffect(() => {
     if (!map || origen.lat == null || destino.lat == null) return;
-    const bounds = new window.google.maps.LatLngBounds();
-    bounds.extend({ lat: origen.lat, lng: origen.lng });
-    bounds.extend({ lat: destino.lat, lng: destino.lng });
-    map.fitBounds(bounds, { top: 60, right: 60, bottom: 60, left: 60 });
-  }, [map, origen.lat, origen.lng, destino.lat, destino.lng]);
+    map.fitBounds(boundsOf([origen, destino]), { padding: 60, duration: 0, maxZoom: 15 });
+  }, [map, origen, destino]);
 
   return null;
 }
 
 export default function PlanificarViaje() {
   const navigate = useNavigate();
-  const placesLib = useMapsLibrary('places');
-  const reverseGeocode = useReverseGeocoder();
 
   const [idVehiculo, setIdVehiculo] = useState('');
   const [tipoVehiculo, setTipoVehiculo] = useState('CARRO');
@@ -179,78 +144,11 @@ export default function PlanificarViaje() {
     spacingKm: 5,
   });
 
-  const originInputRef = useRef(null);
-  const destInputRef = useRef(null);
-  const paradasRefs = useRef([]);
-
-  useEffect(() => {
-    if (!placesLib || !originInputRef.current) return;
-    const ac = new placesLib.Autocomplete(originInputRef.current, {
-      fields: ['geometry', 'name', 'formatted_address'],
-    });
-    ac.addListener('place_changed', () => {
-      const place = ac.getPlace();
-      if (place.geometry) {
-        setOrigen({
-          lat: place.geometry.location.lat(),
-          lng: place.geometry.location.lng(),
-          displayName: place.name || place.formatted_address,
-        });
-      }
-    });
-  }, [placesLib]);
-
-  useEffect(() => {
-    if (!placesLib || !destInputRef.current) return;
-    const ac = new placesLib.Autocomplete(destInputRef.current, {
-      fields: ['geometry', 'name', 'formatted_address'],
-    });
-    ac.addListener('place_changed', () => {
-      const place = ac.getPlace();
-      if (place.geometry) {
-        setDestino({
-          lat: place.geometry.location.lat(),
-          lng: place.geometry.location.lng(),
-          displayName: place.name || place.formatted_address,
-        });
-      }
-    });
-  }, [placesLib]);
-
-  useEffect(() => {
-    if (!placesLib) return;
-    paradas.forEach((_, i) => {
-      const inputEl = paradasRefs.current[i]?.current;
-      if (inputEl && !inputEl._hasAutocomplete) {
-        inputEl._hasAutocomplete = true;
-        const ac = new placesLib.Autocomplete(inputEl, {
-          fields: ['geometry', 'name', 'formatted_address'],
-        });
-        ac.addListener('place_changed', () => {
-          const place = ac.getPlace();
-          if (place.geometry) {
-            const loc = {
-              lat: place.geometry.location.lat(),
-              lng: place.geometry.location.lng(),
-              displayName: place.name || place.formatted_address,
-            };
-            setParadas((prev) => {
-              const updated = [...prev];
-              updated[i] = loc;
-              return updated;
-            });
-          }
-        });
-      }
-    });
-  }, [placesLib, paradas]);
-
   const addParada = () => setParadas([...paradas, { lat: null, lng: null, displayName: '' }]);
 
-  const removeParada = (i) => {
-    paradasRefs.current.splice(i, 1);
-    setParadas(paradas.filter((_, idx) => idx !== i));
-  };
+  const removeParada = (i) => setParadas(paradas.filter((_, idx) => idx !== i));
+
+  const setParada = (i, loc) => setParadas((prev) => prev.map((p, idx) => (idx === i ? loc : p)));
 
   // Handler GPS con retry + reverse geocoding
   const handleUsarUbicacionActual = async () => {
@@ -264,7 +162,6 @@ export default function PlanificarViaje() {
       const direccion = await reverseGeocode(lat, lng);
       const nombre = direccion ?? 'Mi ubicación actual';
       setOrigen({ lat, lng, displayName: nombre });
-      if (originInputRef.current) originInputRef.current.value = nombre;
     } catch (err) {
       const code = err?.code;
       if (err?.message === 'NO_GEOLOCATION') {
@@ -290,19 +187,23 @@ export default function PlanificarViaje() {
   const handleMoveOrigen = useCallback(async (lat, lng) => {
     const direccion = await reverseGeocode(lat, lng);
     setOrigen({ lat, lng, displayName: direccion ?? `${lat.toFixed(5)}, ${lng.toFixed(5)}` });
-    if (originInputRef.current && direccion) originInputRef.current.value = direccion;
-  }, [reverseGeocode]);
+  }, []);
 
   const handleMoveDestino = useCallback(async (lat, lng) => {
     const direccion = await reverseGeocode(lat, lng);
     setDestino({ lat, lng, displayName: direccion ?? `${lat.toFixed(5)}, ${lng.toFixed(5)}` });
-    if (destInputRef.current && direccion) destInputRef.current.value = direccion;
-  }, [reverseGeocode]);
+  }, []);
+
+  // Tocar el mapa fija el primer punto que falte (origen, luego destino)
+  const handleMapClick = useCallback(({ lat, lng }) => {
+    if (origen.lat == null) handleMoveOrigen(lat, lng);
+    else if (destino.lat == null) handleMoveDestino(lat, lng);
+  }, [origen.lat, destino.lat, handleMoveOrigen, handleMoveDestino]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!origen.lat || !destino.lat) {
-      setError('Por favor seleccione origen y destino de las sugerencias.');
+      setError('Por favor elija origen y destino (búsqueda, GPS o tocando el mapa).');
       return;
     }
 
@@ -349,7 +250,7 @@ export default function PlanificarViaje() {
   return (
     <div className="page-content" style={{ textAlign: 'center' }}>
       <h1 className="page-title fade-up">Planificar viaje</h1>
-      <p className="page-subtitle fade-up">Busqueda rapida con Google Places · Soporte multi-parada</p>
+      <p className="page-subtitle fade-up">Búsqueda de direcciones con OpenStreetMap · Soporte multi-parada</p>
 
       <form onSubmit={handleSubmit} className="card fade-up-2">
         <div className="form-grid">
@@ -437,31 +338,19 @@ export default function PlanificarViaje() {
             </button>
           </div>
 
-          <div className="field" style={{ gridColumn: '1 / -1' }}>
-            <label>Buscar Punto de Origen</label>
-            <input ref={originInputRef} type="text" placeholder="Ej. UPB, Medellín" />
-            {origen.lat && <span style={{ fontSize: '0.82rem', color: 'var(--accent)', marginTop: '0.5rem' }}>✓ {origen.displayName}</span>}
-          </div>
+          <PlaceSearch label="Buscar punto de origen" placeholder="Ej. Parque Explora" selected={origen} onSelect={setOrigen} />
 
-          {paradas.map((parada, i) => {
-            if (!paradasRefs.current[i]) paradasRefs.current[i] = createRef();
-            return (
-              <div key={i} className="field" style={{ gridColumn: '1 / -1', borderLeft: '2px solid var(--accent)', paddingLeft: '1rem', marginLeft: '0.5rem' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                  <label style={{ margin: 0 }}>Parada {i + 1}</label>
-                  <button type="button" onClick={() => removeParada(i)} style={{ background: 'none', border: 'none', color: 'var(--danger)', cursor: 'pointer', fontSize: '0.8rem' }}>
-                    Quitar
-                  </button>
-                </div>
-                <input ref={paradasRefs.current[i]} type="text" placeholder="Ej. Centro Comercial Santafe" />
-                {parada.lat && (
-                  <span style={{ fontSize: '0.82rem', color: 'var(--accent)', marginTop: '0.5rem', display: 'block' }}>
-                    Parada fijada: {parada.displayName}
-                  </span>
-                )}
+          {paradas.map((parada, i) => (
+            <div key={i} style={{ gridColumn: '1 / -1', borderLeft: '2px solid var(--accent)', paddingLeft: '1rem', marginLeft: '0.5rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <strong style={{ fontSize: '0.85rem' }}>Parada {i + 1}</strong>
+                <button type="button" onClick={() => removeParada(i)} style={{ background: 'none', border: 'none', color: 'var(--danger)', cursor: 'pointer', fontSize: '0.8rem' }}>
+                  Quitar
+                </button>
               </div>
-            );
-          })}
+              <PlaceSearch placeholder="Ej. Centro Comercial Santafé" selected={parada} onSelect={(loc) => setParada(i, loc)} />
+            </div>
+          ))}
 
           <div className="field" style={{ gridColumn: '1 / -1', textAlign: 'left' }}>
             <button type="button" onClick={addParada} className="btn" style={{ background: 'transparent', border: '1px dashed var(--border)', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
@@ -487,18 +376,14 @@ export default function PlanificarViaje() {
                   onClick={() => setModoParadas('OPTIMIZAR_RUTA')}
                 >
                   <strong>Optimizar ruta</strong>
-                  <span>Google sugiere el mejor orden para reducir vueltas.</span>
+                  <span>Ordena las paradas para recorrer la menor distancia.</span>
                 </button>
               </div>
             </div>
           )}
 
           <div className="field-section">Destino</div>
-          <div className="field" style={{ gridColumn: '1 / -1' }}>
-            <label>Buscar Punto de Destino</label>
-            <input ref={destInputRef} type="text" placeholder="Ej. EAFIT, Medellín" />
-            {destino.lat && <span style={{ fontSize: '0.82rem', color: 'var(--accent)', marginTop: '0.5rem' }}>✓ {destino.displayName}</span>}
-          </div>
+          <PlaceSearch label="Buscar punto de destino" placeholder="Ej. Estadio Atanasio Girardot" selected={destino} onSelect={setDestino} />
 
           {/* Forecast 6h: aparece cuando hay origen para ayudar a decidir cuándo salir */}
           {origen.lat && (
@@ -509,7 +394,7 @@ export default function PlanificarViaje() {
 
           {/* Mapa con pins draggables tipo Uber + capa de lluvia */}
           <div className="field" style={{ gridColumn: '1 / -1' }}>
-            <label style={{ marginBottom: '0.5rem' }}>Mapa — arrastrá los pines para ajustar</label>
+            <label style={{ marginBottom: '0.5rem' }}>Mapa — toca para fijar puntos y arrastra los pines para ajustar</label>
             <div style={{
               width: '100%',
               height: '320px',
@@ -518,14 +403,8 @@ export default function PlanificarViaje() {
               border: '1px solid var(--border)',
               position: 'relative',
             }}>
-              <Map
-                defaultCenter={origen.lat ? { lat: origen.lat, lng: origen.lng } : MEDELLIN_CENTRO}
-                defaultZoom={14}
-                mapId="mdva-planificar-map"
-                colorScheme="DARK"
-                gestureHandling="greedy"
-                disableDefaultUI={false}
-              >
+              <MapView center={origen.lat ? { lat: origen.lat, lng: origen.lng } : MEDELLIN_CENTRO} zoom={13}
+                       onClick={handleMapClick}>
                 <MapaSelector
                   origen={origen}
                   destino={destino}
@@ -537,12 +416,12 @@ export default function PlanificarViaje() {
                   visible={!heatmapError}
                   opacity={0.58}
                 />
-              </Map>
+              </MapView>
             </div>
             <p style={{ fontSize: '0.75rem', color: 'var(--muted)', marginTop: '0.4rem' }}>
               {origen.lat && destino.lat
                 ? 'Pin verde (A) = origen · Pin naranja (B) = destino. La nube muestra probabilidad de lluvia.'
-                : 'Seleccioná origen y destino con el buscador o el botón GPS para ver los pines.'}
+                : 'Elige origen y destino con el buscador, el GPS o tocando el mapa.'}
             </p>
           </div>
         </div>

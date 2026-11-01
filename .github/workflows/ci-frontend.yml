@@ -13,7 +13,7 @@ permissions:
 
 jobs:
   frontend:
-    name: Lint and Build
+    name: Lint, Test and Build
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -36,11 +36,12 @@ jobs:
       - name: ESLint
         run: npm run lint
 
+      - name: Unit tests (vitest)
+        run: npm test
+
       - name: Vite production build
         run: npm run build
         env:
-          # Google Maps key no es necesaria en build time (Vite no la valida)
-          VITE_GOOGLE_MAPS_KEY: build-placeholder
           VITE_API_URL: http://localhost:8080
 
       - name: Upload frontend dist

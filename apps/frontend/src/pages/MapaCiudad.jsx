@@ -1,8 +1,8 @@
-import { Map } from '@vis.gl/react-google-maps';
 import { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import ForecastHorario from '../components/ForecastHorario';
-import WeatherHeatmapLayer from '../components/WeatherHeatmapLayer';
+import WeatherHeatmapLayer, { RainLegend } from '../components/WeatherHeatmapLayer';
+import MapView from '../map/MapView';
 import WeatherHeatmapToggle from '../components/WeatherHeatmapToggle';
 import useWeatherGrid from '../hooks/useWeatherGrid';
 
@@ -68,17 +68,10 @@ export default function MapaCiudad() {
 
   return (
     <div style={{ position: 'relative', width: '100%', height: '100%' }}>
-      <Map
-        defaultCenter={MEDELLIN_CENTER}
-        defaultZoom={13}
-        mapId="mdva-map"
-        colorScheme="DARK"
-        gestureHandling="greedy"
-        disableDefaultUI={false}
-        style={{ width: '100%', height: '100%' }}
-      >
-        <WeatherHeatmapLayer points={points} visible={heatmapEnabled && !error} opacity={0.58} />
-      </Map>
+      <MapView center={MEDELLIN_CENTER} zoom={12}>
+        <WeatherHeatmapLayer points={points} visible={heatmapEnabled && !error} opacity={0.62} />
+      </MapView>
+      {heatmapEnabled && !error && points.length > 0 && <RainLegend />}
 
       <div style={{
         position: 'absolute',

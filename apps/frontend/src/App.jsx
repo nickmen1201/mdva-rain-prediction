@@ -8,9 +8,6 @@ import Register from './pages/Register';
 import MapaCiudad from './pages/MapaCiudad';
 import EnRuta from './pages/EnRuta';
 import ThemeToggle from './components/ThemeToggle';
-import { APIProvider } from '@vis.gl/react-google-maps';
-
-const MAPS_KEY = import.meta.env.VITE_GOOGLE_MAPS_KEY;
 
 function PrivateRoute({ children }) {
   const token = localStorage.getItem('token');
@@ -61,7 +58,6 @@ export default function App() {
         overflowX: 'hidden',
         overflowY: 'auto',
       }}>
-        <APIProvider apiKey={MAPS_KEY} libraries={['geometry', 'places']}>
           <Routes>
             <Route path="/login"    element={<Login />} />
             <Route path="/register" element={<Register />} />
@@ -71,7 +67,6 @@ export default function App() {
             <Route path="/viaje/:id/en-ruta" element={<PrivateRoute><EnRuta /></PrivateRoute>} />
             <Route path="/historial/:idUsuario" element={<PrivateRoute><HistorialViajes /></PrivateRoute>} />
           </Routes>
-        </APIProvider>
       </main>
     </BrowserRouter>
   );

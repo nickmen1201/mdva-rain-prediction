@@ -46,53 +46,16 @@ function generateGrid(center, gridSize, spacingKm) {
   return points;
 }
 
+// Probabilidades del modelo tal cual (spec 011): un punto sin probabilidad se descarta, nunca se pinta
+// como 0 %. La interpolación entre puntos la hace la capa del mapa (bilineal, sin extrapolar).
 function normalizeResults(resultados = []) {
-  return resultados.map((point) => {
-    const probability = Number(point.probabilidadRf ?? 0);
-    return {
+  return resultados
+    .filter((point) => Number.isFinite(Number(point.probabilidadRf)) && point.probabilidadRf !== null)
+    .map((point) => ({
       lat: point.lat,
       lng: point.lng,
-      weight: Math.max(0, Math.min(1, probability)),
-    };
-  });
-}
-
-function interpolateSurface(points, samplesPerSide = 31) {
-  if (points.length < 4) return points;
-
-  const lats = points.map((point) => point.lat);
-  const lngs = points.map((point) => point.lng);
-  const minLat = Math.min(...lats);
-  const maxLat = Math.max(...lats);
-  const minLng = Math.min(...lngs);
-  const maxLng = Math.max(...lngs);
-  const latStep = (maxLat - minLat) / (samplesPerSide - 1);
-  const lngStep = (maxLng - minLng) / (samplesPerSide - 1);
-  const surface = [];
-
-  for (let row = 0; row < samplesPerSide; row += 1) {
-    for (let col = 0; col < samplesPerSide; col += 1) {
-      const lat = minLat + latStep * row;
-      const lng = minLng + lngStep * col;
-      let numerator = 0;
-      let denominator = 0;
-
-      points.forEach((point) => {
-        const dist = Math.max(distanceMeters({ lat, lng }, point), 25);
-        const influence = 1 / (dist ** 1.8);
-        numerator += point.weight * influence;
-        denominator += influence;
-      });
-
-      surface.push({
-        lat: Number(lat.toFixed(6)),
-        lng: Number(lng.toFixed(6)),
-        weight: denominator > 0 ? numerator / denominator : 0,
-      });
-    }
-  }
-
-  return surface;
+      weight: Math.max(0, Math.min(1, Number(point.probabilidadRf))),
+    }));
 }
 
 export default function useWeatherGrid({
@@ -145,7 +108,7 @@ export default function useWeatherGrid({
           generateGrid(fetchCenter, gridSize, spacingKm),
           { signal: controller.signal },
         );
-        const nextPoints = interpolateSurface(normalizeResults(response?.resultados));
+        const nextPoints = normalizeResults(response?.resultados);
         weatherGridCache.set(key, { points: nextPoints, timestamp: Date.now() });
         setPoints(nextPoints);
         setError(null);

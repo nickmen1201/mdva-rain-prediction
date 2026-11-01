@@ -1,6 +1,9 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
-import { Map, useMap } from '@vis.gl/react-google-maps';
+import maplibregl from 'maplibre-gl';
+import { boundsOf, decodePolyline } from '../map/geo';
+import MapView, { useMap } from '../map/MapView';
+import { circleMarker, removeLayer, setLine } from '../map/primitives';
 import { getViajeById, finalizarViaje, reportarPosicion, planificarViaje } from '../api/client';
 import NavigationHeader from '../components/NavigationHeader';
 import NavigationPanel from '../components/NavigationPanel';
@@ -68,135 +71,71 @@ async function obtenerPosicionActual() {
   }
 }
 
+function flecha() {
+  const el = document.createElement('div');
+  el.innerHTML = `<svg viewBox="-24 -24 48 48" width="40" height="40"><path d="${NAV_ARROW_PATH}" fill="#4af0a0" stroke="#ffffff" stroke-width="3"/></svg>`;
+  return el;
+}
+
 function CapaRuta({ viaje, posicion, heading, pasoActivo, theme, paradas }) {
   const map = useMap();
-  const marcadorRef  = useRef(null);
-  const polylineRef  = useRef(null);
-  const recorridoRef = useRef(null);
+  const marcadorRef = useRef(null);
 
   const isDark = theme === 'dark';
 
-  // POI markers: origen, paradas intermedias, destino
+  // Marcadores de origen, paradas intermedias y destino
   useEffect(() => {
-    if (!map || !viaje?.origen || !viaje?.destino) return;
-
-    const markers = [];
-    const makeMarker = (position, title, fillColor, scale) => {
-      const m = new window.google.maps.Marker({
-        position,
-        map,
-        title,
-        zIndex: 5,
-        icon: {
-          path: window.google.maps.SymbolPath.CIRCLE,
-          scale,
-          fillColor,
-          fillOpacity: 1,
-          strokeColor: '#0a0c10',
-          strokeWeight: 2,
-        },
-      });
-      markers.push(m);
-    };
-
-    makeMarker({ lat: viaje.origen.lat,  lng: viaje.origen.lng  }, viaje.origen.displayName  ?? 'Origen',  '#4af0a0', 8);
-    paradas?.forEach((p, i) => {
-      const m = new window.google.maps.Marker({
-        position: { lat: p.lat, lng: p.lng },
-        map,
-        title: p.displayName ?? `Parada ${i + 1}`,
-        zIndex: 6,
-        label: { text: String(i + 1), color: '#0a0c10', fontWeight: 'bold', fontSize: '11px' },
-        icon: {
-          path: window.google.maps.SymbolPath.CIRCLE,
-          scale: 11,
-          fillColor: '#c084fc',
-          fillOpacity: 1,
-          strokeColor: '#0a0c10',
-          strokeWeight: 2,
-        },
-      });
-      markers.push(m);
-    });
-    makeMarker({ lat: viaje.destino.lat, lng: viaje.destino.lng }, viaje.destino.displayName ?? 'Destino', '#f0a04a', 8);
-
-    return () => markers.forEach(m => m.setMap(null));
+    if (!map || !viaje?.origen || !viaje?.destino) return undefined;
+    const markers = [
+      circleMarker(map, viaje.origen, { color: '#4af0a0', size: 16, title: viaje.origen.displayName ?? 'Origen' }),
+      ...(paradas ?? []).map((p, i) => {
+        const m = circleMarker(map, p, { color: '#c084fc', size: 22, title: p.displayName ?? `Parada ${i + 1}` });
+        Object.assign(m.getElement().style, { color: '#0a0c10', fontWeight: '700', fontSize: '11px', display: 'flex',
+          alignItems: 'center', justifyContent: 'center' });
+        m.getElement().textContent = String(i + 1);
+        return m;
+      }),
+      circleMarker(map, viaje.destino, { color: '#f0a04a', size: 16, title: viaje.destino.displayName ?? 'Destino' }),
+    ];
+    return () => markers.forEach((m) => m.remove());
   }, [map, viaje, paradas]);
 
-  // Draw route polyline on mount
+  // Ruta y tramo recorrido (gris)
   useEffect(() => {
-    if (!map || !viaje?.overviewPolyline) return;
-
-    const path = window.google.maps.geometry.encoding.decodePath(viaje.overviewPolyline);
-
-    // Visual Improvements: Thicker and more opaque lines
-    polylineRef.current = new window.google.maps.Polyline({
-      path,
-      strokeColor: isDark ? '#4af0a0' : '#0a8f5c',
-      strokeOpacity: 0.9,
-      strokeWeight: 9,
-      map,
-    });
-
-    recorridoRef.current = new window.google.maps.Polyline({
-      path: [],
-      strokeColor: isDark ? '#5a6070' : '#444444',
-      strokeOpacity: 1.0,
-      strokeWeight: 9,
-      map,
-    });
-
-    // Fit map to route initially
-    const bounds = new window.google.maps.LatLngBounds();
-    path.forEach((p) => bounds.extend(p));
-    map.fitBounds(bounds, { top: 80, right: 300, bottom: 160, left: 40 });
-
+    if (!map || !viaje?.overviewPolyline) return undefined;
+    const path = decodePolyline(viaje.overviewPolyline);
+    setLine(map, 'mdva-nav-route', path, { color: isDark ? '#4af0a0' : '#0a8f5c', width: 9, opacity: 0.9 });
+    setLine(map, 'mdva-nav-traveled', [], { color: isDark ? '#5a6070' : '#444444', width: 9, opacity: 1 });
+    const bounds = boundsOf(path);
+    if (bounds) map.fitBounds(bounds, { padding: { top: 80, right: 300, bottom: 160, left: 40 }, duration: 0 });
     return () => {
-      polylineRef.current?.setMap(null);
-      recorridoRef.current?.setMap(null);
+      removeLayer(map, 'mdva-nav-traveled');
+      removeLayer(map, 'mdva-nav-route');
     };
   }, [map, viaje, isDark]);
 
-  // Update gray "traveled" section
   useEffect(() => {
-    if (!recorridoRef.current || !viaje?.pasos || !posicion) return;
+    if (!map || !viaje?.pasos || !posicion || !map.getSource('mdva-nav-traveled')) return;
     const traveled = [];
     viaje.pasos.slice(0, pasoActivo + 1).forEach((p) => {
       if (p.startLat != null) traveled.push({ lat: p.startLat, lng: p.startLng });
     });
     traveled.push(posicion);
-    recorridoRef.current.setPath(traveled);
-  }, [viaje, pasoActivo, posicion]);
+    setLine(map, 'mdva-nav-traveled', traveled, { color: isDark ? '#5a6070' : '#444444', width: 9, opacity: 1 });
+  }, [map, viaje, pasoActivo, posicion, isDark]);
 
-  // GPS marker & Navigation Mode (Closeup/Tilt/Rotate)
+  // Marcador GPS con rumbo (la flecha rota respecto del norte del mapa)
   useEffect(() => {
     if (!map || !posicion) return;
-
-    const icon = {
-      path: NAV_ARROW_PATH,
-      fillColor: '#4af0a0',
-      fillOpacity: 1,
-      strokeColor: '#ffffff',
-      strokeWeight: 3,
-      scale: 1.6,
-      rotation: heading ?? 0,
-      anchor: new window.google.maps.Point(0, 0),
-    };
-
-    if (marcadorRef.current) {
-      marcadorRef.current.setPosition(posicion);
-      marcadorRef.current.setIcon(icon);
-    } else {
-      marcadorRef.current = new window.google.maps.Marker({
-        position: posicion,
-        map,
-        icon,
-        title: 'Tu posición',
-        zIndex: 10,
-      });
+    if (!marcadorRef.current) {
+      marcadorRef.current = new maplibregl.Marker({ element: flecha(), rotationAlignment: 'map', pitchAlignment: 'map' })
+        .setLngLat([posicion.lng, posicion.lat])
+        .addTo(map);
     }
-
+    marcadorRef.current.setLngLat([posicion.lng, posicion.lat]).setRotation(heading ?? 0);
   }, [map, posicion, heading]);
+
+  useEffect(() => () => marcadorRef.current?.remove(), []);
 
   return null;
 }
@@ -450,7 +389,7 @@ export default function EnRuta() {
 
   // Auto-Chaining Logic: Detect stop arrival
   useEffect(() => {
-    if (!posicion || !viaje || transitionRef.current || finalizando) return;
+    if (!posicion || !viaje?.destino || transitionRef.current || finalizando) return;
 
     const distToDest = haversine(posicion.lat, posicion.lng, viaje.destino.lat, viaje.destino.lng);
 
@@ -586,17 +525,7 @@ export default function EnRuta() {
 
   return (
     <div style={{ position: 'relative', height: '100%', width: '100%' }}>
-      <Map
-        defaultCenter={centro}
-        defaultZoom={16}
-        mapId="mdva-nav-map"
-        colorScheme={theme.toUpperCase()}
-        gestureHandling="greedy"
-        renderingType="VECTOR"
-        disableDefaultUI
-        style={{ width: '100%', height: '100%' }}
-        onDragStart={() => setCentering(false)}
-      >
+      <MapView center={centro} zoom={16} onDragStart={() => setCentering(false)}>
         <NavigationCamera
           enabled={centering}
           position={posicion}
@@ -618,7 +547,7 @@ export default function EnRuta() {
             paradas={paradas}
           />
         )}
-      </Map>
+      </MapView>
 
       <NavigationHeader
         paso={pasoActualData}

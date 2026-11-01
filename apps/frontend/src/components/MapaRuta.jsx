@@ -1,63 +1,31 @@
-import { APIProvider, Map, useMap } from '@vis.gl/react-google-maps';
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
+import { boundsOf, decodePolyline } from '../map/geo';
+import MapView, { useMap } from '../map/MapView';
+import { circleMarker, removeLayer, setLine } from '../map/primitives';
 
-const MAPS_KEY = import.meta.env.VITE_GOOGLE_MAPS_KEY;
+const ID = 'mdva-route';
 
 function PolylineLayer({ encodedPolyline, origen, destino, paradas }) {
   const map = useMap();
-  const markersRef = useRef([]);
 
   useEffect(() => {
-    if (!map || !encodedPolyline) return;
+    if (!map || !encodedPolyline) return undefined;
 
-    const path = window.google.maps.geometry.encoding.decodePath(encodedPolyline);
+    const path = decodePolyline(encodedPolyline);
+    setLine(map, ID, path, { color: '#4af0a0', width: 4, opacity: 0.9 });
 
-    const polyline = new window.google.maps.Polyline({
-      path,
-      strokeColor: '#4af0a0',
-      strokeOpacity: 0.9,
-      strokeWeight: 4,
-      map,
-    });
+    const bounds = boundsOf(path);
+    if (bounds) map.fitBounds(bounds, { padding: 40, duration: 0 });
 
-    const bounds = new window.google.maps.LatLngBounds();
-    path.forEach((p) => bounds.extend(p));
-    map.fitBounds(bounds, { top: 40, right: 40, bottom: 40, left: 40 });
-
-    // Limpia marcadores anteriores
-    markersRef.current.forEach(m => m.setMap(null));
-    markersRef.current = [];
-
-    const makeMarker = (position, title, fillColor, scale) => {
-      const m = new window.google.maps.Marker({
-        position,
-        map,
-        title,
-        icon: {
-          path: window.google.maps.SymbolPath.CIRCLE,
-          scale,
-          fillColor,
-          fillOpacity: 1,
-          strokeColor: '#0a0c10',
-          strokeWeight: 2,
-        },
-      });
-      markersRef.current.push(m);
-    };
-
-    // Origen (verde)
-    makeMarker({ lat: origen.lat, lng: origen.lng }, origen.displayName, '#4af0a0', 9);
-
-    // Paradas intermedias (violeta)
-    paradas?.forEach(p => makeMarker({ lat: p.lat, lng: p.lng }, p.displayName, '#c084fc', 7));
-
-    // Destino (naranja)
-    makeMarker({ lat: destino.lat, lng: destino.lng }, destino.displayName, '#f0a04a', 9);
+    const markers = [
+      circleMarker(map, origen, { color: '#4af0a0', size: 18, title: origen.displayName }),
+      ...(paradas ?? []).map((p) => circleMarker(map, p, { color: '#c084fc', size: 14, title: p.displayName })),
+      circleMarker(map, destino, { color: '#f0a04a', size: 18, title: destino.displayName }),
+    ];
 
     return () => {
-      polyline.setMap(null);
-      markersRef.current.forEach(m => m.setMap(null));
-      markersRef.current = [];
+      markers.forEach((m) => m.remove());
+      removeLayer(map, ID);
     };
   }, [map, encodedPolyline, origen, destino, paradas]);
 
@@ -66,23 +34,8 @@ function PolylineLayer({ encodedPolyline, origen, destino, paradas }) {
 
 export default function MapaRuta({ encodedPolyline, origen, destino, paradas }) {
   return (
-    <div className="map-container" style={{ height: '100%', width: '100%' }}>
-      <Map
-        defaultCenter={{ lat: (origen.lat + destino.lat) / 2, lng: (origen.lng + destino.lng) / 2 }}
-        defaultZoom={12}
-        mapId="mdva-map"
-        colorScheme="DARK"
-        gestureHandling="greedy"
-        disableDefaultUI={false}
-        style={{ width: '100%', height: '100%' }}
-      >
-        <PolylineLayer
-          encodedPolyline={encodedPolyline}
-          origen={origen}
-          destino={destino}
-          paradas={paradas}
-        />
-      </Map>
-    </div>
+    <MapView center={{ lat: (origen.lat + destino.lat) / 2, lng: (origen.lng + destino.lng) / 2 }} zoom={12}>
+      <PolylineLayer encodedPolyline={encodedPolyline} origen={origen} destino={destino} paradas={paradas} />
+    </MapView>
   );
 }

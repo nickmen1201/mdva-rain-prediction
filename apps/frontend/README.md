@@ -1,16 +1,36 @@
-# React + Vite
+# Frontend — MDVA
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+React 19 + Vite. Mapas con **MapLibre GL** y teselas de OpenStreetMap (el tema oscuro se pinta en el cliente); búsqueda de direcciones con **Nominatim** a través del Backend. No requiere ninguna API key (spec 011).
 
-Currently, two official plugins are available:
+## Ejecutar
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+```bash
+npm install
+npm run dev          # http://localhost:5173 (Backend en VITE_API_URL, por defecto http://localhost:8080)
+npm test             # vitest: decodificación de polyline y escala de color del heatmap
+npm run lint
+npm run build
+```
 
-## React Compiler
+Con el stack completo: `docker compose -f docker-compose.dev.yml up --build` (Frontend en http://localhost:8090).
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Pantallas
 
-## Expanding the ESLint configuration
+| Ruta | Qué muestra |
+|---|---|
+| `/` | Mapa de la ciudad con la probabilidad de lluvia del modelo (malla 9 × 9, escala fija con leyenda) y pronóstico de 6 h |
+| `/planificar` | Búsqueda de origen, destino y paradas (Enter o botón), GPS, toque en el mapa y pines arrastrables |
+| `/viaje/:id` | Ruta, alerta de lluvia y alternativa (más seca o más corta) |
+| `/viaje/:id/en-ruta` | Navegación con cámara inclinada, rumbo suavizado y orientación del dispositivo |
+| `/historial/:idUsuario` | Viajes anteriores |
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## Mapa (`src/map/`)
+
+- `MapView.jsx`: crea el mapa y expone `useMap()` a los componentes hijos.
+- `geo.js`: decodificación de *encoded polyline* (precisión 1e-5) y cajas.
+- `primitives.js`: líneas GeoJSON y marcadores.
+- `rainScale.js`: escala de color de probabilidad (cortes en los umbrales 40 % y 70 %) e interpolación bilineal de la malla. El heatmap pinta la probabilidad tal cual: sin re-escalar ni agregar textura.
+
+Teselas configurables con `VITE_TILES_URL` (ver `.env.example`); para tráfico alto, usar un servidor de teselas propio. El tema oscuro invierte el brillo y rota el tono de la misma capa raster (las teselas oscuras de CARTO exigen API key).
+
+La búsqueda de direcciones se dispara al enviar el texto, no por tecla: la [política de Nominatim](https://operations.osmfoundation.org/policies/nominatim/) prohíbe el autocompletado contra su servidor público.

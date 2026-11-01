@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { useMap } from '@vis.gl/react-google-maps';
+import { useMap } from '../map/MapView';
 
 const MIN_CAMERA_MOVE_METERS = 2;
 const MIN_HEADING_DELTA_DEGREES = 0.7;
@@ -45,14 +45,8 @@ export default function useNavigationCamera({
   useEffect(() => {
     if (!map) return;
 
-    map.setOptions({
-      headingInteractionEnabled: true,
-      tiltInteractionEnabled: true,
-    });
-
     if (!enabled) {
-      map.setTilt(0);
-      map.setHeading(0);
+      map.easeTo({ pitch: 0, bearing: 0, duration: 400 });
       return;
     }
 
@@ -72,11 +66,13 @@ export default function useNavigationCamera({
     lastCameraPositionRef.current = position;
     lastRecenterTickRef.current = recenterTick;
 
-    map.moveCamera({
-      center: position,
+    // MapLibre: pitch = inclinación, bearing = rumbo (spec 011, misma cámara de navegación 3D)
+    map.easeTo({
+      center: [position.lng, position.lat],
       zoom,
-      tilt,
-      heading: nextHeading,
+      pitch: tilt,
+      bearing: nextHeading,
+      duration: forceRecenter ? 600 : 250,
     });
   }, [enabled, heading, map, position, recenterTick, tilt, zoom]);
 }

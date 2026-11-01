@@ -13,9 +13,7 @@ COPY . .
 
 # VITE_API_URL se inyecta como build arg para que Vite lo bake en el bundle
 ARG VITE_API_URL=""
-ARG VITE_GOOGLE_MAPS_KEY=""
 ENV VITE_API_URL=$VITE_API_URL
-ENV VITE_GOOGLE_MAPS_KEY=$VITE_GOOGLE_MAPS_KEY
 
 RUN npm run build
 
@@ -29,7 +27,8 @@ COPY nginx.conf /etc/nginx/conf.d/default.conf.template
 RUN apk add --no-cache gettext
 
 ENV PORT=80
+ENV BACKEND_UPSTREAM=http://backend:8080
 
 EXPOSE 80
 
-CMD ["/bin/sh", "-c", "envsubst '${PORT}' < /etc/nginx/conf.d/default.conf.template > /etc/nginx/conf.d/default.conf && nginx -g 'daemon off;'"]
+CMD ["/bin/sh", "-c", "envsubst '${PORT} ${BACKEND_UPSTREAM}' < /etc/nginx/conf.d/default.conf.template > /etc/nginx/conf.d/default.conf && nginx -g 'daemon off;'"]

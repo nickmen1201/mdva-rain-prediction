@@ -1338,3 +1338,26 @@ a:focus-visible {
 :focus:not(:focus-visible) {
   outline: none;
 }
+
+/* ── Spec 011: mapa MapLibre, leyenda de lluvia y búsqueda de lugares ─────── */
+.map-container .maplibregl-ctrl-attrib { font-size: 10px; }
+.rain-legend {
+  position: absolute; right: 1rem; top: 12.5rem; z-index: 10; min-width: 200px;
+  padding: 0.55rem 0.7rem; border-radius: 10px; background: var(--surface, rgba(10, 12, 16, 0.85));
+  border: 1px solid var(--border, #2a2f3a); color: var(--text, #e6e6e6); font-size: 0.72rem;
+}
+.rain-legend-title { display: block; margin-bottom: 0.35rem; font-weight: 600; }
+.rain-legend-bar { height: 10px; border-radius: 5px; }
+.rain-legend-labels { display: flex; justify-content: space-between; margin-top: 0.2rem; opacity: 0.85; }
+.place-results {
+  list-style: none; margin: 0.4rem 0 0; padding: 0; border: 1px solid var(--border, #2a2f3a);
+  border-radius: 8px; overflow: hidden; text-align: left;
+}
+.place-results li + li { border-top: 1px solid var(--border, #2a2f3a); }
+.place-results button {
+  width: 100%; text-align: left; padding: 0.5rem 0.7rem; background: transparent; border: 0;
+  color: var(--text, inherit); cursor: pointer; font-size: 0.85rem;
+}
+.place-results button:hover { background: rgba(74, 240, 160, 0.12); }
+.field-hint { display: block; margin-top: 0.4rem; font-size: 0.8rem; color: var(--text-muted, #9aa0aa); }
+.field-hint.error { color: var(--danger, #f06a6a); }

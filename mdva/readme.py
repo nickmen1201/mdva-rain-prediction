@@ -1,7 +1,8 @@
 """Genera la tabla de resultados del README desde `metrics.json` (charter R-44: ninguna cifra a mano).
 
-Reemplaza el bloque entre `<!-- metrics:start -->` y `<!-- metrics:end -->`. `tests/test_readme.py`
-verifica que el README versionado coincida con lo que generaría este módulo.
+Reemplaza dos bloques: el titular (`<!-- headline:start/end -->`, modelo frente al pronóstico que ya
+existe) y la tabla completa (`<!-- metrics:start/end -->`). `tests/test_readme.py` verifica que el
+README versionado coincida con lo que generaría este módulo.
 
 Uso: `make readme`
 """
@@ -14,6 +15,7 @@ from mdva import config
 
 README = config.PROJ_ROOT / "README.md"
 START, END = "<!-- metrics:start -->", "<!-- metrics:end -->"
+HEAD_START, HEAD_END = "<!-- headline:start -->", "<!-- headline:end -->"
 VERSION = "1.1.0"
 NOMBRES = {
     "model": "**rain_classifier 1.1.0**",
@@ -56,9 +58,37 @@ def render(metrics: dict) -> str:
     return "\n".join(lineas)
 
 
+def render_headline(metrics: dict) -> str:
+    """Pronóstico crudo de Open-Meteo frente al modelo, en los dos periodos nunca usados para decidir."""
+    titulos = {"holdout_2026": "2026 (holdout, ene–oct)", "test_2025": "2025 (prueba, año completo)"}
+    lineas = [
+        HEAD_START,
+        "",
+        "| Periodo nunca visto | ROC-AUC: pronóstico → modelo | Brier: pronóstico → modelo | Error de probabilidad |",
+        "|---|---|---|---|",
+    ]
+    for split, titulo in titulos.items():
+        s = metrics["splits"].get(split)
+        if not s:
+            continue
+        raw, mod = s["models"]["raw_forecast"], s["models"]["model"]
+        reduccion = (1 - mod["brier"] / raw["brier"]) * 100
+        lineas.append(
+            f"| {titulo} | {raw['roc_auc']:.2f} → **{mod['roc_auc']:.2f}** | "
+            f"{raw['brier']:.3f} → **{mod['brier']:.3f}** | **−{reduccion:.0f} %** |"
+        )
+    lineas += ["", HEAD_END]
+    return "\n".join(lineas)
+
+
+def _replace(text: str, start: str, end: str, block: str) -> str:
+    i, j = text.index(start), text.index(end) + len(end)
+    return text[:i] + block + text[j:]
+
+
 def updated(readme: str, metrics: dict) -> str:
-    i, j = readme.index(START), readme.index(END) + len(END)
-    return readme[:i] + render(metrics) + readme[j:]
+    readme = _replace(readme, HEAD_START, HEAD_END, render_headline(metrics))
+    return _replace(readme, START, END, render(metrics))
 
 
 def main() -> None:

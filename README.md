@@ -1,12 +1,68 @@
-# MDVA — Predicción horaria de lluvia para la movilidad en el Valle de Aburrá
+# MDVA — ¿Va a llover en tu ruta? Probabilidad de lluvia calibrada para Medellín
 
 [![CI Python](https://github.com/nickmen1201/mdva-rain-prediction/actions/workflows/ci-python.yml/badge.svg)](https://github.com/nickmen1201/mdva-rain-prediction/actions/workflows/ci-python.yml)
 [![CI Backend](https://github.com/nickmen1201/mdva-rain-prediction/actions/workflows/ci-backend.yml/badge.svg)](https://github.com/nickmen1201/mdva-rain-prediction/actions/workflows/ci-backend.yml)
 [![CI Frontend](https://github.com/nickmen1201/mdva-rain-prediction/actions/workflows/ci-frontend.yml/badge.svg)](https://github.com/nickmen1201/mdva-rain-prediction/actions/workflows/ci-frontend.yml)
+![Python 3.11](https://img.shields.io/badge/python-3.11-blue)
+![scikit-learn](https://img.shields.io/badge/scikit--learn-1.8-orange)
 
-Clasificador **calibrado** de probabilidad de lluvia por hora y por punto para Medellín y su área metropolitana, construido sobre pronósticos numéricos gratuitos (Open-Meteo), evaluado con validación temporal honesta y servido en una aplicación de planificación de viajes (rutas, alertas y navegación) que corre completa **sin ninguna API key**.
+En Medellín la lluvia llega en tormentas de tarde, cortas y muy locales: el pronóstico numérico acierta el día, pero falla la hora y el barrio. **MDVA corrige ese pronóstico con Machine Learning** y entrega, para cada punto del Valle de Aburrá y cada hora, una probabilidad de lluvia **calibrada**; es decir, cuando dice 30 %, llueve cerca del 30 % de las veces. Una aplicación de rutas usa esa probabilidad para avisar antes de salir, ajustar el tiempo de viaje y proponer la ruta más seca.
 
-> El centro de este repositorio es el **proceso de Machine Learning**: dataset reproducible con contratos de datos, una sola definición de features para entrenamiento e inferencia, búsqueda de hiperparámetros con validación cruzada *rolling-origin*, interpretabilidad contrastada con la física, calibración *cross-fitted*, análisis de decisión para los umbrales y una evaluación final única en un periodo nunca visto (2026).
+**Resultado principal:** en datos que ningún paso del desarrollo tocó, el modelo supera al pronóstico de Open-Meteo, la misma fuente que recibe como entrada:
+
+<!-- headline:start -->
+
+| Periodo nunca visto | ROC-AUC: pronóstico → modelo | Brier: pronóstico → modelo | Error de probabilidad |
+|---|---|---|---|
+| 2026 (holdout, ene–oct) | 0.71 → **0.84** | 0.125 → **0.105** | **−16 %** |
+| 2025 (prueba, año completo) | 0.70 → **0.85** | 0.157 → **0.123** | **−21 %** |
+
+<!-- headline:end -->
+
+Supera también a la climatología, a una regresión logística y a la versión anterior del modelo, con intervalos de confianza pareados ([tabla completa](#resultados)). Todo el sistema corre con un solo comando y **sin ninguna API key**.
+
+<table>
+  <tr>
+    <td width="33%"><img src="reports/figures/ui/1-mapa-ciudad.png" alt="Mapa de probabilidad de lluvia sobre Medellín"></td>
+    <td width="33%"><img src="reports/figures/ui/3-resultado.png" alt="Resultado de un viaje con alerta y pronóstico de 6 horas"></td>
+    <td width="33%"><img src="reports/figures/rain_classifier_reliability.png" alt="Curva de confiabilidad en 2025 y 2026"></td>
+  </tr>
+  <tr>
+    <td align="center"><sub>Probabilidad del modelo sobre el mapa</sub></td>
+    <td align="center"><sub>Viaje: alerta, próximas 6 h y rutas</sub></td>
+    <td align="center"><sub>Calibración en años nunca vistos</sub></td>
+  </tr>
+</table>
+
+---
+
+## Qué demuestra este proyecto
+
+| Competencia | Cómo se aplicó aquí |
+|---|---|
+| **Evaluación sin fuga de información** | Validación cruzada temporal *rolling-origin* (6 folds trimestrales, hueco de 24 h) solo sobre 2022–2024. 2025 y 2026 se evalúan **una sola vez** al final, y un `decision_log` registra qué periodo tocó cada decisión. |
+| **Selección de modelos con estadística, no a ojo** | 60 configuraciones de HistGradientBoosting frente a un GAM con *splines* y un bosque aleatorio. Gana el modelo más simple que esté a menos de un error estándar **pareado** del mejor. |
+| **Detectar y corregir un error metodológico propio** | La primera versión de la regla de un error estándar ignoraba que los folds son heterogéneos y eligió un modelo **peor en todos los folds**. El error se encontró, se corrigió con la versión pareada, se documentó ([research R3](specs/012-ml-depth/research.md)) y quedó cubierto por un test. |
+| **Probabilidades accionables** | Calibración Platt *cross-fitted*: el ECE en desarrollo baja de 0.027 a 0.004. Las curvas de costo muestran que el umbral de alerta (40 %) es casi óptimo y que el umbral empírico coincide con el teórico 1/(1+r). |
+| **Interpretabilidad contrastada con la física** | Importancia por permutación con IC, PDP/ICE y ablación por grupos. El modelo aprendió por su cuenta el ciclo diurno de las tormentas (máximo a las 14 h). |
+| **Datos y etiqueta defendibles** | La etiqueta (ERA5 ≥ 0.5 mm/h) se validó contra pluviómetros SIATA, con el umbral elegido sin fuga. Los datos pasan por un contrato con *quality gates*, y las descargas son idempotentes con manifiesto SHA-256. |
+| **Sin diferencias entre entrenamiento y producción** | Un solo módulo de features (contrato versionado 1.1.0, 24 features) para entrenar y servir, y un test de paridad con diferencia máxima 0. En vivo se consulta la misma fuente, con las mismas variables y unidades. |
+| **Del modelo al producto** | API de predicción con validación de contrato (FastAPI). La ruta "más seca" pondera cada tramo de calle por la probabilidad de una grilla espacial del modelo. Model card generada por código, artefactos versionados, CI y Docker Compose. |
+
+---
+
+## Pruébalo en 5 minutos
+
+Requisitos: Docker. No hace falta ninguna API key: el clima viene de Open-Meteo, los mapas de OpenStreetMap y las direcciones de Photon y Nominatim.
+
+```bash
+cp .env.example .env          # contraseñas locales de desarrollo
+docker compose -f docker-compose.dev.yml up --build
+```
+
+Abre <http://localhost:8090>, crea una cuenta y planifica un viaje: escribe un lugar (p. ej. "Universidad de Antioquia") y elige una sugerencia, o toca el mapa. El primer arranque del servicio de rutas descarga el grafo vial del valle (2–10 min); después queda en caché.
+
+Verificación de punta a punta: `make smoke` (API) y `make ui-smoke` (navegador real con Playwright; capturas en [`reports/figures/ui/`](reports/figures/ui/)).
 
 ---
 
@@ -40,113 +96,105 @@ Supera con IC pareado (Brier y log loss) a: rain_classifier 1.0.0, Regresión lo
 
 <!-- metrics:end -->
 
-*Tabla generada por `make readme` desde [`reports/metrics/rain_classifier/1.1.0/metrics.json`](reports/metrics/rain_classifier/1.1.0/metrics.json); un test impide que se desincronice. Detalle completo en la [model card](models/rain_classifier/1.1.0/model_card.md) y en el [notebook 3.0](notebooks/3.0-nm-evaluacion-y-calibracion.ipynb).*
+*Tablas generadas por `make readme` desde [`metrics.json`](reports/metrics/rain_classifier/1.1.0/metrics.json); un test impide que se desincronicen del README. Detalle completo en la [model card](models/rain_classifier/1.1.0/model_card.md) y en el [notebook 3.0](notebooks/3.0-nm-evaluacion-y-calibracion.ipynb).*
 
-**Lectura honesta**
-- El modelo mejora de forma significativa a todos los baselines desplegables, también en 2026. La persistencia ("llueve si llovió la hora anterior") tiene un Brier similar, pero **no es desplegable**: en producción no hay una observación de la hora anterior equivalente a la etiqueta.
-- La calibración *cross-fitted* (Platt) bajó el ECE de 0.027 a 0.004 dentro de desarrollo, pero en 2025 y 2026 el ECE (0.04–0.06) supera la meta de 0.03: la tasa de lluvia cambia entre años (15.6 % en 2024, 21.5 % en 2025). Es una limitación documentada, no oculta.
-- La etiqueta es reanálisis ERA5 (~25 km), no lluvia medida: frente a pluviómetros SIATA la concordancia horaria es baja para **cualquier** fuente de malla ([validación externa](reports/metrics/label_validation.json)). El modelo predice lluvia "de la zona", no de un punto exacto.
+**Lectura crítica**
+- **Calibración fuera de desarrollo.** Dentro de 2022–2024 el ECE es 0.004, pero en 2025 y 2026 sube a 0.04–0.06, por encima de la meta de 0.03, porque la tasa de lluvia cambia entre años (15.6 % en 2024, 21.5 % en 2025). La curva de arriba lo muestra: el modelo subestima un poco la lluvia en los años más lluviosos. Una recalibración periódica con datos recientes es el siguiente paso.
+- **Qué significa la etiqueta.** Es reanálisis ERA5 (~25 km), no lluvia medida en un punto: el modelo predice la lluvia "de la zona". Frente a pluviómetros SIATA, la concordancia hora a hora es baja para **cualquier** fuente de malla ([validación externa](reports/metrics/label_validation.json)).
+- **Por qué no se usa la persistencia.** "Llueve si llovió la hora anterior" alcanza un Brier similar, pero no es desplegable: en producción no hay una observación de la hora anterior equivalente a la etiqueta.
 
----
-
-## El problema
-
-Medellín tiene lluvias convectivas de tarde, muy locales y difíciles de pronosticar a la hora exacta. La aplicación ajusta el tiempo de viaje y emite alertas (VERDE < 40 %, AMARILLO 40–70 %, ROJO > 70 %) según la probabilidad de lluvia en el origen. Para que esas alertas sean útiles, la probabilidad tiene que estar **calibrada** y el modelo tiene que superar a lo que ya ofrece el pronóstico numérico.
-
-## Método
-
-| Etapa | Qué se hizo | Dónde |
-|---|---|---|
-| Datos | Pronósticos archivados de Open-Meteo (la misma fuente que se consulta en vivo) para 13 estaciones SIATA, 2022–2025; etiqueta: precipitación ERA5 ≥ 0.5 mm/h (umbral calibrado contra pluviómetros sin fuga). Contrato de datos con *quality gates*, descargas idempotentes con manifiesto SHA-256. Holdout 2026 en archivo aparte | `mdva/dataset.py`, `mdva/data_contract.py`, `make data`, `make data-holdout` |
-| Features | **Un solo módulo** para entrenamiento e inferencia (contrato versionado 1.1.0, 24 features): variables de la hora, viento en componentes u/v, codificación cíclica de hora local y mes, **ventana t−2…t+2 del mismo pronóstico** (absorbe errores de *timing*) y ubicación. Test de paridad entrenamiento/inferencia con diferencia máxima 0 | `mdva/features.py`, `docs/features.md` |
-| Validación | CV *rolling-origin*: 6 folds trimestrales 2023–2024, ventana creciente, hueco de 24 h. 2025 y 2026 fuera de toda decisión | `mdva/modeling/cv.py` |
-| Selección de features | Aporte marginal de cada grupo candidato (> 1 EE pareado) y **validación espacial** (entrenar sin una celda ERA5, evaluar en ella) para la ubicación | `study.json` → `feature_candidates`, `spatial_cv` |
-| Modelo | 60 configuraciones aleatorias de HistGradientBoosting + logística con *splines* (GAM) + bosque aleatorio; elección con la **regla de un error estándar pareada** | `mdva/modeling/search.py` |
-| Interpretabilidad | Importancia por permutación con IC, PDP/ICE, ciclo diurno aprendido (máximo a las 14 h, como las tormentas de la tarde), ablación por grupos y curva de aprendizaje | `mdva/modeling/analysis.py` |
-| Calibración y umbrales | Calibración *cross-fitted* (cada fold con los anteriores); curvas de costo: el umbral óptimo empírico coincide con 1/(1+r), y 0.40 es casi óptimo para r ≈ 1–2 | `mdva/modeling/calibration.py` |
-| Evaluación | Una sola vez en 2025 y 2026 frente a climatología, pronóstico crudo, logística y el modelo anterior; IC por bootstrap en bloques de días y diferencias pareadas; registro de qué periodo tocó cada decisión | `mdva/modeling/train.py`, `metrics.json` → `decision_log` |
-
-**Un hallazgo del proceso.** La primera versión de la regla de un error estándar usaba el EE de la media del log loss entre folds. Como los trimestres tienen tasas de lluvia muy distintas, ese EE era enorme (≈ 0.04) y la regla eligió un modelo peor **en todos los folds**. La versión correcta es pareada: el EE de la diferencia por fold frente al mejor. Está documentado en [`specs/012-ml-depth/research.md`](specs/012-ml-depth/research.md) (R3) y cubierto por un test.
-
-![Importancia por permutación](reports/figures/study_permutation_importance.png)
-![Calibración cross-fitted](reports/figures/study_calibration.png)
+<p>
+  <img src="reports/figures/study_permutation_importance.png" width="49%" alt="Importancia por permutación">
+  <img src="reports/figures/study_hour_profile.png" width="49%" alt="Ciclo diurno aprendido por el modelo">
+</p>
 
 ---
 
-## Reproducir
+## Cómo funciona
 
-Requisitos: [uv](https://docs.astral.sh/uv/) y `make` (o los comandos equivalentes del `Makefile`). Todo el pipeline usa Python 3.11 con versiones fijadas en `uv.lock`.
-
-```bash
-make requirements     # entornos de los 3 proyectos Python desde sus lockfiles
-make data             # dataset 2022–2025 desde Open-Meteo (~30 s con la caché de descargas)
-make data-holdout     # holdout 2026 (archivo aparte)
-make study            # estudio de modelado: CV, búsqueda, ablación, interpretabilidad (~1 h en 12 núcleos)
-make train            # modelo final 1.1.0 + evaluación única en 2025 y 2026 + model card
-make notebook         # notebook 3.0 ejecutado leyendo solo reports/
-make readme           # tabla de resultados de este README
-make lint test        # ruff + pytest (incluye un estudio + entrenamiento de punta a punta con datos sintéticos)
+```
+Open-Meteo (pronóstico archivado 2022–2026)          ERA5 (etiqueta: lluvia ≥ 0.5 mm/h)
+              │                                                 │
+              └──────────► mdva.dataset ◄──────────────────────┘   contrato de datos + quality gates
+                                │
+                         mdva.features   ◄── el mismo código en entrenamiento y en producción
+                                │
+          mdva.modeling.study: CV rolling-origin · búsqueda · ablación · interpretabilidad · calibración
+                                │
+          mdva.modeling.train: modelo 1.1.0 + evaluación única en 2025 y 2026 + model card
+                                │
+     ML API (FastAPI) ◄── Backend (Spring Boot) ◄── Frontend (React + MapLibre)
+            ▲                       │
+            └── Routing (OSMnx): ruta más rápida, más corta y más seca
 ```
 
-Semillas fijas; cada corrida de entrenamiento queda registrada en `reports/runs/` (commit, huella del dataset, parámetros y métricas).
+| Etapa | Qué se hizo | Código |
+|---|---|---|
+| Datos | Pronósticos archivados de Open-Meteo para 13 estaciones SIATA, 2022–2025, más un holdout 2026 en un archivo aparte. Contrato de datos con *quality gates*. | [`mdva/dataset.py`](mdva/dataset.py), [`mdva/data_contract.py`](mdva/data_contract.py) |
+| Features | Variables de la hora, viento en componentes u/v, hora local y mes cíclicos, ventana t−2…t+2 del mismo pronóstico (absorbe errores de *timing*) y ubicación. | [`mdva/features.py`](mdva/features.py), [`docs/features.md`](docs/features.md) |
+| Validación | 6 folds trimestrales con ventana creciente y hueco de 24 h; validación espacial dejando fuera una celda ERA5. | [`mdva/modeling/cv.py`](mdva/modeling/cv.py) |
+| Modelo | HistGradientBoosting elegido con la regla de un error estándar pareada entre 60 configuraciones y dos familias de referencia. | [`mdva/modeling/search.py`](mdva/modeling/search.py) |
+| Análisis | Permutación con IC, PDP/ICE, ciclo diurno, ablación, curva de aprendizaje, errores por segmento y curvas de costo. | [`mdva/modeling/analysis.py`](mdva/modeling/analysis.py) |
+| Evaluación | Bootstrap en bloques de días, diferencias pareadas frente a cada baseline y `decision_log`. | [`mdva/modeling/train.py`](mdva/modeling/train.py) |
 
-## Producto
+### Reproducir el modelo
 
-El modelo se sirve en una aplicación de cinco servicios, que corre completa con `docker compose -f docker-compose.dev.yml up --build` (o `make up`) y **sin ninguna API key**:
+Requisitos: [uv](https://docs.astral.sh/uv/) y `make`. Python 3.11 con versiones fijadas en `uv.lock`; semillas fijas.
+
+```bash
+make requirements     # entornos de los 3 proyectos Python
+make data             # dataset 2022–2025 desde Open-Meteo
+make data-holdout     # holdout 2026 (archivo aparte)
+make study            # CV, búsqueda, ablación e interpretabilidad (~1 h en 12 núcleos)
+make train            # modelo 1.1.0 + evaluación única en 2025 y 2026 + model card
+make notebook         # notebook 3.0, que solo lee reports/
+make readme           # cifras de este README
+make lint test        # ruff + pytest (incluye estudio → entrenamiento de punta a punta con datos sintéticos)
+```
+
+Cada corrida de entrenamiento queda registrada en `reports/runs/` (commit, huella del dataset, parámetros y métricas).
+
+### Servicios
 
 | Servicio | Tecnología | Puerto | Rol |
 |---|---|---|---|
-| ML API | FastAPI | 8081 | `POST /v2/predict` y `/v2/predict/batch`: valida la entrada contra el contrato de features (422 con Problem Details) y devuelve probabilidad calibrada y nivel de alerta |
-| Routing | FastAPI + OSMnx + NetworkX | 8000 | Rutas sobre el grafo OSM del valle con tiempos por tipo de vía; ruta "más seca" ponderando cada arista por la probabilidad de lluvia de una grilla espacial del modelo |
-| Backend | Spring Boot 3 + Java 21 + PostgreSQL | 8080 | Viajes, alertas, monitoreo en ruta, clima (Open-Meteo) y geocodificación (Nominatim, ≤ 1 req/s con caché) |
-| Frontend | React 19 + MapLibre GL | 8090 | Mapa con heatmap de probabilidad (escala fija), planificación, navegación 3D |
-| Base de datos | PostgreSQL 16 (Flyway) | 5436 | Usuarios, viajes, paradas, alertas |
+| ML API | FastAPI | 8081 | `POST /v2/predict` y `/v2/predict/batch`: valida la entrada contra el contrato de features y devuelve la probabilidad calibrada y el nivel de alerta |
+| Routing | FastAPI + OSMnx + NetworkX | 8000 | Rutas sobre el grafo OSM del valle con tiempos por tipo de vía; ruta más seca con una grilla espacial de probabilidad |
+| Backend | Spring Boot 3 + Java 21 + PostgreSQL | 8080 | Viajes, alertas, monitoreo en ruta, clima en vivo y direcciones (sugerencias con Photon, búsqueda y dirección de un punto con Nominatim) |
+| Frontend | React 19 + MapLibre GL | 8090 | Mapa de probabilidad, planificación, resultado y navegación |
+| Base de datos | PostgreSQL 16 + Flyway | 5436 | Usuarios, viajes, paradas y alertas |
 
-Verificación de punta a punta: `make smoke` (API) y `make ui-smoke` (navegador real con Playwright; capturas en `reports/figures/ui/`).
-
-```
-Frontend ──▶ Backend ──▶ Routing ──▶ ML API ◀── Open-Meteo (pronóstico en vivo)
-                │                        ▲
-                ├──▶ ML API ─────────────┘    (misma fuente, mismas variables y unidades que el entrenamiento)
-                └──▶ Nominatim (direcciones)
-```
-
-## Estructura (Cookiecutter Data Science v2)
+### Estructura (Cookiecutter Data Science v2)
 
 ```
-mdva/                 paquete de ciencia de datos: dataset, contrato de datos, features, modelado, reportes
-  modeling/           cv, search, analysis, calibration, study, train, evaluate, predict, model_card
+mdva/                 paquete de ciencia de datos: dataset, contrato, features, modelado, reportes
 services/ml_api/      servicio de predicción (consume mdva)
-services/routing_api/ servicio de rutas (DDD)
+services/routing_api/ servicio de rutas
 apps/backend/         Spring Boot
 apps/frontend/        React + MapLibre
-models/               artefactos versionados (< 5 MB) con metadata.json y model_card.md
+models/               modelos versionados con metadata y model card
 reports/              métricas, estudio, figuras y registro de corridas (generados por código)
-notebooks/            exploración (1.0) y narración del modelado (3.0)
-specs/                especificaciones por etapa (Spec-Driven Development) con plan, contratos y verificación
-docs/                 contrato de features, informe técnico y manuales
+notebooks/            exploración (1.0) y narración de la evaluación (3.0)
+specs/                especificación, plan, contratos y verificación de cada etapa
 tests/                pytest del paquete y pruebas de punta a punta del stack
 ```
 
-## Cómo se trabajó
+Cada etapa del trabajo tiene su especificación, su plan y su verificación registrada en [`specs/`](specs/) (Spec-Driven Development), bajo una [constitución de ingeniería](.specify/memory/constitution.md). La CI en GitHub Actions corre ruff, pytest y el smoke del ML API (Python), los tests de Gradle (Backend), ESLint, vitest y el build (Frontend), además de un escaneo de secretos.
 
-El proyecto se refactorizó con **Spec-Driven Development**: cada cambio pasó por especificación → aclaraciones → plan → contratos → tareas → análisis de consistencia → implementación → verificación registrada, bajo una [constitución](.specify/memory/constitution.md) de ingeniería (reproducibilidad, contratos, evaluación honesta, sin datos inventados) y un [charter](.specify/memory/charter.md) con el diagnóstico de partida. Cada carpeta de [`specs/`](specs/) documenta una etapa, desde la reestructuración del repositorio (001) hasta la profundidad de ML (012).
+---
 
-CI en GitHub Actions: ruff + pytest + smoke del ML API (Python), Gradle test (Backend), ESLint + vitest + build (Frontend) y escaneo de secretos.
+## Limitaciones
+
+- La etiqueta es reanálisis (ERA5, ~25 km), no un pluviómetro.
+- 13 estaciones en 5 celdas: hay muchas menos observaciones independientes que filas; por eso los intervalos remuestrean días completos.
+- La calibración se degrada cuando cambia la tasa anual de lluvia; falta una recalibración periódica.
+- Los tiempos de viaje usan velocidades por tipo de vía de OSM, sin tráfico en vivo.
 
 ## Autoría
 
 MDVA nació como proyecto de curso (2026-1) de **Camilo Ardila, Santiago Martínez, Nicolás Meneses y Luis Ángel Seoanes**: la primera versión de la aplicación (Backend, Frontend, base de datos y un prototipo de modelo) es trabajo del equipo.
 
-Este repositorio es la versión de portafolio de **Nicolás Meneses**, que rehízo de forma individual:
-- todo el componente de ciencia de datos: dataset reproducible, etiqueta validada contra pluviómetros, contrato de features, estudio de modelado, calibración, evaluación y model card;
-- los servicios de ML y de rutas (contratos, señal de lluvia única, ruta más seca espacial);
-- la migración del producto a servicios gratuitos (Open-Meteo, OSM/Nominatim, MapLibre), la reestructuración CCDS v2 y la CI.
-
-## Limitaciones
-
-- La etiqueta es reanálisis (ERA5, ~25 km): el modelo aprende la lluvia de la celda, no la de un pluviómetro.
-- 13 estaciones en 5 celdas: muchas menos observaciones independientes que filas (por eso los IC remuestrean días completos).
-- La tasa de lluvia varía entre años y degrada la calibración fuera de desarrollo; una recalibración periódica con datos recientes es el siguiente paso natural.
-- Los tiempos de viaje usan velocidades por tipo de vía de OSM; no hay tráfico en vivo (no existe una fuente gratuita).
-
+Esta versión es el trabajo individual de **Nicolás Meneses**, que rehízo:
+- todo el componente de ciencia de datos: dataset reproducible, validación de la etiqueta, contrato de features, estudio de modelado, calibración, evaluación y model card;
+- los servicios de ML y de rutas (contratos, una sola señal de lluvia, ruta más seca espacial);
+- la migración a servicios gratuitos (Open-Meteo, OpenStreetMap, MapLibre), la reestructuración del repositorio y la CI.

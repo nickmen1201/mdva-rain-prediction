@@ -36,6 +36,13 @@ LABEL_VALIDATION_REPORT = METRICS_DIR / "label_validation.json"
 
 YEARS = (2022, 2023, 2024, 2025)
 
+# Holdout fresco (spec 012, R-50): un periodo nunca usado en ninguna decisión. Fecha de corte fija
+# para que sea reproducible (ERA5 llega con días de retraso). Se guarda aparte del dataset principal.
+HOLDOUT_YEAR = 2026
+HOLDOUT_END = "2026-10-15"
+HOLDOUT_PROCESSED = PROCESSED_DATA_DIR / "rain_hourly_holdout_2026.parquet"
+HOLDOUT_QUALITY_REPORT = REPORTS_DIR / "data_quality_holdout.json"
+
 # Variables de pronóstico disponibles en el histórico y en vivo (research R1)
 FORECAST_VARIABLES = (
     "temperature_2m",

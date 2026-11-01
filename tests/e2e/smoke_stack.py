@@ -79,6 +79,17 @@ def main():
         "pressure_msl": 1013.0,
         "precipitation": 0.4,
         "cape": 300.0,
+        # Contrato de features 1.1.0 (spec 012): ventana del mismo pronóstico y ubicación
+        "precipitation_prev2": 0.0,
+        "precipitation_prev1": 0.1,
+        "precipitation_next1": 1.2,
+        "precipitation_next2": 0.8,
+        "cloud_cover_prev1": 80.0,
+        "cloud_cover_next1": 95.0,
+        "cape_prev1": 250.0,
+        "cape_next1": 350.0,
+        "latitude": ORIGEN["lat"],
+        "longitude": ORIGEN["lng"],
     }
     status, body = request("POST", f"{ML_URL}/v2/predict", entrada_v2)
     results["ml_v2_predict"] = {"status": status, "has_alert": bool(isinstance(body, dict) and body.get("alert_level"))}

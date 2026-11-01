@@ -24,6 +24,11 @@ import java.util.stream.Collectors;
  * Pronóstico horario de Open-Meteo con las 9 variables del contrato de features, en UTC y
  * con unidades explícitas (las mismas que en el entrenamiento, specs/003 y specs/004).
  * Las unidades declaradas por la fuente se verifican: nunca se convierten en silencio.
+ *
+ * <p>Contrato de features 1.1.0 (spec 012): cada hora lleva la ventana del <b>mismo</b> pronóstico
+ * (t−2…t+2) y la ubicación pedida. Se pide también el día anterior ({@code past_days=1}) para que la
+ * hora en curso tenga sus vecinos; una hora sin sus cuatro vecinos contiguos no se devuelve (no se
+ * rellenan valores).
  */
 @Component
 public class OpenMeteoForecastClient {
@@ -33,6 +38,10 @@ public class OpenMeteoForecastClient {
     static final List<String> VARIABLES = List.of(
             "temperature_2m", "relative_humidity_2m", "dew_point_2m", "cloud_cover", "wind_speed_10m",
             "wind_direction_10m", "pressure_msl", "precipitation", "cape");
+
+    private static final int CLOUD = VARIABLES.indexOf("cloud_cover");
+    private static final int PRECIP = VARIABLES.indexOf("precipitation");
+    private static final int CAPE = VARIABLES.indexOf("cape");
 
     static final Map<String, String> EXPECTED_UNITS = Map.of(
             "temperature_2m", "°C",
@@ -60,7 +69,7 @@ public class OpenMeteoForecastClient {
         this.baseUrl = baseUrl;
     }
 
-    /** Serie horaria (hoy y mañana, UTC) para un punto. */
+    /** Serie horaria (ayer, hoy y mañana en UTC; solo horas con ventana completa) para un punto. */
     public List<HourlyInputs> hourly(double lat, double lng) {
         return hourly(List.of(new double[]{lat, lng})).get(0);
     }
@@ -71,7 +80,8 @@ public class OpenMeteoForecastClient {
         String lngs = points.stream().map(p -> String.format(Locale.US, "%.5f", p[1])).collect(Collectors.joining(","));
         String url = baseUrl + "?latitude=" + lats + "&longitude=" + lngs
                 + "&hourly=" + String.join(",", VARIABLES)
-                + "&forecast_days=2&timezone=GMT&wind_speed_unit=ms&temperature_unit=celsius&precipitation_unit=mm";
+                + "&past_days=1&forecast_days=2&timezone=GMT&wind_speed_unit=ms&temperature_unit=celsius"
+                + "&precipitation_unit=mm";
 
         JsonNode resp = restTemplate.getForObject(url, JsonNode.class);
         if (resp == null) {
@@ -83,7 +93,11 @@ public class OpenMeteoForecastClient {
             throw new IllegalStateException(
                     "Open-Meteo devolvió %d ubicaciones; se pidieron %d".formatted(ubicaciones.size(), points.size()));
         }
-        return ubicaciones.stream().map(OpenMeteoForecastClient::parse).toList();
+        List<List<HourlyInputs>> out = new ArrayList<>(points.size());
+        for (int i = 0; i < points.size(); i++) {
+            out.add(parse(ubicaciones.get(i), points.get(i)[0], points.get(i)[1]));
+        }
+        return out;
     }
 
     /** Desde la primera hora con inicio ≥ {@code desde}, hasta {@code cantidad} horas consecutivas. */
@@ -91,11 +105,14 @@ public class OpenMeteoForecastClient {
         return serie.stream().filter(h -> !h.timeUtc().isBefore(desde)).limit(cantidad).toList();
     }
 
-    static List<HourlyInputs> parse(JsonNode ubicacion) {
+    /** Valores crudos de una hora completa de la serie. */
+    private record Hora(Instant t, double[] v) {}
+
+    static List<HourlyInputs> parse(JsonNode ubicacion, double lat, double lng) {
         verificarUnidades(ubicacion.path("hourly_units"));
         JsonNode hourly = ubicacion.path("hourly");
         JsonNode tiempos = hourly.path("time");
-        List<HourlyInputs> serie = new ArrayList<>();
+        Map<Instant, Hora> horas = new LinkedHashMap<>();
         for (int i = 0; i < tiempos.size(); i++) {
             double[] v = new double[VARIABLES.size()];
             boolean completa = true;
@@ -112,7 +129,19 @@ public class OpenMeteoForecastClient {
                 log.debug("Open-Meteo: hora {} incompleta; se omite (no se rellenan valores)", t);
                 continue;
             }
-            serie.add(new HourlyInputs(t, v[0], v[1], v[2], v[3], v[4], v[5], v[6], v[7], v[8]));
+            horas.put(t, new Hora(t, v));
+        }
+
+        List<HourlyInputs> serie = new ArrayList<>();
+        for (Hora h : horas.values()) {
+            Hora p2 = horas.get(h.t().minusSeconds(7200)), p1 = horas.get(h.t().minusSeconds(3600));
+            Hora n1 = horas.get(h.t().plusSeconds(3600)), n2 = horas.get(h.t().plusSeconds(7200));
+            if (p2 == null || p1 == null || n1 == null || n2 == null) continue;  // sin ventana completa
+            double[] v = h.v();
+            HourlyInputs.Window w = new HourlyInputs.Window(
+                    p2.v()[PRECIP], p1.v()[PRECIP], n1.v()[PRECIP], n2.v()[PRECIP],
+                    p1.v()[CLOUD], n1.v()[CLOUD], p1.v()[CAPE], n1.v()[CAPE]);
+            serie.add(new HourlyInputs(h.t(), v[0], v[1], v[2], v[3], v[4], v[5], v[6], v[7], v[8], w, lat, lng));
         }
         return serie;
     }

@@ -45,13 +45,16 @@ SOURCES = {
 RETRY_STATUS = {429, 500, 502, 503, 504}
 
 
-def build_url(source: str, latitudes: Sequence[float], longitudes: Sequence[float], year: int) -> str:
+def build_url(
+    source: str, latitudes: Sequence[float], longitudes: Sequence[float], year: int, end_date: str | None = None
+) -> str:
+    """URL de un año completo, o hasta `end_date` (YYYY-MM-DD) para un año en curso (holdout, spec 012)."""
     spec = SOURCES[source]
     params = {
         "latitude": ",".join(f"{x:.5f}" for x in latitudes),
         "longitude": ",".join(f"{x:.5f}" for x in longitudes),
         "start_date": f"{year}-01-01",
-        "end_date": f"{year}-12-31",
+        "end_date": end_date or f"{year}-12-31",
         **spec["params"],
         "temperature_unit": "celsius",
         "wind_speed_unit": "ms",
@@ -144,6 +147,7 @@ def download_year(
     raw_dir: Path,
     *,
     fetcher: Callable[[str], bytes] = fetch,
+    end_date: str | None = None,
 ) -> tuple[Path, bool]:
     """Descarga (o reutiliza) el crudo de una fuente y un año. Devuelve (ruta, se_descargó)."""
     destino = raw_dir / source / f"{year}.json"
@@ -151,7 +155,7 @@ def download_year(
         log.info("En caché: %s", destino.name)
         return destino, False
 
-    url = build_url(source, latitudes, longitudes, year)
+    url = build_url(source, latitudes, longitudes, year, end_date)
     data = fetcher(url)
     respuestas = json.loads(data)
     respuestas = respuestas if isinstance(respuestas, list) else [respuestas]

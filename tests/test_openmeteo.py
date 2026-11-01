@@ -112,3 +112,8 @@ def test_numero_de_ubicaciones_incorrecto_falla(tmp_path):
 def test_escritura_atomica_no_deja_temporales(tmp_path):
     openmeteo.write_atomic(tmp_path / "x.json", b"{}")
     assert [p.name for p in tmp_path.iterdir()] == ["x.json"]
+
+
+def test_url_de_un_anio_parcial_para_el_holdout():
+    q = parse_qs(urlparse(openmeteo.build_url("era5", LATS, LONS, 2026, end_date="2026-10-15")).query)
+    assert q["start_date"] == ["2026-01-01"] and q["end_date"] == ["2026-10-15"]

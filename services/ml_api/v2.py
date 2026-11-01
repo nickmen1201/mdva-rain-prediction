@@ -24,7 +24,7 @@ from mdva.modeling.predict import RainModel, load_model
 
 log = logging.getLogger(__name__)
 
-MODEL_VERSION = os.environ.get("MDVA_MODEL_VERSION", "1.0.0")
+MODEL_VERSION = os.environ.get("MDVA_MODEL_VERSION", "1.1.0")
 _models_env = os.environ.get("MDVA_MODELS_DIR")
 MODELS_DIR = Path(_models_env) if _models_env else Path(__file__).resolve().parents[2] / "models"
 MAX_BATCH = 200

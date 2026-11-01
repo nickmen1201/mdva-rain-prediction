@@ -6,7 +6,7 @@
 COMPOSE = docker compose -f docker-compose.dev.yml
 GITLEAKS_IMAGE = ghcr.io/gitleaks/gitleaks:v8.30.1
 
-.PHONY: requirements lint format test secrets data validate-labels train up down smoke clean help
+.PHONY: requirements lint format test secrets data data-holdout validate-labels study train notebook readme up down smoke ui-smoke clean help
 
 ## Instalar los entornos de los 3 proyectos Python desde sus lockfiles
 requirements:
@@ -37,13 +37,29 @@ secrets:
 data:
 	uv run python -m mdva.dataset
 
+## Construir el holdout fresco 2026 (archivo aparte; ninguna decisión lo usa)
+data-holdout:
+	uv run python -m mdva.dataset --holdout
+
 ## Validar la etiqueta contra pluviómetros SIATA y calibrar el umbral
 validate-labels:
 	uv run python -m mdva.label_validation
 
-## Entrenar, calibrar y evaluar el modelo de lluvia
+## Estudio de modelado: CV temporal, búsqueda, ablación, interpretabilidad, calibración (~1 h)
+study:
+	uv run python -m mdva.modeling.study
+
+## Entrenar el modelo final desde el estudio y evaluarlo una vez en 2025 y en el holdout 2026
 train:
 	uv run python -m mdva.modeling.train
+
+## Regenerar y ejecutar el notebook de evaluación desde reports/ (sin entrenar)
+notebook:
+	uv run --group notebook python -m mdva.notebook
+
+## Regenerar la tabla de resultados del README desde metrics.json
+readme:
+	uv run python -m mdva.readme
 
 ## Levantar el stack de desarrollo
 up:
@@ -56,6 +72,11 @@ down:
 ## Smoke test de punta a punta (requiere `make up`)
 smoke:
 	uv run python tests/e2e/smoke_stack.py
+
+## Recorrido de la interfaz con Chromium (Playwright) y capturas en reports/figures/ui/ (requiere `make up`)
+ui-smoke:
+	uv run --no-project --with playwright==1.55.0 playwright install chromium
+	uv run --no-project --with playwright==1.55.0 python tests/e2e/ui_smoke.py
 
 ## Borrar cachés de Python y herramientas
 clean:

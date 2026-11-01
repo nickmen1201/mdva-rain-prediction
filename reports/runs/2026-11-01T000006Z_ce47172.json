@@ -1,0 +1,36 @@
+{
+  "run_at_utc": "2026-11-01T00:00:06Z",
+  "git_sha": "ce471721ae7268e89aec0c16d92c3a5dc5142385",
+  "dirty_worktree": true,
+  "model_version": "1.1.0",
+  "dataset_fingerprint": "57133164d885fd2e04d4baee5f9ab48ffb13c092589b1aa43be44f623b5fc482",
+  "holdout_fingerprint": "1b12aa0812e80246c496cffa9bb636f495e88fa4c75578ce52a7dc771aacd015",
+  "seed": 42,
+  "chosen": {
+    "learning_rate": 0.097271,
+    "max_leaf_nodes": 29,
+    "min_samples_leaf": 200,
+    "l2_regularization": 0.04605,
+    "max_features": 0.520807,
+    "max_iter": 159,
+    "family": "hgb"
+  },
+  "calibration": "sigmoid",
+  "test_2025": {
+    "roc_auc": 0.8456,
+    "pr_auc": 0.6149,
+    "brier": 0.1234,
+    "log_loss": 0.3934,
+    "ece": 0.0572,
+    "bss": 0.1133
+  },
+  "holdout_2026": {
+    "roc_auc": 0.8372,
+    "pr_auc": 0.5247,
+    "brier": 0.1049,
+    "log_loss": 0.3422,
+    "ece": 0.0389,
+    "bss": 0.1507
+  },
+  "duration_s": 331.9
+}

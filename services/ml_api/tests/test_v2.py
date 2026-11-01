@@ -1,5 +1,6 @@
 """API v2 contra el modelo rain_classifier real de models/ (versionado en git)."""
 
+import json
 import time
 from datetime import datetime, timedelta, timezone
 
@@ -20,6 +21,17 @@ ENTRADA = {
     "pressure_msl": 1013.0,
     "precipitation": 0.4,
     "cape": 300.0,
+    # Contrato de features 1.1.0 (spec 012)
+    "precipitation_prev2": 0.0,
+    "precipitation_prev1": 0.1,
+    "precipitation_next1": 1.2,
+    "precipitation_next2": 0.8,
+    "cloud_cover_prev1": 80.0,
+    "cloud_cover_next1": 95.0,
+    "cape_prev1": 250.0,
+    "cape_next1": 350.0,
+    "latitude": 6.2518,
+    "longitude": -75.5636,
 }
 
 
@@ -34,7 +46,13 @@ def test_health_v2_reporta_el_modelo(api):
     assert body == {
         "status": "ok",
         "ready": True,
-        "model": {"name": "rain_classifier", "version": v2.MODEL_VERSION, "calibration": "none"},
+        "model": {
+            "name": "rain_classifier",
+            "version": v2.MODEL_VERSION,
+            "calibration": json.loads(
+                (v2.MODELS_DIR / "rain_classifier" / v2.MODEL_VERSION / "metadata.json").read_text(encoding="utf-8")
+            )["calibration"]["method"],
+        },
     }
 
 
@@ -48,8 +66,15 @@ def test_prediccion_individual(api):
 
 
 def test_mas_lluvia_pronosticada_sube_la_probabilidad(api):
-    seco = api.post("/v2/predict", json=dict(ENTRADA, precipitation=0.0, cloud_cover=10.0)).json()
-    humedo = api.post("/v2/predict", json=dict(ENTRADA, precipitation=5.0, cloud_cover=100.0)).json()
+    lluvia = (
+        "precipitation",
+        "precipitation_prev2",
+        "precipitation_prev1",
+        "precipitation_next1",
+        "precipitation_next2",
+    )
+    seco = api.post("/v2/predict", json=dict(ENTRADA, **{k: 0.0 for k in lluvia}, cloud_cover=10.0)).json()
+    humedo = api.post("/v2/predict", json=dict(ENTRADA, **{k: 5.0 for k in lluvia}, cloud_cover=100.0)).json()
     assert humedo["probability"] > seco["probability"]
 
 
@@ -76,6 +101,8 @@ def test_lote_vacio_o_demasiado_grande_es_422(api, n):
         ({"relative_humidity_2m": 150.0}, "relative_humidity_2m"),
         ({"time_utc": "2026-10-28T20:00:00"}, "time_utc"),
         ({"cape": None}, "cape"),
+        ({"latitude": 4.6}, "latitude"),  # fuera del Valle de Aburrá
+        ({"precipitation_next1": -1.0}, "precipitation_next1"),
     ],
 )
 def test_entrada_invalida_es_problem_details(api, cambio, campo):
@@ -87,9 +114,10 @@ def test_entrada_invalida_es_problem_details(api, cambio, campo):
     assert any(e["field"] == campo for e in body["errors"])
 
 
-def test_campo_faltante_es_problem_details(api):
-    r = api.post("/v2/predict", json={k: v for k, v in ENTRADA.items() if k != "pressure_msl"})
-    assert r.status_code == 422 and any(e["field"] == "pressure_msl" for e in r.json()["errors"])
+@pytest.mark.parametrize("campo", ["pressure_msl", "precipitation_prev2", "longitude"])
+def test_campo_faltante_es_problem_details(api, campo):
+    r = api.post("/v2/predict", json={k: v for k, v in ENTRADA.items() if k != campo})
+    assert r.status_code == 422 and any(e["field"] == campo for e in r.json()["errors"])
 
 
 @pytest.mark.parametrize("ruta", ["/predecir/random_forest", "/predecir/ambos", "/monitorear/trayecto"])

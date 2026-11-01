@@ -14,6 +14,7 @@ Uso (desde la raíz del repo):
 from __future__ import annotations
 
 import argparse
+import dataclasses
 import hashlib
 import json
 import logging
@@ -185,11 +186,70 @@ def run(fetcher=openmeteo.fetch) -> dict:
         write_report(report, config.DATA_QUALITY_REPORT)
 
 
+def holdout_contracts():
+    """Los mismos contratos con el periodo del holdout (2026-01-01 → HOLDOUT_END)."""
+    inicio = pd.Timestamp(f"{config.HOLDOUT_YEAR}-01-01T00:00", tz="UTC")
+    fin = pd.Timestamp(f"{config.HOLDOUT_END}T23:00", tz="UTC")
+    return tuple(
+        dataclasses.replace(c, period_start=inicio, period_end=fin)
+        for c in (FORECAST_INTERIM_CONTRACT, REFERENCE_INTERIM_CONTRACT, DATASET_CONTRACT)
+    )
+
+
+def run_holdout(fetcher=openmeteo.fetch) -> dict:
+    """Construye el holdout fresco con el mismo pipeline y contratos, en un archivo aparte (spec 012)."""
+    report: dict = {"dataset_contract_version": DATASET_CONTRACT.version, "downloads": {}, "stages": {}}
+    try:
+        stations = pd.read_csv(config.STATIONS_CSV)
+        manifest = openmeteo.Manifest(config.RAW_MANIFEST, config.RAW_DATA_DIR)
+        ids = stations["station_id"].tolist()
+        lats, lons = stations["latitude"].tolist(), stations["longitude"].tolist()
+        crudos = {}
+        for source in ("forecast", "era5"):
+            ruta, nuevo = openmeteo.download_year(
+                source,
+                config.HOLDOUT_YEAR,
+                lats,
+                lons,
+                manifest,
+                config.OPENMETEO_RAW_DIR,
+                fetcher=fetcher,
+                end_date=config.HOLDOUT_END,
+            )
+            crudos[source] = [ruta]
+            report["downloads"][source] = {"new": int(nuevo), "cached": int(not nuevo)}
+        fc, rc, dc = holdout_contracts()
+        forecast = parse_raw(crudos["forecast"], ids, "forecast")
+        report["stages"]["forecast"] = validate(forecast, fc).to_dict()
+        reference = parse_raw(crudos["era5"], ids, "era5")
+        report["stages"]["era5"] = validate(reference, rc).to_dict()
+        dataset, resumen = build_processed(forecast, reference, stations, config.LABEL_THRESHOLD_MM)
+        report["processed_summary"] = resumen
+        write_stage(dataset, dc, config.HOLDOUT_PROCESSED, report)
+        report["period"] = [str(fc.period_start), str(fc.period_end)]
+        report["ok"] = True
+        return report
+    except DataContractError:
+        report["ok"] = False
+        raise
+    finally:
+        write_report(report, config.HOLDOUT_QUALITY_REPORT)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--log-level", default="INFO")
+    parser.add_argument("--holdout", action="store_true", help="construir el holdout fresco 2026 (spec 012)")
     args = parser.parse_args()
     logging.basicConfig(level=args.log_level, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
+    if args.holdout:
+        report = run_holdout()
+        log.info(
+            "Holdout listo: %s filas, tasa de lluvia %s",
+            report["stages"][DATASET_CONTRACT.name]["rows"],
+            report["processed_summary"]["rain_rate"],
+        )
+        return
     report = run()
     log.info(
         "Dataset listo: %s filas, tasa de lluvia %s, descargas nuevas %s",

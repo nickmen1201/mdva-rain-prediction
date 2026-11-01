@@ -144,3 +144,13 @@ def test_huella_no_depende_del_orden_de_filas():
     df = pd.DataFrame({"station_id": np.int64(1), "time_utc": t, "x": [1.0, 2.0, 3.0]})
     assert dataset.content_fingerprint(df) == dataset.content_fingerprint(df.iloc[::-1])
     assert dataset.content_fingerprint(df) != dataset.content_fingerprint(df.assign(x=[1.0, 2.0, 4.0]))
+
+
+def test_contratos_del_holdout_cubren_solo_2026():
+    from mdva import config
+    from mdva.dataset import holdout_contracts
+
+    for c in holdout_contracts():
+        assert c.period_start == pd.Timestamp("2026-01-01T00:00", tz="UTC")
+        assert c.period_end == pd.Timestamp(f"{config.HOLDOUT_END}T23:00", tz="UTC")
+        assert c.expected_hours == (c.period_end - c.period_start) / pd.Timedelta(hours=1) + 1

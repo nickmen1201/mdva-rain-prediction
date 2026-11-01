@@ -56,7 +56,8 @@ class WeatherMLServiceImplTest {
         Instant inicio = AHORA.truncatedTo(ChronoUnit.DAYS);
         return IntStream.range(0, horas)
                 .mapToObj(h -> new HourlyInputs(inicio.plus(h, ChronoUnit.HOURS),
-                        h, 80.0, 15.0, 90.0, 2.0, 180.0, 1013.0, 0.0, 100.0))
+                        h, 80.0, 15.0, 90.0, 2.0, 180.0, 1013.0, 0.0, 100.0,
+                        new HourlyInputs.Window(0.0, 0.0, 0.0, 0.0, 90.0, 90.0, 100.0, 100.0), 6.2442, -75.5812))
                 .toList();
     }
 

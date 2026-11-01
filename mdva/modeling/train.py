@@ -1,21 +1,22 @@
-"""Entrena, calibra y evalúa el clasificador de lluvia (spec 005).
+"""Entrena el clasificador de lluvia 1.1.0 a partir del estudio y lo evalúa una sola vez (specs 005 y 012).
 
-1. Features con `mdva.features` sobre el dataset `rain_hourly` (spec 003).
-2. Split temporal: train 2022–2023 (sin junio–julio de 2022), validación 2024, prueba 2025.
-3. Selección por log loss en validación entre regresión logística e HistGradientBoosting.
-4. Calibración sobre validación (método elegido con un sub-split temporal de la validación).
-5. Evaluación única en prueba frente a baselines, con IC por bootstrap en bloques de días,
-   curva de confiabilidad, niveles de alerta y validación externa contra pluviómetros SIATA.
-6. Artefactos: modelo + metadata + model card, métricas, figuras y registro de corrida.
+1. Lee las decisiones de `study.json` (spec 012): familia e hiperparámetros (regla de 1 EE), features
+   (contrato 1.1.0) y método de calibración, todas tomadas con CV temporal dentro de 2022–2024.
+2. Entrena en todo el periodo de desarrollo; el mapa de calibración se ajusta sobre predicciones
+   *out-of-fold* de los mismos folds del estudio (cross-fitting), nunca sobre lo que vio el modelo.
+3. Evalúa **una vez** en 2025 (prueba, ya usada para reportar la versión 1.0.0) y en el holdout fresco
+   2026 (nunca usado), frente a climatología, pronóstico crudo, regresión logística y el modelo 1.0.0,
+   con IC por bootstrap en bloques de días y diferencias pareadas.
+4. Validación externa contra pluviómetros SIATA (jun–jul 2022, fuera del entrenamiento).
+5. Artefactos: modelo + metadata + model card, métricas, figuras, registro de corrida y de decisiones.
 
-Uso (desde la raíz del repo, con el dataset construido):
+Uso (desde la raíz del repo, con `make data`, `make data-holdout` y `make study` hechos):
     python -m mdva.modeling.train
 """
 
 from __future__ import annotations
 
 import argparse
-import itertools
 import json
 import logging
 import platform
@@ -27,64 +28,33 @@ import joblib
 import numpy as np
 import pandas as pd
 import sklearn
-from sklearn.calibration import CalibratedClassifierCV
-from sklearn.ensemble import HistGradientBoostingClassifier
-from sklearn.frozen import FrozenEstimator
+from sklearn.base import clone
 from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import log_loss
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
 
 from mdva import config, openmeteo
 from mdva.data_contract import DATASET_CONTRACT
 from mdva.dataset import content_fingerprint
-from mdva.features import FEATURE_CONTRACT_VERSION, FEATURES, build_features
+from mdva.features import BASE_FEATURES, FEATURE_CONTRACT_VERSION, FEATURES, build_features, forecast_window_inputs
 from mdva.label_validation import siata_hourly
-from mdva.modeling import evaluate, model_card, splits
+from mdva.modeling import cv, evaluate, model_card, search, splits
 from mdva.modeling.baselines import Climatology, RawForecast, persistence
+from mdva.modeling.calibration import CalibratedModel, Calibrator
 from mdva.modeling.predict import MODEL_NAME, model_dir
+from mdva.modeling.study import STUDY_DIR
 
 log = logging.getLogger(__name__)
 
-MODEL_VERSION = "1.0.0"
+MODEL_VERSION = "1.1.0"
+PREVIOUS_VERSION = "1.0.0"
 SEED = 42
 ALERT_THRESHOLDS = {"amarillo": 0.40, "rojo": 0.70}
-HGB_GRID = {
-    "learning_rate": (0.05, 0.1),
-    "max_leaf_nodes": (15, 31),
-    "max_iter": (200, 400),
-    "l2_regularization": (0.0, 1.0),
-}
 MAX_MODEL_BYTES = 5_000_000
-
-
-def candidates():
-    yield "logistic", {}, make_pipeline(StandardScaler(), LogisticRegression(max_iter=2000))
-    claves = list(HGB_GRID)
-    for valores in itertools.product(*HGB_GRID.values()):
-        params = dict(zip(claves, valores))
-        yield "hgb", params, HistGradientBoostingClassifier(early_stopping=False, random_state=SEED, **params)
-
-
-def _ll(y, p) -> float:
-    return float(log_loss(y, np.clip(p, evaluate.EPS, 1 - evaluate.EPS), labels=[0, 1]))
-
-
-def choose_calibration(base, X_val: pd.DataFrame, y_val: np.ndarray, t_val: pd.Series) -> tuple[str, dict]:
-    """Elige entre sin calibrar, isotónica y sigmoide: ajusta en enero–junio y evalúa en julio–diciembre de 2024."""
-    corte = pd.Timestamp("2024-07-01", tz="UTC")
-    a, b = (t_val < corte).to_numpy(), (t_val >= corte).to_numpy()
-    resultados = {"none": round(_ll(y_val[b], base.predict_proba(X_val[b])[:, 1]), 5)}
-    for metodo in ("isotonic", "sigmoid"):
-        cal = CalibratedClassifierCV(FrozenEstimator(base), method=metodo).fit(X_val[a], y_val[a])
-        resultados[metodo] = round(_ll(y_val[b], cal.predict_proba(X_val[b])[:, 1]), 5)
-    return min(resultados, key=resultados.get), resultados
-
-
-def calibrate(base, metodo: str, X_val: pd.DataFrame, y_val: np.ndarray):
-    if metodo == "none":
-        return base
-    return CalibratedClassifierCV(FrozenEstimator(base), method=metodo).fit(X_val, y_val)
+HOLDOUT = (
+    pd.Timestamp(f"{config.HOLDOUT_YEAR}-01-01", tz="UTC") + splits.GAP,
+    pd.Timestamp(config.HOLDOUT_END, tz="UTC") + pd.Timedelta(days=1),
+)
 
 
 def git_info() -> tuple[str, bool]:
@@ -96,73 +66,125 @@ def git_info() -> tuple[str, bool]:
         return "desconocido", True
 
 
+def load_frames(
+    dataset: pd.DataFrame | None = None, holdout: pd.DataFrame | None = None
+) -> tuple[pd.DataFrame, str, str | None]:
+    """Dataset principal + holdout con las entradas de la ventana (sin filas con ventana incompleta) y sus huellas."""
+    principal = dataset if dataset is not None else pd.read_parquet(config.DATASET_PROCESSED)
+    partes = [principal.assign(_holdout=False)]
+    fresco = (
+        holdout
+        if holdout is not None
+        else (pd.read_parquet(config.HOLDOUT_PROCESSED) if config.HOLDOUT_PROCESSED.exists() else None)
+    )
+    huellas = (content_fingerprint(principal), content_fingerprint(fresco) if fresco is not None else None)
+    if fresco is not None:
+        partes.append(fresco.assign(_holdout=True))
+    df = pd.concat(partes, ignore_index=True).sort_values(["time_utc", "station_id"]).reset_index(drop=True)
+    ventana = forecast_window_inputs(df)  # la serie continua 2025 → 2026 da los vecinos del borde
+    completas = ventana.notna().all(axis=1)
+    log.info("Filas sin ventana completa descartadas: %d", int((~completas).sum()))
+    return pd.concat([df, ventana], axis=1)[completas].reset_index(drop=True), *huellas
+
+
+def read_study(path=STUDY_DIR / "study.json") -> dict:
+    if not path.exists():
+        raise FileNotFoundError(f"Falta {path}: ejecute `make study` antes de `make train`")
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
 def run(
     dataset: pd.DataFrame | None = None,
+    holdout: pd.DataFrame | None = None,
     *,
+    study: dict | None = None,
     n_boot: int = 500,
     siata_hours: pd.DataFrame | None = None,
     out_models=None,
     out_reports=None,
+    compare_previous: bool = True,
 ) -> dict:
     inicio = time.time()
-    df = dataset if dataset is not None else pd.read_parquet(config.DATASET_PROCESSED)
-    df = df.sort_values(["time_utc", "station_id"]).reset_index(drop=True)
+    estudio = study if study is not None else read_study()
+    if estudio["feature_set"]["features"] != list(FEATURES):
+        raise RuntimeError("El estudio eligió features distintas del contrato implementado en mdva/features.py")
+
+    df, huella, huella_holdout = load_frames(dataset, holdout)
+    t = df["time_utc"]
     X = build_features(df)
     y = df["rain"].to_numpy(dtype=int)
-    t = df["time_utc"]
-    masks = {k: v.to_numpy() for k, v in splits.temporal_splits(t).items()}
-    tr, va, te, ex = masks["train"], masks["validation"], masks["test"], masks["external"]
+    es_holdout = df["_holdout"].to_numpy()
+    principal = splits.temporal_splits(t)
+    dev = cv.development_mask(t) & ~es_holdout
+    te = principal["test"].to_numpy() & ~es_holdout
+    ho = ((t >= HOLDOUT[0]) & (t < HOLDOUT[1])).to_numpy() & es_holdout
+    ex = principal["external"].to_numpy() & ~es_holdout
 
-    # ── Selección ────────────────────────────────────────────────────────────
-    seleccion = []
-    mejor = None
-    for nombre, params, est in candidates():
-        est.fit(X[tr], y[tr])
-        ll = _ll(y[va], est.predict_proba(X[va])[:, 1])
-        seleccion.append({"name": nombre, "params": params, "val_log_loss": round(ll, 5)})
-        log.info("candidato %s %s → log loss validación %.5f", nombre, params, ll)
-        if mejor is None or ll < mejor[0]:
-            mejor = (ll, nombre, params, est)
-    _, nombre_base, params_base, base = mejor
-    logistica = next(c for c in seleccion if c["name"] == "logistic")
-    modelo_logistico = make_pipeline(StandardScaler(), LogisticRegression(max_iter=2000)).fit(X[tr], y[tr])
+    # ── Modelo elegido por el estudio ────────────────────────────────────────
+    elegido = estudio["search"]["chosen"]
+    familia, params = elegido["family"], elegido["params"]
+    base_est = search.FAMILIES[familia](params)
+    dev_idx = np.flatnonzero(dev)
+    t_dev = t.iloc[dev_idx].reset_index(drop=True)
+    folds = cv.rolling_folds(t_dev)
+    X_dev, y_dev = X.iloc[dev_idx].reset_index(drop=True), y[dev_idx]
 
-    # ── Calibración ──────────────────────────────────────────────────────────
-    metodo, comparacion = choose_calibration(base, X[va], y[va], t[va].reset_index(drop=True))
-    modelo = calibrate(base, metodo, X[va], y[va])
+    # Mapa de calibración sobre OOF (cross-fitting, mismos folds del estudio)
+    metodo = estudio["calibration"]["chosen"]
+    oof = cv.cross_validate(base_est, X_dev, y_dev, folds).oof
+    validos = np.concatenate([f.valid for f in folds])
+    calibrador = Calibrator(metodo).fit(oof[validos], y_dev[validos])
+    base = clone(base_est).fit(X_dev, y_dev)
+    modelo = CalibratedModel(base, calibrador)
+    log.info("Modelo %s %s entrenado en %d filas; calibración %s", familia, params, len(dev_idx), metodo)
 
-    # ── Baselines ────────────────────────────────────────────────────────────
-    clima = Climatology().fit(t[tr], y[tr])
-    crudo = RawForecast().fit(X[tr], y[tr])
+    # ── Baselines (todos ajustados en desarrollo) ────────────────────────────
+    clima = Climatology().fit(t.iloc[dev_idx], y_dev)
+    crudo = RawForecast().fit(X_dev, y_dev)
+    logistica = make_pipeline(StandardScaler(), LogisticRegression(max_iter=2000)).fit(X_dev, y_dev)
+    anterior = _load_previous() if compare_previous else None
 
-    def predicciones(m):
-        return {
-            "model": modelo.predict_proba(X[m])[:, 1],
+    def predicciones(m: np.ndarray) -> dict:
+        Xm = X[m]
+        p = {
+            "model": modelo.predict_proba(Xm)[:, 1],
             "climatology": clima.predict_proba(t[m]),
-            "raw_forecast": crudo.predict_proba(X[m]),
-            "logistic": modelo_logistico.predict_proba(X[m])[:, 1],
+            "raw_forecast": crudo.predict_proba(Xm),
+            "logistic": logistica.predict_proba(Xm)[:, 1],
             "persistence_reference": persistence(df.loc[m, "station_id"], t[m], y[m]),
         }
+        if anterior is not None:
+            p["model_1_0_0"] = anterior.predict_proba(Xm[list(BASE_FEATURES)])[:, 1]
+        return p
 
-    reporte_splits = {}
-    for nombre, m in (("validation", va), ("test", te)):
+    reporte = {}
+    for nombre, m in (("test_2025", te), ("holdout_2026", ho)):
+        if not m.any():
+            log.warning("Sin filas para %s: se omite", nombre)
+            continue
         preds = predicciones(m)
         puntos = {k: evaluate.point_metrics(y[m], p) for k, p in preds.items()}
         for k in puntos:
             puntos[k]["bss"] = 1 - puntos[k]["brier"] / puntos["climatology"]["brier"]
-        reporte_splits[nombre] = {"models": {k: {mk: round(v, 4) for mk, v in r.items()} for k, r in puntos.items()}}
-        if nombre == "test":
-            dias = t[m].dt.floor("D").to_numpy()
-            boot = evaluate.day_block_bootstrap(y[m], preds, dias, n_boot=n_boot, seed=SEED)
-            for k in puntos:
-                reporte_splits[nombre]["models"][k]["ci95"] = boot["ci95"][k]
-            reporte_splits[nombre]["paired_vs_model"] = boot["paired_vs_model"]
-            p_test = preds["model"]
-
-    pareadas = reporte_splits["test"]["paired_vs_model"]
-
-    def supera(baseline):
-        return all(pareadas[baseline][k]["ci95"][1] < 0 for k in ("brier_diff", "log_loss_diff"))
+        dias = t[m].dt.floor("D").to_numpy()
+        boot = evaluate.day_block_bootstrap(y[m], preds, dias, n_boot=n_boot, seed=SEED)
+        reporte[nombre] = {
+            "period": [t[m].min().isoformat(), t[m].max().isoformat()],
+            "rows": int(m.sum()),
+            "rain_rate": round(float(y[m].mean()), 4),
+            "models": {
+                k: {mk: round(v, 4) for mk, v in r.items()} | {"ci95": boot["ci95"][k]} for k, r in puntos.items()
+            },
+            "paired_vs_model": boot["paired_vs_model"],
+            "reliability": evaluate.reliability(y[m], preds["model"]),
+            "alert_levels": evaluate.alert_levels(y[m], preds["model"], **ALERT_THRESHOLDS),
+        }
+        reporte[nombre]["claims"] = {
+            f"beats_{b}": all(boot["paired_vs_model"][b][k]["ci95"][1] < 0 for k in ("brier_diff", "log_loss_diff"))
+            for b in boot["paired_vs_model"]
+        } | {"ece_below_0_03": puntos["model"]["ece"] < 0.03}
+        if nombre == "test_2025":
+            y_test, preds_test = y[m], preds
 
     # ── Validación externa contra SIATA ──────────────────────────────────────
     horas = siata_hours if siata_hours is not None else siata_hourly()[0]
@@ -178,30 +200,41 @@ def run(
         ALERT_THRESHOLDS["amarillo"],
     )
 
-    huella = content_fingerprint(df)
+    decisiones = estudio["decision_log"] + [
+        {
+            "decision": f"modelo final {familia} entrenado en todo desarrollo con calibración {metodo} (mapa OOF)",
+            "evidence": "metadata.json",
+            "data": "desarrollo 2022–2024",
+        },
+        {
+            "decision": "evaluación única en 2025 y en el holdout fresco 2026 (ninguna decisión usa estos periodos)",
+            "evidence": "metrics.json:splits",
+            "data": "2025 (ya visto por 1.0.0) y 2026-01 → " + config.HOLDOUT_END,
+        },
+    ]
     metrics = {
         "model_name": MODEL_NAME,
         "model_version": MODEL_VERSION,
         "dataset_fingerprint": huella,
+        "holdout_fingerprint": huella_holdout,
         "bootstrap": {"B": n_boot, "block": "day_utc", "seed": SEED},
-        "selection": {"candidates": seleccion, "chosen": {"name": nombre_base, "params": params_base}},
-        "calibration_choice": {**comparacion, "chosen": metodo},
-        "splits": reporte_splits,
-        "reliability": {"test": evaluate.reliability(y[te], p_test)},
-        "alert_levels": {"test": evaluate.alert_levels(y[te], p_test, **ALERT_THRESHOLDS)},
-        "external_siata": externa,
-        "claims": {
-            "beats_climatology": supera("climatology"),
-            "beats_raw_forecast": supera("raw_forecast"),
-            "beats_logistic": supera("logistic"),
-            "ece_below_0_03": reporte_splits["test"]["models"]["model"]["ece"] < 0.03,
+        "study": {
+            "path": "reports/metrics/rain_classifier/study/study.json",
+            "chosen": elegido,
+            "chosen_vs_v1_cv": estudio["search"]["chosen_vs_v1"],
+            "calibration_crossfit": {
+                m: {"log_loss": d["log_loss"], "ece": d["ece"]} for m, d in estudio["calibration"]["methods"].items()
+            },
         },
+        "splits": reporte,
+        "external_siata": externa,
+        "decision_log": decisiones,
     }
 
     # ── Artefactos ───────────────────────────────────────────────────────────
     carpeta = model_dir(MODEL_VERSION, out_models)
     carpeta.mkdir(parents=True, exist_ok=True)
-    joblib.dump(modelo, carpeta / "model.joblib")
+    joblib.dump(modelo, carpeta / "model.joblib", compress=3)
     tamano = (carpeta / "model.joblib").stat().st_size
     if tamano >= MAX_MODEL_BYTES:
         raise RuntimeError(f"El modelo pesa {tamano} bytes (≥ 5 MB): publíquelo como asset de release (charter P7)")
@@ -209,6 +242,25 @@ def run(
     reports = out_reports or config.REPORTS_DIR
     metrics_path = reports / "metrics" / MODEL_NAME / MODEL_VERSION / "metrics.json"
     sha, sucio = git_info()
+    t_principal = t[~es_holdout].reset_index(drop=True)
+    descripcion = splits.describe(
+        t_principal,
+        pd.Series(y[~es_holdout]),
+        {k: v.to_numpy() for k, v in splits.temporal_splits(t_principal).items()},
+    )
+    descripcion["development"] = {
+        "start": t[dev].min().isoformat(),
+        "end": t[dev].max().isoformat(),
+        "rows": int(dev.sum()),
+        "rain_rate": round(float(y[dev].mean()), 4),
+    }
+    if ho.any():
+        descripcion["holdout_2026"] = {
+            "start": t[ho].min().isoformat(),
+            "end": t[ho].max().isoformat(),
+            "rows": int(ho.sum()),
+            "rain_rate": round(float(y[ho].mean()), 4),
+        }
     metadata = {
         "model_name": MODEL_NAME,
         "model_version": MODEL_VERSION,
@@ -219,9 +271,9 @@ def run(
         "feature_contract_version": FEATURE_CONTRACT_VERSION,
         "features": list(FEATURES),
         "label": {"threshold_mm": config.LABEL_THRESHOLD_MM, "source": "ERA5"},
-        "splits": splits.describe(t, pd.Series(y), splits.temporal_splits(t)),
-        "base_estimator": {"class": type(base).__name__, "params": params_base},
-        "calibration": {"method": metodo, "fitted_on": None if metodo == "none" else "validation"},
+        "splits": descripcion,
+        "base_estimator": {"class": type(base).__name__, "family": familia, "params": params},
+        "calibration": {"method": metodo, "fitted_on": "predicciones out-of-fold de desarrollo (cross-fitting)"},
         "alert_thresholds": ALERT_THRESHOLDS,
         "seed": SEED,
         "library_versions": {
@@ -237,14 +289,19 @@ def run(
     }
     _write_json(carpeta / "metadata.json", metadata)
     _write_json(metrics_path, metrics)
-    openmeteo.write_atomic(carpeta / "model_card.md", model_card.render(metadata, metrics).encode("utf-8"))
+    openmeteo.write_atomic(carpeta / "model_card.md", model_card.render(metadata, metrics, estudio).encode("utf-8"))
 
     try:
         from mdva import plots
 
-        plots.reliability_diagram(metrics["reliability"]["test"], reports / "figures" / f"{MODEL_NAME}_reliability.png")
-        plots.pr_curves(y[te], predicciones(te), reports / "figures" / f"{MODEL_NAME}_pr_curves.png")
-    except ImportError:  # pragma: no cover - matplotlib es dependencia del proyecto
+        if "test_2025" in reporte:
+            plots.reliability_diagram(
+                reporte["test_2025"]["reliability"],
+                reports / "figures" / f"{MODEL_NAME}_reliability.png",
+                extra={"holdout 2026": reporte.get("holdout_2026", {}).get("reliability")},
+            )
+            plots.pr_curves(y_test, preds_test, reports / "figures" / f"{MODEL_NAME}_pr_curves.png")
+    except ImportError:  # pragma: no cover - matplotlib es dependencia del pipeline
         log.warning("matplotlib no disponible: se omiten las figuras")
 
     corrida = {
@@ -253,17 +310,28 @@ def run(
         "dirty_worktree": sucio,
         "model_version": MODEL_VERSION,
         "dataset_fingerprint": huella,
+        "holdout_fingerprint": huella_holdout,
         "seed": SEED,
-        "grid": {k: list(v) for k, v in HGB_GRID.items()},
-        "chosen": metrics["selection"]["chosen"],
+        "chosen": elegido["params"] | {"family": familia},
         "calibration": metodo,
-        "val_metrics": reporte_splits["validation"]["models"]["model"],
-        "test_metrics": {k: v for k, v in reporte_splits["test"]["models"]["model"].items() if k != "ci95"},
-        "logistic_val_log_loss": logistica["val_log_loss"],
+        "test_2025": {
+            k: v for k, v in reporte.get("test_2025", {}).get("models", {}).get("model", {}).items() if k != "ci95"
+        },
+        "holdout_2026": {
+            k: v for k, v in reporte.get("holdout_2026", {}).get("models", {}).get("model", {}).items() if k != "ci95"
+        },
         "duration_s": round(time.time() - inicio, 1),
     }
     _write_json(reports / "runs" / f"{metadata['created_at_utc'].replace(':', '')}_{sha[:7]}.json", corrida)
     return {"metadata": metadata, "metrics": metrics, "run": corrida}
+
+
+def _load_previous():
+    """Modelo 1.0.0 (13 features) para la comparación pareada; None si no está."""
+    ruta = model_dir(PREVIOUS_VERSION) / "model.joblib"
+    if not ruta.exists():
+        return None
+    return joblib.load(ruta)
 
 
 def _write_json(path, data) -> None:
@@ -278,16 +346,17 @@ def main() -> None:
     args = parser.parse_args()
     logging.basicConfig(level=args.log_level, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
     r = run(n_boot=args.n_boot)
-    m = r["metrics"]["splits"]["test"]["models"]["model"]
-    log.info(
-        "Modelo %s listo: prueba ROC-AUC %.3f, Brier %.4f, BSS %.3f, ECE %.4f; afirmaciones %s",
-        MODEL_VERSION,
-        m["roc_auc"],
-        m["brier"],
-        m["bss"],
-        m["ece"],
-        r["metrics"]["claims"],
-    )
+    for nombre, s in r["metrics"]["splits"].items():
+        m = s["models"]["model"]
+        log.info(
+            "%s: ROC-AUC %.3f, Brier %.4f, BSS %.3f, ECE %.4f; %s",
+            nombre,
+            m["roc_auc"],
+            m["brier"],
+            m["bss"],
+            m["ece"],
+            s["claims"],
+        )
 
 
 if __name__ == "__main__":

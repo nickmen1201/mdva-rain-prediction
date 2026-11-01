@@ -8,7 +8,7 @@ from openapi_spec_validator import validate
 
 import main
 
-CONTRATO = Path(__file__).resolve().parents[3] / "specs" / "006-ml-api-v2" / "contracts" / "openapi-v2.yaml"
+CONTRATO = Path(__file__).resolve().parents[3] / "specs" / "012-ml-depth" / "contracts" / "openapi-v2.yaml"
 
 
 @pytest.fixture(scope="module")

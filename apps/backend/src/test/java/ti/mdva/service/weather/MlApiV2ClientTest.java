@@ -29,7 +29,8 @@ class MlApiV2ClientTest {
 
     private static final String BASE = "http://ml:8081";
     private static final HourlyInputs ENTRADA = new HourlyInputs(
-            Instant.parse("2026-10-29T15:00:00Z"), 20.0, 75.0, 15.5, 60.0, 2.0, 180.0, 1013.0, 0.4, 120.0);
+            Instant.parse("2026-10-29T15:00:00Z"), 20.0, 75.0, 15.5, 60.0, 2.0, 180.0, 1013.0, 0.4, 120.0,
+            new HourlyInputs.Window(0.0, 0.1, 0.8, 0.5, 55.0, 70.0, 110.0, 130.0), 6.2442, -75.5812);
     private static final String AMARILLO = "{\"probability\": 0.5, \"alert_level\": \"AMARILLO\"}";
 
     private MockRestServiceServer server;

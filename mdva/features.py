@@ -1,14 +1,22 @@
-"""Única definición de features para entrenamiento e inferencia (spec 004).
+"""Única definición de features para entrenamiento e inferencia (specs 004 y 012).
 
-Entradas crudas: instante UTC objetivo + 9 variables pronosticadas de Open-Meteo (mismas
-unidades y rangos que el contrato de datos `rain_hourly`). Salida: 13 features en orden
-fijo y versionado. Ningún otro componente del sistema recalcula features.
+Entradas crudas (contrato 1.1.0):
+- instante UTC objetivo + 9 variables pronosticadas de Open-Meteo para esa hora;
+- **ventana del pronóstico**: precipitación de las horas t−2, t−1, t+1, t+2 y nubosidad y CAPE de
+  t−1 y t+1, del **mismo** pronóstico horario (en producción vienen en la misma respuesta de
+  Open-Meteo; en el dataset se arman con `forecast_window_inputs`);
+- **ubicación**: latitud y longitud del punto.
 
-Contrato: specs/004-feature-contract/contracts/features.v1.md · Documentación: docs/features.md
+Salida: 24 features en orden fijo y versionado. Ningún otro componente recalcula features; los
+servicios envían variables crudas con las unidades del contrato de datos `rain_hourly`.
+
+Contratos: specs/004-feature-contract/contracts/features.v1.md (1.0.0) y
+specs/012-ml-depth/contracts/features.v1.1.md (1.1.0) · Documentación: docs/features.md
 """
 
 from __future__ import annotations
 
+import dataclasses
 from zoneinfo import ZoneInfo
 
 import numpy as np
@@ -17,13 +25,31 @@ import pandas as pd
 from mdva import config
 from mdva.data_contract import DATASET_CONTRACT
 
-FEATURE_CONTRACT_VERSION = "1.0.0"
+FEATURE_CONTRACT_VERSION = "1.1.0"
 LOCAL_TZ = ZoneInfo("America/Bogota")
 
 TIME_INPUT = "time_utc"
-RAW_INPUTS = {c.name: c for c in DATASET_CONTRACT.columns if c.name in config.FORECAST_VARIABLES}
+_COLUMNAS = {c.name: c for c in DATASET_CONTRACT.columns}
+FORECAST_INPUTS = {nombre: _COLUMNAS[nombre] for nombre in config.FORECAST_VARIABLES}
 
-FEATURES = (
+# Ventana del pronóstico: variable → desplazamientos en horas respecto de la hora objetivo
+WINDOW_OFFSETS = {"precipitation": (-2, -1, 1, 2), "cloud_cover": (-1, 1), "cape": (-1, 1)}
+
+
+def window_input_name(variable: str, offset: int) -> str:
+    return f"{variable}_prev{-offset}" if offset < 0 else f"{variable}_next{offset}"
+
+
+WINDOW_INPUTS = {
+    window_input_name(var, k): dataclasses.replace(_COLUMNAS[var], name=window_input_name(var, k))
+    for var, offsets in WINDOW_OFFSETS.items()
+    for k in offsets
+}
+LOCATION_INPUTS = {nombre: _COLUMNAS[nombre] for nombre in ("latitude", "longitude")}
+RAW_INPUTS = {**FORECAST_INPUTS, **WINDOW_INPUTS, **LOCATION_INPUTS}
+
+# Contrato 1.0.0: las 13 primeras features (las usa la versión 1.0.0 del modelo)
+BASE_FEATURES = (
     "temperature_2m",
     "relative_humidity_2m",
     "dew_point_depression",
@@ -38,6 +64,19 @@ FEATURES = (
     "month_sin",
     "month_cos",
 )
+WINDOW_FEATURES = (
+    "precipitation_prev2_log1p",
+    "precipitation_prev1_log1p",
+    "precipitation_next1_log1p",
+    "precipitation_next2_log1p",
+    "cloud_cover_prev1",
+    "cloud_cover_next1",
+    "cape_prev1_log1p",
+    "cape_next1_log1p",
+    "precipitation_5h_log1p",
+)
+LOCATION_FEATURES = ("latitude", "longitude")
+FEATURES = BASE_FEATURES + WINDOW_FEATURES + LOCATION_FEATURES
 
 
 class FeatureInputError(ValueError):
@@ -114,7 +153,38 @@ def build_features(raw: pd.DataFrame | list[dict]) -> pd.DataFrame:
     f["hour_cos"] = np.cos(2 * np.pi * hora / 24)
     f["month_sin"] = np.sin(2 * np.pi * (mes - 1) / 12)
     f["month_cos"] = np.cos(2 * np.pi * (mes - 1) / 12)
+
+    # Ventana del pronóstico (contrato 1.1.0)
+    for var, offsets in WINDOW_OFFSETS.items():
+        for k in offsets:
+            col = window_input_name(var, k)
+            f[col if var == "cloud_cover" else f"{col}_log1p"] = x[col] if var == "cloud_cover" else np.log1p(x[col])
+    lluvia_5h = x["precipitation"] + sum(
+        x[window_input_name("precipitation", k)] for k in WINDOW_OFFSETS["precipitation"]
+    )
+    f["precipitation_5h_log1p"] = np.log1p(lluvia_5h)
+
+    # Ubicación
+    f["latitude"] = x["latitude"]
+    f["longitude"] = x["longitude"]
     return f[list(FEATURES)].astype("float64")
+
+
+def forecast_window_inputs(df: pd.DataFrame) -> pd.DataFrame:
+    """Entradas de la ventana desde la serie horaria de cada estación (solo para armar el dataset).
+
+    Toma vecinos contiguos de la misma estación; si la hora vecina no existe (borde o hueco de la
+    serie), queda NaN y la fila no pasa `validate_inputs` (no se rellena). En producción los vecinos
+    vienen de la misma respuesta del pronóstico.
+    """
+    orden = df.sort_values(["station_id", TIME_INPUT])
+    g = orden.groupby("station_id", sort=False)
+    out = pd.DataFrame(index=orden.index)
+    for var, offsets in WINDOW_OFFSETS.items():
+        for k in offsets:
+            contiguo = (g[TIME_INPUT].shift(-k) - orden[TIME_INPUT]) == pd.Timedelta(hours=k)
+            out[window_input_name(var, k)] = g[var].shift(-k).where(contiguo)
+    return out.loc[df.index]
 
 
 def _is_datetime(s: pd.Series) -> bool:

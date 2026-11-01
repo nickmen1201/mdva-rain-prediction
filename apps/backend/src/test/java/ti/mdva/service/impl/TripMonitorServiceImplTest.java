@@ -46,7 +46,8 @@ class TripMonitorServiceImplTest {
     private static final double LNG      = -75.5812;
     private static final OffsetDateTime INSTANTE_DATO = OffsetDateTime.of(2026, 10, 29, 14, 0, 0, 0, ZoneOffset.UTC);
     private static final HourlyInputs ACTUAL = new HourlyInputs(
-            Instant.parse("2026-10-29T15:00:00Z"), 20.0, 75.0, 15.5, 60.0, 2.0, 180.0, 1013.0, 0.0, 120.0);
+            Instant.parse("2026-10-29T15:00:00Z"), 20.0, 75.0, 15.5, 60.0, 2.0, 180.0, 1013.0, 0.0, 120.0,
+            new HourlyInputs.Window(0.0, 0.0, 0.2, 0.1, 55.0, 70.0, 110.0, 130.0), LAT, LNG);
 
     @BeforeEach
     void setup() {

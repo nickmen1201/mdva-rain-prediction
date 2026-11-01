@@ -19,7 +19,7 @@ import static org.springframework.test.web.client.match.MockRestRequestMatchers.
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
-@DisplayName("OpenMeteoForecastClient — 9 variables, UTC y unidades verificadas (spec 007)")
+@DisplayName("OpenMeteoForecastClient — 9 variables, UTC, unidades verificadas y ventana del pronóstico (specs 007 y 012)")
 class OpenMeteoForecastClientTest {
 
     private static final String URL = "https://api.open-meteo.com/v1/forecast";
@@ -39,46 +39,58 @@ class OpenMeteoForecastClientTest {
         client = new OpenMeteoForecastClient(rt, URL);
     }
 
+    /** 7 horas (12:00–18:00 UTC); solo 14:00–16:00 tienen sus 4 vecinos y forman la serie. */
     private static String ubicacion(String unidades, String temperaturas) {
         return """
                 {%s,
-                 "hourly": {"time": ["2026-10-29T14:00", "2026-10-29T15:00", "2026-10-29T16:00"],
-                   "temperature_2m": %s, "relative_humidity_2m": [80, 81, 82], "dew_point_2m": [15, 15, 15],
-                   "cloud_cover": [90, 95, 100], "wind_speed_10m": [1.5, 2.0, 2.5], "wind_direction_10m": [180, 190, 200],
-                   "pressure_msl": [1012, 1013, 1014], "precipitation": [0.0, 0.4, 1.2], "cape": [100, 200, 300]}}
+                 "hourly": {"time": ["2026-10-29T12:00", "2026-10-29T13:00", "2026-10-29T14:00", "2026-10-29T15:00",
+                                     "2026-10-29T16:00", "2026-10-29T17:00", "2026-10-29T18:00"],
+                   "temperature_2m": %s, "relative_humidity_2m": [80, 80, 80, 81, 82, 82, 82],
+                   "dew_point_2m": [15, 15, 15, 15, 15, 15, 15], "cloud_cover": [60, 70, 90, 95, 100, 80, 50],
+                   "wind_speed_10m": [1.5, 1.5, 1.5, 2.0, 2.5, 2.5, 2.5],
+                   "wind_direction_10m": [180, 180, 180, 190, 200, 200, 200],
+                   "pressure_msl": [1012, 1012, 1012, 1013, 1014, 1014, 1014],
+                   "precipitation": [0.0, 0.1, 0.2, 0.4, 1.2, 0.8, 0.3], "cape": [50, 80, 100, 200, 300, 250, 90]}}
                 """.formatted(unidades, temperaturas);
     }
 
     @Test
-    @DisplayName("Pide las 9 variables en UTC con unidades explícitas y parsea las horas como instantes UTC")
+    @DisplayName("Pide ayer + 2 días en UTC con unidades explícitas; cada hora lleva su ventana y la ubicación pedida")
     void unaUbicacion() {
         server.expect(requestTo(startsWith(URL)))
                 .andExpect(method(GET))
                 .andExpect(queryParam("latitude", "6.24420"))
                 .andExpect(queryParam("longitude", "-75.58120"))
                 .andExpect(queryParam("hourly", String.join(",", OpenMeteoForecastClient.VARIABLES)))
+                .andExpect(queryParam("past_days", "1"))
                 .andExpect(queryParam("timezone", "GMT"))
                 .andExpect(queryParam("wind_speed_unit", "ms"))
                 .andExpect(queryParam("temperature_unit", "celsius"))
                 .andExpect(queryParam("precipitation_unit", "mm"))
-                .andRespond(withSuccess(ubicacion(UNIDADES, "[20.1, 21.2, 22.3]"), MediaType.APPLICATION_JSON));
+                .andRespond(withSuccess(ubicacion(UNIDADES, "[18, 19, 20.1, 21.2, 22.3, 22, 21]"),
+                        MediaType.APPLICATION_JSON));
 
         List<HourlyInputs> serie = client.hourly(6.2442, -75.5812);
 
         server.verify();
-        assertThat(serie).hasSize(3);
-        HourlyInputs h = serie.get(1);
-        assertThat(h.timeUtc()).isEqualTo(Instant.parse("2026-10-29T15:00:00Z"));
+        assertThat(serie).extracting(HourlyInputs::timeUtc).containsExactly(
+                Instant.parse("2026-10-29T14:00:00Z"), Instant.parse("2026-10-29T15:00:00Z"),
+                Instant.parse("2026-10-29T16:00:00Z"));
+        HourlyInputs h = serie.get(1);  // 15:00
         assertThat(h.temperature2m()).isEqualTo(21.2);
-        assertThat(h.windSpeed10m()).isEqualTo(2.0);
         assertThat(h.precipitation()).isEqualTo(0.4);
-        assertThat(h.cape()).isEqualTo(200.0);
+        assertThat(h.window()).isEqualTo(new HourlyInputs.Window(0.1, 0.2, 1.2, 0.8, 90.0, 100.0, 100.0, 300.0));
+        assertThat(h.latitude()).isEqualTo(6.2442);
+        assertThat(h.longitude()).isEqualTo(-75.5812);
+        assertThat(h.toModelRecord()).containsEntry("precipitation_next2", 0.8).containsEntry("latitude", 6.2442)
+                .hasSize(20);
     }
 
     @Test
-    @DisplayName("Varias ubicaciones en una sola llamada, en el mismo orden")
+    @DisplayName("Varias ubicaciones en una sola llamada, en el mismo orden y con su propia ubicación")
     void variasUbicaciones() {
-        String cuerpo = "[" + ubicacion(UNIDADES, "[10, 11, 12]") + "," + ubicacion(UNIDADES, "[30, 31, 32]") + "]";
+        String cuerpo = "[" + ubicacion(UNIDADES, "[1, 1, 10, 11, 12, 1, 1]") + ","
+                + ubicacion(UNIDADES, "[3, 3, 30, 31, 32, 3, 3]") + "]";
         server.expect(requestTo(startsWith(URL)))
                 .andExpect(queryParam("latitude", "6.20000,6.30000"))
                 .andExpect(queryParam("longitude", "-75.50000,-75.60000"))
@@ -90,13 +102,14 @@ class OpenMeteoForecastClientTest {
         assertThat(series).hasSize(2);
         assertThat(series.get(0).get(0).temperature2m()).isEqualTo(10.0);
         assertThat(series.get(1).get(0).temperature2m()).isEqualTo(30.0);
+        assertThat(series.get(1).get(0).latitude()).isEqualTo(6.3);
     }
 
     @Test
     @DisplayName("Unidades declaradas distintas a las pedidas: falla, nunca convierte en silencio")
     void unidadesInesperadas() {
         server.expect(requestTo(startsWith(URL)))
-                .andRespond(withSuccess(ubicacion(UNIDADES.replace("m/s", "km/h"), "[20, 21, 22]"),
+                .andRespond(withSuccess(ubicacion(UNIDADES.replace("m/s", "km/h"), "[20, 20, 20, 21, 22, 22, 22]"),
                         MediaType.APPLICATION_JSON));
 
         assertThatThrownBy(() -> client.hourly(6.2442, -75.5812))
@@ -105,22 +118,22 @@ class OpenMeteoForecastClientTest {
     }
 
     @Test
-    @DisplayName("Horas con valores nulos se omiten (no se rellenan)")
+    @DisplayName("Una hora con nulos se omite y también las horas cuya ventana la necesita (no se rellenan)")
     void horasIncompletasSeOmiten() {
         server.expect(requestTo(startsWith(URL)))
-                .andRespond(withSuccess(ubicacion(UNIDADES, "[20, null, 22]"), MediaType.APPLICATION_JSON));
+                .andRespond(withSuccess(ubicacion(UNIDADES, "[20, 20, 20, 21, null, 22, 22]"),
+                        MediaType.APPLICATION_JSON));
 
-        List<HourlyInputs> serie = client.hourly(6.2442, -75.5812);
-
-        assertThat(serie).extracting(HourlyInputs::timeUtc).containsExactly(
-                Instant.parse("2026-10-29T14:00:00Z"), Instant.parse("2026-10-29T16:00:00Z"));
+        // 16:00 es nula: se pierden 16:00 y las horas que la usan como vecina (14:00 y 15:00)
+        assertThat(client.hourly(6.2442, -75.5812)).isEmpty();
     }
 
     @Test
     @DisplayName("Hora en curso: la primera hora con inicio ≥ el instante pedido")
     void horaEnCurso() {
         server.expect(requestTo(startsWith(URL)))
-                .andRespond(withSuccess(ubicacion(UNIDADES, "[20, 21, 22]"), MediaType.APPLICATION_JSON));
+                .andRespond(withSuccess(ubicacion(UNIDADES, "[20, 20, 20, 21, 22, 22, 22]"),
+                        MediaType.APPLICATION_JSON));
         List<HourlyInputs> serie = client.hourly(6.2442, -75.5812);
 
         assertThat(OpenMeteoForecastClient.from(serie, Instant.parse("2026-10-29T15:00:00Z"), 1))

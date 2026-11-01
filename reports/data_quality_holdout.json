@@ -1,0 +1,572 @@
+{
+  "dataset_contract_version": "1.0.0",
+  "downloads": {
+    "forecast": {
+      "new": 1,
+      "cached": 0
+    },
+    "era5": {
+      "new": 1,
+      "cached": 0
+    }
+  },
+  "stages": {
+    "forecast": {
+      "contract": "openmeteo_forecast",
+      "version": "1.0.0",
+      "rows": 89856,
+      "ok": true,
+      "rules": [
+        {
+          "rule": "columns",
+          "ok": true,
+          "detail": "faltan=[] sobran=[]"
+        },
+        {
+          "rule": "dtype:station_id",
+          "ok": true,
+          "detail": "int64 (esperado int64)"
+        },
+        {
+          "rule": "nulls:station_id",
+          "ok": true,
+          "detail": "0 nulos"
+        },
+        {
+          "rule": "dtype:time_utc",
+          "ok": true,
+          "detail": "datetime64[us, UTC] (esperado datetime64[us, UTC])"
+        },
+        {
+          "rule": "nulls:time_utc",
+          "ok": true,
+          "detail": "0 nulos"
+        },
+        {
+          "rule": "dtype:temperature_2m",
+          "ok": true,
+          "detail": "float64 (esperado float64)"
+        },
+        {
+          "rule": "nulls:temperature_2m",
+          "ok": true,
+          "detail": "peor fracción por station_id=0.0000 (máx 0.01)"
+        },
+        {
+          "rule": "range:temperature_2m",
+          "ok": true,
+          "detail": "0 fuera de [-5, 45] degC"
+        },
+        {
+          "rule": "dtype:relative_humidity_2m",
+          "ok": true,
+          "detail": "float64 (esperado float64)"
+        },
+        {
+          "rule": "nulls:relative_humidity_2m",
+          "ok": true,
+          "detail": "peor fracción por station_id=0.0000 (máx 0.01)"
+        },
+        {
+          "rule": "range:relative_humidity_2m",
+          "ok": true,
+          "detail": "0 fuera de [0, 100] %"
+        },
+        {
+          "rule": "dtype:dew_point_2m",
+          "ok": true,
+          "detail": "float64 (esperado float64)"
+        },
+        {
+          "rule": "nulls:dew_point_2m",
+          "ok": true,
+          "detail": "peor fracción por station_id=0.0000 (máx 0.01)"
+        },
+        {
+          "rule": "range:dew_point_2m",
+          "ok": true,
+          "detail": "0 fuera de [-20, 35] degC"
+        },
+        {
+          "rule": "dtype:cloud_cover",
+          "ok": true,
+          "detail": "float64 (esperado float64)"
+        },
+        {
+          "rule": "nulls:cloud_cover",
+          "ok": true,
+          "detail": "peor fracción por station_id=0.0000 (máx 0.01)"
+        },
+        {
+          "rule": "range:cloud_cover",
+          "ok": true,
+          "detail": "0 fuera de [0, 100] %"
+        },
+        {
+          "rule": "dtype:wind_speed_10m",
+          "ok": true,
+          "detail": "float64 (esperado float64)"
+        },
+        {
+          "rule": "nulls:wind_speed_10m",
+          "ok": true,
+          "detail": "peor fracción por station_id=0.0000 (máx 0.01)"
+        },
+        {
+          "rule": "range:wind_speed_10m",
+          "ok": true,
+          "detail": "0 fuera de [0, 60] m/s"
+        },
+        {
+          "rule": "dtype:wind_direction_10m",
+          "ok": true,
+          "detail": "float64 (esperado float64)"
+        },
+        {
+          "rule": "nulls:wind_direction_10m",
+          "ok": true,
+          "detail": "peor fracción por station_id=0.0000 (máx 0.01)"
+        },
+        {
+          "rule": "range:wind_direction_10m",
+          "ok": true,
+          "detail": "0 fuera de [0, 360] deg"
+        },
+        {
+          "rule": "dtype:pressure_msl",
+          "ok": true,
+          "detail": "float64 (esperado float64)"
+        },
+        {
+          "rule": "nulls:pressure_msl",
+          "ok": true,
+          "detail": "peor fracción por station_id=0.0000 (máx 0.01)"
+        },
+        {
+          "rule": "range:pressure_msl",
+          "ok": true,
+          "detail": "0 fuera de [950, 1050] hPa"
+        },
+        {
+          "rule": "dtype:precipitation",
+          "ok": true,
+          "detail": "float64 (esperado float64)"
+        },
+        {
+          "rule": "nulls:precipitation",
+          "ok": true,
+          "detail": "peor fracción por station_id=0.0000 (máx 0.01)"
+        },
+        {
+          "rule": "range:precipitation",
+          "ok": true,
+          "detail": "0 fuera de [0, 200] mm/h"
+        },
+        {
+          "rule": "dtype:cape",
+          "ok": true,
+          "detail": "float64 (esperado float64)"
+        },
+        {
+          "rule": "nulls:cape",
+          "ok": true,
+          "detail": "peor fracción por station_id=0.0000 (máx 0.01)"
+        },
+        {
+          "rule": "range:cape",
+          "ok": true,
+          "detail": "0 fuera de [0, 10000] J/kg"
+        },
+        {
+          "rule": "unique_key",
+          "ok": true,
+          "detail": "0 duplicados de ['station_id', 'time_utc']"
+        },
+        {
+          "rule": "period",
+          "ok": true,
+          "detail": "0 filas fuera del periodo"
+        },
+        {
+          "rule": "coverage",
+          "ok": true,
+          "detail": "peor cobertura por station_id=1.0000 (mín 0.99)"
+        }
+      ]
+    },
+    "era5": {
+      "contract": "openmeteo_era5",
+      "version": "1.0.0",
+      "rows": 89856,
+      "ok": true,
+      "rules": [
+        {
+          "rule": "columns",
+          "ok": true,
+          "detail": "faltan=[] sobran=[]"
+        },
+        {
+          "rule": "dtype:station_id",
+          "ok": true,
+          "detail": "int64 (esperado int64)"
+        },
+        {
+          "rule": "nulls:station_id",
+          "ok": true,
+          "detail": "0 nulos"
+        },
+        {
+          "rule": "dtype:time_utc",
+          "ok": true,
+          "detail": "datetime64[us, UTC] (esperado datetime64[us, UTC])"
+        },
+        {
+          "rule": "nulls:time_utc",
+          "ok": true,
+          "detail": "0 nulos"
+        },
+        {
+          "rule": "dtype:precipitation_ref",
+          "ok": true,
+          "detail": "float64 (esperado float64)"
+        },
+        {
+          "rule": "nulls:precipitation_ref",
+          "ok": true,
+          "detail": "peor fracción por station_id=0.0000 (máx 0.01)"
+        },
+        {
+          "rule": "range:precipitation_ref",
+          "ok": true,
+          "detail": "0 fuera de [0, 200] mm/h"
+        },
+        {
+          "rule": "dtype:era5_cell",
+          "ok": true,
+          "detail": "str (esperado str)"
+        },
+        {
+          "rule": "nulls:era5_cell",
+          "ok": true,
+          "detail": "0 nulos"
+        },
+        {
+          "rule": "unique_key",
+          "ok": true,
+          "detail": "0 duplicados de ['station_id', 'time_utc']"
+        },
+        {
+          "rule": "period",
+          "ok": true,
+          "detail": "0 filas fuera del periodo"
+        },
+        {
+          "rule": "coverage",
+          "ok": true,
+          "detail": "peor cobertura por station_id=1.0000 (mín 0.99)"
+        }
+      ]
+    },
+    "rain_hourly": {
+      "contract": "rain_hourly",
+      "version": "1.0.0",
+      "rows": 89856,
+      "ok": true,
+      "rules": [
+        {
+          "rule": "columns",
+          "ok": true,
+          "detail": "faltan=[] sobran=[]"
+        },
+        {
+          "rule": "dtype:station_id",
+          "ok": true,
+          "detail": "int64 (esperado int64)"
+        },
+        {
+          "rule": "nulls:station_id",
+          "ok": true,
+          "detail": "0 nulos"
+        },
+        {
+          "rule": "dtype:time_utc",
+          "ok": true,
+          "detail": "datetime64[us, UTC] (esperado datetime64[us, UTC])"
+        },
+        {
+          "rule": "nulls:time_utc",
+          "ok": true,
+          "detail": "0 nulos"
+        },
+        {
+          "rule": "dtype:latitude",
+          "ok": true,
+          "detail": "float64 (esperado float64)"
+        },
+        {
+          "rule": "nulls:latitude",
+          "ok": true,
+          "detail": "0 nulos"
+        },
+        {
+          "rule": "range:latitude",
+          "ok": true,
+          "detail": "0 fuera de [6.0, 6.6] deg"
+        },
+        {
+          "rule": "dtype:longitude",
+          "ok": true,
+          "detail": "float64 (esperado float64)"
+        },
+        {
+          "rule": "nulls:longitude",
+          "ok": true,
+          "detail": "0 nulos"
+        },
+        {
+          "rule": "range:longitude",
+          "ok": true,
+          "detail": "0 fuera de [-75.8, -75.2] deg"
+        },
+        {
+          "rule": "dtype:temperature_2m",
+          "ok": true,
+          "detail": "float64 (esperado float64)"
+        },
+        {
+          "rule": "nulls:temperature_2m",
+          "ok": true,
+          "detail": "0 nulos"
+        },
+        {
+          "rule": "range:temperature_2m",
+          "ok": true,
+          "detail": "0 fuera de [-5, 45] degC"
+        },
+        {
+          "rule": "dtype:relative_humidity_2m",
+          "ok": true,
+          "detail": "float64 (esperado float64)"
+        },
+        {
+          "rule": "nulls:relative_humidity_2m",
+          "ok": true,
+          "detail": "0 nulos"
+        },
+        {
+          "rule": "range:relative_humidity_2m",
+          "ok": true,
+          "detail": "0 fuera de [0, 100] %"
+        },
+        {
+          "rule": "dtype:dew_point_2m",
+          "ok": true,
+          "detail": "float64 (esperado float64)"
+        },
+        {
+          "rule": "nulls:dew_point_2m",
+          "ok": true,
+          "detail": "0 nulos"
+        },
+        {
+          "rule": "range:dew_point_2m",
+          "ok": true,
+          "detail": "0 fuera de [-20, 35] degC"
+        },
+        {
+          "rule": "dtype:cloud_cover",
+          "ok": true,
+          "detail": "float64 (esperado float64)"
+        },
+        {
+          "rule": "nulls:cloud_cover",
+          "ok": true,
+          "detail": "0 nulos"
+        },
+        {
+          "rule": "range:cloud_cover",
+          "ok": true,
+          "detail": "0 fuera de [0, 100] %"
+        },
+        {
+          "rule": "dtype:wind_speed_10m",
+          "ok": true,
+          "detail": "float64 (esperado float64)"
+        },
+        {
+          "rule": "nulls:wind_speed_10m",
+          "ok": true,
+          "detail": "0 nulos"
+        },
+        {
+          "rule": "range:wind_speed_10m",
+          "ok": true,
+          "detail": "0 fuera de [0, 60] m/s"
+        },
+        {
+          "rule": "dtype:wind_direction_10m",
+          "ok": true,
+          "detail": "float64 (esperado float64)"
+        },
+        {
+          "rule": "nulls:wind_direction_10m",
+          "ok": true,
+          "detail": "0 nulos"
+        },
+        {
+          "rule": "range:wind_direction_10m",
+          "ok": true,
+          "detail": "0 fuera de [0, 360] deg"
+        },
+        {
+          "rule": "dtype:pressure_msl",
+          "ok": true,
+          "detail": "float64 (esperado float64)"
+        },
+        {
+          "rule": "nulls:pressure_msl",
+          "ok": true,
+          "detail": "0 nulos"
+        },
+        {
+          "rule": "range:pressure_msl",
+          "ok": true,
+          "detail": "0 fuera de [950, 1050] hPa"
+        },
+        {
+          "rule": "dtype:precipitation",
+          "ok": true,
+          "detail": "float64 (esperado float64)"
+        },
+        {
+          "rule": "nulls:precipitation",
+          "ok": true,
+          "detail": "0 nulos"
+        },
+        {
+          "rule": "range:precipitation",
+          "ok": true,
+          "detail": "0 fuera de [0, 200] mm/h"
+        },
+        {
+          "rule": "dtype:cape",
+          "ok": true,
+          "detail": "float64 (esperado float64)"
+        },
+        {
+          "rule": "nulls:cape",
+          "ok": true,
+          "detail": "0 nulos"
+        },
+        {
+          "rule": "range:cape",
+          "ok": true,
+          "detail": "0 fuera de [0, 10000] J/kg"
+        },
+        {
+          "rule": "dtype:precipitation_ref",
+          "ok": true,
+          "detail": "float64 (esperado float64)"
+        },
+        {
+          "rule": "nulls:precipitation_ref",
+          "ok": true,
+          "detail": "0 nulos"
+        },
+        {
+          "rule": "range:precipitation_ref",
+          "ok": true,
+          "detail": "0 fuera de [0, 200] mm/h"
+        },
+        {
+          "rule": "dtype:era5_cell",
+          "ok": true,
+          "detail": "str (esperado str)"
+        },
+        {
+          "rule": "nulls:era5_cell",
+          "ok": true,
+          "detail": "0 nulos"
+        },
+        {
+          "rule": "dtype:rain",
+          "ok": true,
+          "detail": "bool (esperado bool)"
+        },
+        {
+          "rule": "nulls:rain",
+          "ok": true,
+          "detail": "0 nulos"
+        },
+        {
+          "rule": "unique_key",
+          "ok": true,
+          "detail": "0 duplicados de ['station_id', 'time_utc']"
+        },
+        {
+          "rule": "period",
+          "ok": true,
+          "detail": "0 filas fuera del periodo"
+        },
+        {
+          "rule": "coverage",
+          "ok": true,
+          "detail": "peor cobertura por station_id=1.0000 (mín 0.99)"
+        }
+      ],
+      "content_fingerprint": "1b12aa0812e80246c496cffa9bb636f495e88fa4c75578ce52a7dc771aacd015"
+    }
+  },
+  "processed_summary": {
+    "joined_rows": 89856,
+    "dropped_incomplete_rows": 0,
+    "dropped_by_station": {},
+    "label_threshold_mm": 0.5,
+    "rain_rate": 0.1623,
+    "rows_by_station": {
+      "59": 6912,
+      "68": 6912,
+      "73": 6912,
+      "82": 6912,
+      "83": 6912,
+      "105": 6912,
+      "122": 6912,
+      "201": 6912,
+      "202": 6912,
+      "203": 6912,
+      "205": 6912,
+      "206": 6912,
+      "207": 6912
+    },
+    "stations_by_era5_cell": {
+      "6.0,-75.75": [
+        105
+      ],
+      "6.25,-75.5": [
+        59,
+        68,
+        73,
+        201,
+        202,
+        203,
+        205,
+        207
+      ],
+      "6.25,-75.75": [
+        83,
+        206
+      ],
+      "6.5,-75.25": [
+        82
+      ],
+      "6.5,-75.5": [
+        122
+      ]
+    }
+  },
+  "period": [
+    "2026-01-01 00:00:00+00:00",
+    "2026-10-15 23:00:00+00:00"
+  ],
+  "ok": true
+}

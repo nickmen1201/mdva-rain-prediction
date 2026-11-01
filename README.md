@@ -1,362 +1,152 @@
-# Monitoreo de Variables Ambientales (MVA)
+# MDVA — Predicción horaria de lluvia para la movilidad en el Valle de Aburrá
 
-Aplicación web de planificación de viajes y monitoreo ambiental para el área metropolitana del Valle de Aburrá (Medellín, Colombia). Integra predicción de lluvia con modelos de Machine Learning entrenados con datos locales del SIATA, enrutamiento ambiental y recomendaciones instructivas de movilidad en tiempo real.
+[![CI Python](https://github.com/nickmen1201/mdva-rain-prediction/actions/workflows/ci-python.yml/badge.svg)](https://github.com/nickmen1201/mdva-rain-prediction/actions/workflows/ci-python.yml)
+[![CI Backend](https://github.com/nickmen1201/mdva-rain-prediction/actions/workflows/ci-backend.yml/badge.svg)](https://github.com/nickmen1201/mdva-rain-prediction/actions/workflows/ci-backend.yml)
+[![CI Frontend](https://github.com/nickmen1201/mdva-rain-prediction/actions/workflows/ci-frontend.yml/badge.svg)](https://github.com/nickmen1201/mdva-rain-prediction/actions/workflows/ci-frontend.yml)
 
-**Equipo:** Camilo Ardila · Santiago Martínez · Nicolás Meneses · Luis Ángel Seoanes  
-**Periodo:** 13/02/2026 – 04/05/2026 · 5 sprints quincenales
+Clasificador **calibrado** de probabilidad de lluvia por hora y por punto para Medellín y su área metropolitana, construido sobre pronósticos numéricos gratuitos (Open-Meteo), evaluado con validación temporal honesta y servido en una aplicación de planificación de viajes (rutas, alertas y navegación) que corre completa **sin ninguna API key**.
 
----
-
-## Tabla de contenido
-
-1. [Descripción general](#descripción-general)
-2. [Stack tecnológico](#stack-tecnológico)
-3. [Estructura del repositorio](#estructura-del-repositorio)
-4. [Requisitos previos](#requisitos-previos)
-5. [Ejecución con Docker (recomendado)](#ejecución-con-docker-recomendado)
-6. [Verificación de servicios](#verificación-de-servicios)
-7. [API y endpoints](#api-y-endpoints)
-8. [Desarrollo local (sin Docker)](#desarrollo-local-sin-docker)
-9. [Base de datos](#base-de-datos)
-10. [Datos](#datos)
-11. [Modelos ML](#modelos-ml)
-12. [CI/CD](#cicd)
-13. [Documentación técnica](#documentación-técnica)
-14. [Troubleshooting](#troubleshooting)
+> El centro de este repositorio es el **proceso de Machine Learning**: dataset reproducible con contratos de datos, una sola definición de features para entrenamiento e inferencia, búsqueda de hiperparámetros con validación cruzada *rolling-origin*, interpretabilidad contrastada con la física, calibración *cross-fitted*, análisis de decisión para los umbrales y una evaluación final única en un periodo nunca visto (2026).
 
 ---
 
-## Descripción general
+## Resultados
 
-MVA es una webapp mobile-first que combina:
+<!-- metrics:start -->
 
-- **Predicción de lluvia** — dos modelos scikit-learn (Random Forest AUC=0.82, Regresión Logística F1=0.78) entrenados con datos históricos del SIATA y Open-Meteo para el Valle de Aburrá.
-- **Enrutamiento ambiental** — grafo vial OSMnx/NetworkX ponderado por condiciones climáticas.
-- **Integración Google Cloud** — Directions API (ruta), Geocoding API (búsqueda de lugares), Weather API (condiciones actuales), Maps JS API (mapa interactivo).
-- **Alertas instructivas** — niveles Verde / Amarillo / Rojo con tiempo de viaje ajustado por lluvia (factores ×1.00 / ×1.20 / ×1.35).
-- **Navegación 3D** — vista de navegación paso a paso con cámara inclinada y capa de calor meteorológico.
-- **Autenticación JWT** — registro y login de usuarios con hash bcrypt.
+**Holdout fresco 2026 (nunca usado en ninguna decisión)** — 2026-01-02 → 2026-10-15, 89,518 horas-estación, llueve en el 16.3 %. IC 95 % por bootstrap en bloques de días.
 
-El stack completo corre en Docker Compose con un solo comando.
+| Modelo | ROC-AUC | PR-AUC | Brier | BSS vs climatología | ECE |
+|---|---|---|---|---|---|
+| **rain_classifier 1.1.0** | 0.837 [0.820, 0.856] | 0.525 | 0.1049 | 0.151 | 0.039 |
+| rain_classifier 1.0.0 | 0.805 [0.789, 0.824] | 0.488 | 0.1087 | 0.120 | 0.021 |
+| Regresión logística | 0.799 [0.779, 0.820] | 0.469 | 0.1098 | 0.111 | 0.017 |
+| Climatología (hora × mes) | 0.724 [0.694, 0.754] | 0.362 | 0.1235 | 0.000 | 0.038 |
+| Pronóstico crudo de Open-Meteo | 0.714 [0.698, 0.733] | 0.346 | 0.1251 | -0.013 | 0.028 |
 
----
+Supera con IC pareado (Brier y log loss) a: rain_classifier 1.0.0, Regresión logística, Climatología (hora × mes), Pronóstico crudo de Open-Meteo.
 
-## Stack tecnológico
+**Prueba 2025** — 2025-01-02 → 2025-12-31, 113,568 horas-estación, llueve en el 21.5 %. IC 95 % por bootstrap en bloques de días.
 
-| Capa | Tecnología |
-|---|---|
-| Frontend | React 18 + Vite, nginx (Docker), Google Maps JS API |
-| Backend | Java 21, Spring Boot 3.4.2, JOOQ 3.19.18, Flyway, JWT |
-| ML Service | Python 3.11, FastAPI, scikit-learn 1.8.0 |
-| Routing Service | Python 3.11, FastAPI, OSMnx, NetworkX |
-| Base de datos | PostgreSQL 16 |
-| Infraestructura | Docker Compose, GitHub Actions (CI/CD parcial) |
+| Modelo | ROC-AUC | PR-AUC | Brier | BSS vs climatología | ECE |
+|---|---|---|---|---|---|
+| **rain_classifier 1.1.0** | 0.846 [0.830, 0.860] | 0.615 | 0.1234 | 0.113 | 0.057 |
+| rain_classifier 1.0.0 | 0.825 [0.810, 0.840] | 0.581 | 0.1264 | 0.091 | 0.035 |
+| Regresión logística | 0.805 [0.789, 0.822] | 0.545 | 0.1323 | 0.049 | 0.031 |
+| Climatología (hora × mes) | 0.777 [0.753, 0.797] | 0.505 | 0.1391 | 0.000 | 0.037 |
+| Pronóstico crudo de Open-Meteo | 0.702 [0.688, 0.716] | 0.398 | 0.1567 | -0.126 | 0.042 |
 
----
+Supera con IC pareado (Brier y log loss) a: rain_classifier 1.0.0, Regresión logística, Climatología (hora × mes), Pronóstico crudo de Open-Meteo.
 
-## Estructura del repositorio
+<!-- metrics:end -->
 
-```
-Monitoreo-de-variables-ambientales/      (Cookiecutter Data Science v2)
-├── docker-compose.dev.yml  docker-compose.prod.yml   ← Orquestación de los 5 servicios
-├── data/                    ← raw / interim / processed / external (no se versiona)
-├── docs/                    ← Informe técnico, manuales y planes de sprint
-├── models/                  ← Modelos entrenados (random_forest.pkl, regresion_logistica.pkl)
-├── notebooks/               ← Exploración (convención <n>.<m>-<iniciales>-<descripcion>)
-├── references/              ← Informe del curso y wiki en PDF
-├── reports/figures/         ← Figuras generadas
-├── mdva/                    ← Paquete de ciencia de datos (config de rutas, entrenamiento)
-├── services/
-│   ├── ml_api/              ← FastAPI de predicción de lluvia (puerto 8081)
-│   └── routing_api/         ← FastAPI de enrutamiento OSMnx + NetworkX (puerto 8000)
-├── apps/
-│   ├── backend/             ← Spring Boot + JOOQ + Flyway (puerto 8080)
-│   └── frontend/            ← React + Vite servido con nginx (puerto 8090)
-├── db/                      ← init-docker.sql, seeds/ (CSV) y scripts/
-├── tests/e2e/               ← Smoke test de punta a punta del stack
-├── specs/  .specify/        ← Spec-Driven Development (constitución, charter y specs)
-```
+*Tabla generada por `make readme` desde [`reports/metrics/rain_classifier/1.1.0/metrics.json`](reports/metrics/rain_classifier/1.1.0/metrics.json); un test impide que se desincronice. Detalle completo en la [model card](models/rain_classifier/1.1.0/model_card.md) y en el [notebook 3.0](notebooks/3.0-nm-evaluacion-y-calibracion.ipynb).*
+
+**Lectura honesta**
+- El modelo mejora de forma significativa a todos los baselines desplegables, también en 2026. La persistencia ("llueve si llovió la hora anterior") tiene un Brier similar, pero **no es desplegable**: en producción no hay una observación de la hora anterior equivalente a la etiqueta.
+- La calibración *cross-fitted* (Platt) bajó el ECE de 0.027 a 0.004 dentro de desarrollo, pero en 2025 y 2026 el ECE (0.04–0.06) supera la meta de 0.03: la tasa de lluvia cambia entre años (15.6 % en 2024, 21.5 % en 2025). Es una limitación documentada, no oculta.
+- La etiqueta es reanálisis ERA5 (~25 km), no lluvia medida: frente a pluviómetros SIATA la concordancia horaria es baja para **cualquier** fuente de malla ([validación externa](reports/metrics/label_validation.json)). El modelo predice lluvia "de la zona", no de un punto exacto.
 
 ---
 
-## Requisitos previos
+## El problema
 
-- **Docker Desktop** instalado y corriendo (único requisito para el stack completo).
-- Para desarrollo local del frontend: Node.js 24+ y npm 11+.
-- Para regenerar código JOOQ: JDK 21 (no necesario si solo usas Docker).
+Medellín tiene lluvias convectivas de tarde, muy locales y difíciles de pronosticar a la hora exacta. La aplicación ajusta el tiempo de viaje y emite alertas (VERDE < 40 %, AMARILLO 40–70 %, ROJO > 70 %) según la probabilidad de lluvia en el origen. Para que esas alertas sean útiles, la probabilidad tiene que estar **calibrada** y el modelo tiene que superar a lo que ya ofrece el pronóstico numérico.
+
+## Método
+
+| Etapa | Qué se hizo | Dónde |
+|---|---|---|
+| Datos | Pronósticos archivados de Open-Meteo (la misma fuente que se consulta en vivo) para 13 estaciones SIATA, 2022–2025; etiqueta: precipitación ERA5 ≥ 0.5 mm/h (umbral calibrado contra pluviómetros sin fuga). Contrato de datos con *quality gates*, descargas idempotentes con manifiesto SHA-256. Holdout 2026 en archivo aparte | `mdva/dataset.py`, `mdva/data_contract.py`, `make data`, `make data-holdout` |
+| Features | **Un solo módulo** para entrenamiento e inferencia (contrato versionado 1.1.0, 24 features): variables de la hora, viento en componentes u/v, codificación cíclica de hora local y mes, **ventana t−2…t+2 del mismo pronóstico** (absorbe errores de *timing*) y ubicación. Test de paridad entrenamiento/inferencia con diferencia máxima 0 | `mdva/features.py`, `docs/features.md` |
+| Validación | CV *rolling-origin*: 6 folds trimestrales 2023–2024, ventana creciente, hueco de 24 h. 2025 y 2026 fuera de toda decisión | `mdva/modeling/cv.py` |
+| Selección de features | Aporte marginal de cada grupo candidato (> 1 EE pareado) y **validación espacial** (entrenar sin una celda ERA5, evaluar en ella) para la ubicación | `study.json` → `feature_candidates`, `spatial_cv` |
+| Modelo | 60 configuraciones aleatorias de HistGradientBoosting + logística con *splines* (GAM) + bosque aleatorio; elección con la **regla de un error estándar pareada** | `mdva/modeling/search.py` |
+| Interpretabilidad | Importancia por permutación con IC, PDP/ICE, ciclo diurno aprendido (máximo a las 14 h, como las tormentas de la tarde), ablación por grupos y curva de aprendizaje | `mdva/modeling/analysis.py` |
+| Calibración y umbrales | Calibración *cross-fitted* (cada fold con los anteriores); curvas de costo: el umbral óptimo empírico coincide con 1/(1+r), y 0.40 es casi óptimo para r ≈ 1–2 | `mdva/modeling/calibration.py` |
+| Evaluación | Una sola vez en 2025 y 2026 frente a climatología, pronóstico crudo, logística y el modelo anterior; IC por bootstrap en bloques de días y diferencias pareadas; registro de qué periodo tocó cada decisión | `mdva/modeling/train.py`, `metrics.json` → `decision_log` |
+
+**Un hallazgo del proceso.** La primera versión de la regla de un error estándar usaba el EE de la media del log loss entre folds. Como los trimestres tienen tasas de lluvia muy distintas, ese EE era enorme (≈ 0.04) y la regla eligió un modelo peor **en todos los folds**. La versión correcta es pareada: el EE de la diferencia por fold frente al mejor. Está documentado en [`specs/012-ml-depth/research.md`](specs/012-ml-depth/research.md) (R3) y cubierto por un test.
+
+![Importancia por permutación](reports/figures/study_permutation_importance.png)
+![Calibración cross-fitted](reports/figures/study_calibration.png)
 
 ---
 
-## Ejecución con Docker (recomendado)
+## Reproducir
+
+Requisitos: [uv](https://docs.astral.sh/uv/) y `make` (o los comandos equivalentes del `Makefile`). Todo el pipeline usa Python 3.11 con versiones fijadas en `uv.lock`.
 
 ```bash
-# Desde la raíz del repositorio
-docker compose -f docker-compose.dev.yml up --build
+make requirements     # entornos de los 3 proyectos Python desde sus lockfiles
+make data             # dataset 2022–2025 desde Open-Meteo (~30 s con la caché de descargas)
+make data-holdout     # holdout 2026 (archivo aparte)
+make study            # estudio de modelado: CV, búsqueda, ablación, interpretabilidad (~1 h en 12 núcleos)
+make train            # modelo final 1.1.0 + evaluación única en 2025 y 2026 + model card
+make notebook         # notebook 3.0 ejecutado leyendo solo reports/
+make readme           # tabla de resultados de este README
+make lint test        # ruff + pytest (incluye un estudio + entrenamiento de punta a punta con datos sintéticos)
 ```
 
-Los servicios arrancan en orden por healthchecks:
-```
-postgres → ml-service → routing-service → backend → frontend
-```
+Semillas fijas; cada corrida de entrenamiento queda registrada en `reports/runs/` (commit, huella del dataset, parámetros y métricas).
 
-> El primer arranque puede tardar **5-10 minutos**: descarga de imágenes base, compilación del JAR de Spring Boot y descarga del grafo OSM del Valle de Aburrá.
+## Producto
 
-Para detener y eliminar volúmenes:
-```bash
-docker compose -f docker-compose.dev.yml down -v
-```
+El modelo se sirve en una aplicación de cinco servicios, que corre completa con `docker compose -f docker-compose.dev.yml up --build` (o `make up`) y **sin ninguna API key**:
 
----
-
-## Verificación de servicios
-
-Una vez levantado el stack, verifica que todo responde:
-
-| Servicio | URL | Verificación |
-|---|---|---|
-| Frontend | http://localhost:8090 | Pantalla de login/planificación |
-| Backend health | http://localhost:8080/actuator/health | `{ "status": "UP" }` |
-| Swagger UI | http://localhost:8080/swagger-ui.html | Documentación interactiva |
-| ML Service health | http://localhost:8081/health | Modelos cargados |
-| ML Service docs | http://localhost:8081/docs | Swagger FastAPI |
-| Routing Service health | http://localhost:8000/health | Grafo listo |
-| Routing Service docs | http://localhost:8000/docs | Swagger FastAPI |
-| PostgreSQL | `psql -h localhost -p 5436 -U postgres -d mdva` | Conexión exitosa |
-
----
-
-## API y endpoints
-
-### Autenticación
-
-| Método | Ruta | Descripción |
-|---|---|---|
-| POST | `/api/auth/register` | Registro de usuario nuevo |
-| POST | `/api/auth/login` | Login — retorna JWT |
-
-### Viajes
-
-| Método | Ruta | HTTP | Descripción |
+| Servicio | Tecnología | Puerto | Rol |
 |---|---|---|---|
-| POST | `/api/viajes/planificar` | 201 | Planifica viaje completo (ruta + ML + alerta) |
-| GET | `/api/viajes/{id}` | 200/404 | Obtiene un viaje por ID |
-| PATCH | `/api/viajes/{id}/finalizar` | 200 | Marca el viaje como finalizado |
-| GET | `/api/viajes/usuario/{idUsuario}` | 200 | Historial de viajes del usuario |
+| ML API | FastAPI | 8081 | `POST /v2/predict` y `/v2/predict/batch`: valida la entrada contra el contrato de features (422 con Problem Details) y devuelve probabilidad calibrada y nivel de alerta |
+| Routing | FastAPI + OSMnx + NetworkX | 8000 | Rutas sobre el grafo OSM del valle con tiempos por tipo de vía; ruta "más seca" ponderando cada arista por la probabilidad de lluvia de una grilla espacial del modelo |
+| Backend | Spring Boot 3 + Java 21 + PostgreSQL | 8080 | Viajes, alertas, monitoreo en ruta, clima (Open-Meteo) y geocodificación (Nominatim, ≤ 1 req/s con caché) |
+| Frontend | React 19 + MapLibre GL | 8090 | Mapa con heatmap de probabilidad (escala fija), planificación, navegación 3D |
+| Base de datos | PostgreSQL 16 (Flyway) | 5436 | Usuarios, viajes, paradas, alertas |
 
-### Clima
+Verificación de punta a punta: `make smoke` (API) y `make ui-smoke` (navegador real con Playwright; capturas en `reports/figures/ui/`).
 
-| Método | Ruta | Descripción |
-|---|---|---|
-| GET/POST | `/api/weather/current` | Condiciones actuales por coordenada (Open-Meteo independiente) |
-| GET | `/api/weather/grid` | Datos de cuadrícula para capa de calor |
-
-### Ubicaciones
-
-| Método | Ruta | Descripción |
-|---|---|---|
-| GET | `/api/locations/municipalities` | Lista de municipios del Valle de Aburrá |
-| GET | `/api/locations/municipalities/{id}/communes` | Comunas de un municipio |
-| GET | `/api/locations/communes/{id}/neighborhoods` | Barrios de una comuna |
-
-### Ejemplo — Planificar un viaje
-
-```bash
-curl -X POST http://localhost:8080/api/viajes/planificar \
-  -H "Content-Type: application/json" \
-  -d '{
-    "idUsuario": 1,
-    "origen": {
-      "lat": 6.2442,
-      "lng": -75.5812,
-      "displayName": "Medellín Centro"
-    },
-    "destino": {
-      "lat": 6.1132,
-      "lng": -75.6145,
-      "displayName": "Itagüí"
-    }
-  }'
+```
+Frontend ──▶ Backend ──▶ Routing ──▶ ML API ◀── Open-Meteo (pronóstico en vivo)
+                │                        ▲
+                ├──▶ ML API ─────────────┘    (misma fuente, mismas variables y unidades que el entrenamiento)
+                └──▶ Nominatim (direcciones)
 ```
 
-El microservicio ML también es accesible directamente:
+## Estructura (Cookiecutter Data Science v2)
 
-```bash
-curl -X POST http://localhost:8081/predecir/ambos \
-  -H "Content-Type: application/json" \
-  -d '{
-    "temperatura_c": 18.5,
-    "humedad_relativa_pct": 82.0,
-    "cobertura_nubosa_pct": 75.0,
-    "velocidad_viento_ms": 2.3,
-    "hora": 14,
-    "mes": 4
-  }'
+```
+mdva/                 paquete de ciencia de datos: dataset, contrato de datos, features, modelado, reportes
+  modeling/           cv, search, analysis, calibration, study, train, evaluate, predict, model_card
+services/ml_api/      servicio de predicción (consume mdva)
+services/routing_api/ servicio de rutas (DDD)
+apps/backend/         Spring Boot
+apps/frontend/        React + MapLibre
+models/               artefactos versionados (< 5 MB) con metadata.json y model_card.md
+reports/              métricas, estudio, figuras y registro de corridas (generados por código)
+notebooks/            exploración (1.0) y narración del modelado (3.0)
+specs/                especificaciones por etapa (Spec-Driven Development) con plan, contratos y verificación
+docs/                 contrato de features, informe técnico y manuales
+tests/                pytest del paquete y pruebas de punta a punta del stack
 ```
 
----
+## Cómo se trabajó
 
-## Comandos de desarrollo
+El proyecto se refactorizó con **Spec-Driven Development**: cada cambio pasó por especificación → aclaraciones → plan → contratos → tareas → análisis de consistencia → implementación → verificación registrada, bajo una [constitución](.specify/memory/constitution.md) de ingeniería (reproducibilidad, contratos, evaluación honesta, sin datos inventados) y un [charter](.specify/memory/charter.md) con el diagnóstico de partida. Cada carpeta de [`specs/`](specs/) documenta una etapa, desde la reestructuración del repositorio (001) hasta la profundidad de ML (012).
 
-Requisitos: [uv](https://docs.astral.sh/uv/) (instala Python 3.11 si hace falta) y Docker. Los objetivos del `Makefile` siguen la convención Cookiecutter Data Science v2; en Windows sin `make` se usa el comando equivalente.
+CI en GitHub Actions: ruff + pytest + smoke del ML API (Python), Gradle test (Backend), ESLint + vitest + build (Frontend) y escaneo de secretos.
 
-| Objetivo | Comando equivalente | Qué hace |
-|---|---|---|
-| `make requirements` | `uv sync --all-extras` · `uv sync --project services/ml_api` · `uv sync --project services/routing_api` | Entornos de los 3 proyectos Python desde sus lockfiles |
-| `make lint` | `uv run ruff check .` · `uv run ruff format --check .` | Lint y formato |
-| `make format` | `uv run ruff check --fix .` · `uv run ruff format .` | Corrige y formatea |
-| `make test` | `uv run pytest` · `uv run --project services/ml_api pytest services/ml_api/tests` · `uv run --project services/routing_api pytest services/routing_api/tests` | Tests de Python |
-| `make secrets` | `docker run --rm -v "$PWD:/repo" ghcr.io/gitleaks/gitleaks:v8.30.1 git /repo --log-opts=HEAD` | Escaneo de secretos |
-| `make up` / `make down` | `docker compose -f docker-compose.dev.yml up --build -d` / `down` | Stack de desarrollo |
-| `make smoke` | `uv run python tests/e2e/smoke_stack.py` | Smoke test de punta a punta (con el stack arriba) |
+## Autoría
 
-La CI (`.github/workflows/`) corre lint, tests, escaneo de secretos y los builds del Backend y del Frontend en cada push.
+MDVA nació como proyecto de curso (2026-1) de **Camilo Ardila, Santiago Martínez, Nicolás Meneses y Luis Ángel Seoanes**: la primera versión de la aplicación (Backend, Frontend, base de datos y un prototipo de modelo) es trabajo del equipo.
 
-## Desarrollo local (sin Docker)
+Este repositorio es la versión de portafolio de **Nicolás Meneses**, que rehízo de forma individual:
+- todo el componente de ciencia de datos: dataset reproducible, etiqueta validada contra pluviómetros, contrato de features, estudio de modelado, calibración, evaluación y model card;
+- los servicios de ML y de rutas (contratos, señal de lluvia única, ruta más seca espacial);
+- la migración del producto a servicios gratuitos (Open-Meteo, OSM/Nominatim, MapLibre), la reestructuración CCDS v2 y la CI.
 
-### Backend
+## Limitaciones
 
-```bash
-cd apps/backend
-# Windows
-.\gradlew.bat bootRun --args="--spring.profiles.active=dev"
+- La etiqueta es reanálisis (ERA5, ~25 km): el modelo aprende la lluvia de la celda, no la de un pluviómetro.
+- 13 estaciones en 5 celdas: muchas menos observaciones independientes que filas (por eso los IC remuestrean días completos).
+- La tasa de lluvia varía entre años y degrada la calibración fuera de desarrollo; una recalibración periódica con datos recientes es el siguiente paso natural.
+- Los tiempos de viaje usan velocidades por tipo de vía de OSM; no hay tráfico en vivo (no existe una fuente gratuita).
 
-# Linux/Mac
-./gradlew bootRun --args="--spring.profiles.active=dev"
-```
-
-Requiere PostgreSQL corriendo en `localhost:5436` con la BD `mdva` inicializada (`db/init-docker.sql`).
-
-### Frontend
-
-```bash
-cd apps/frontend
-npm install
-npm run dev    # http://localhost:5173
-```
-
-Variables necesarias en `apps/frontend/.env` (plantilla en `apps/frontend/.env.example`):
-```
-VITE_GOOGLE_MAPS_KEY=<tu_api_key>
-VITE_API_BASE_URL=http://localhost:8080
-```
-
-### Regenerar código JOOQ
-
-Con PostgreSQL corriendo en el puerto 5436:
-
-```bash
-cd apps/backend
-.\gradlew.bat generateJooq   # Windows
-./gradlew generateJooq        # Linux/Mac
-```
-
----
-
-## Base de datos
-
-**Motor:** PostgreSQL 16  
-**Puerto host:** 5436 (→ 5432 interno)  
-**Base de datos:** `mdva`  
-**Usuario:** `postgres` / **Password:** valor de `POSTGRES_PASSWORD` en tu `.env` local (desarrollo)
-
-**Tablas principales:**
-
-| Tabla | Descripción |
-|---|---|
-| `municipios` | 10 municipios del Valle de Aburrá |
-| `comunas` | 21 comunas y corregimientos |
-| `barrios` | 46 barrios |
-| `tipos_vehiculo` | 11 tipos de vehículo |
-| `tipos_motor` | 7 tipos de motor |
-| `usuarios` | Cuentas de usuario con hash bcrypt |
-| `vehiculos` | Flota de vehículos por usuario (placa colombiana validada) |
-| `viajes` | Viajes planificados con ruta, condiciones ML y estado |
-
-**Migraciones Flyway:**
-
-| Versión | Descripción |
-|---|---|
-| V1 | Estado base (`init-docker.sql`) — tablas + datos seed |
-| V2 | Agrega coordenadas lat/lng, nombre y distancia a `viajes` |
-
----
-
-## Datos
-
-El dataset de entrenamiento se reconstruye con un solo comando (`make data`, ~30 s con la caché de descargas) y queda en `data/processed/rain_hourly.parquet` (no versionado; sí lo están el contrato y los reportes).
-
-| Aspecto | Detalle |
-|---|---|
-| Fuente | Open-Meteo, 2022–2025: *Historical Forecast* (variables de entrada, las mismas que se piden en vivo) y *ERA5* (precipitación de referencia), en UTC y con unidades explícitas |
-| Ubicaciones | 13 estaciones SIATA del Valle de Aburrá → **455 832 filas** (13 × 35 064 horas), 0 descartadas |
-| Etiqueta | `rain = precipitación ERA5 de la misma hora ≥ 0.5 mm/h`; tasa de lluvia 19.0 % |
-| Calidad | Contrato declarativo `rain_hourly` v1 (`mdva/data_contract.py`): tipos, unidades, rangos, nulos, clave única y cobertura; una etapa que no lo cumple no se promueve. Resultado en [`reports/data_quality.json`](reports/data_quality.json) |
-| Reproducibilidad | Manifiesto SHA-256 de las descargas; una segunda ejecución hace 0 descargas y produce la misma huella de contenido |
-
-### Validación externa de la etiqueta (SIATA)
-
-Los pluviómetros SIATA disponibles cubren solo un mes (7 jun – 7 jul de 2022), así que no se usan para entrenar sino para medir qué tan fiel es la etiqueta (`make validate-labels` → [`reports/metrics/label_validation.json`](reports/metrics/label_validation.json)):
-
-- **Umbral calibrado sin fuga**: con la primera mitad del mes, por igualación de frecuencias, 0.5 mm/h en ERA5 reproduce la tasa observada en SIATA (24.0 % vs. 21.4 %). La segunda mitad solo se usa para medir.
-- **Acuerdo hora a hora bajo** (validación, 11 estaciones, 3 891 horas): kappa 0.05 a 1 h, 0.13 a 3 h y 0.18 a 6 h (F1 0.23 → 0.57). El pronóstico crudo de Open-Meteo obtiene valores muy parecidos (kappa 0.08 / 0.15 / 0.19).
-- **Limitación de resolución**: ERA5 tiene celdas de ~25 km; 8 de las 13 estaciones caen en la misma celda, de modo que la etiqueta describe lluvia "en la zona" y no en un punto. Las métricas del modelo se leen frente a esta referencia, no frente a un pluviómetro.
-- Exclusiones: la estación 205 no tiene minutos con calidad 1 y la 206 solo 9 horas comparables (< 250).
-
----
-
-## Modelos ML
-
-Los modelos se sirven vía `http://localhost:8081` (FastAPI).
-
-| Modelo | Archivo | AUC | F1 | Uso |
-|---|---|---|---|---|
-| Random Forest | `models/random_forest.pkl` | 0.82 | ~0.78 | Decisión principal de alerta |
-| Regresión Logística | `models/regresion_logistica.pkl` | — | 0.78 | Referencia complementaria |
-
-- Entrenados con datos del SIATA + Open-Meteo (Valle de Aburrá).
-- Versión scikit-learn **1.8.0** fijada en `services/ml_api/uv.lock` (la de los `.pkl`) — no cambiar sin re-entrenar.
-- Mejora desde línea base: F1 0.65 → 0.78 (+20%).
-
-> Nota: uno de los dos modelos puede no estar en el repositorio por tamaño. El ML Service arranca en modo tolerante a fallos y retorna HTTP 503 si se solicita un modelo no cargado.
-
----
-
-## CI/CD
-
-Configurado parcialmente con GitHub Actions (`./github/workflows/release.yml`). El pipeline está en progreso (HU025); algunos workflows se marcan como fallidos en pushes regulares.
-
----
-
-## Documentación técnica
-
-| Documento | Descripción |
-|---|---|
-| [docs/informe-tecnico.md](docs/informe-tecnico.md) | Arquitectura, esquema de BD, flujo de datos, decisiones técnicas |
-| [docs/manual-usuario.md](docs/manual-usuario.md) | Guía de uso con flujos paso a paso y escenarios cotidianos |
-| [docs/manual-pruebas.md](docs/manual-pruebas.md) | Casos de prueba, resultados de validación ML y pruebas piloto UX |
-| [docs/sprints/sprint-3-documentacion.md](docs/sprints/sprint-3-documentacion.md) | Documentación detallada del Sprint 3 (Camilo Ardila) |
-
----
-
-## Troubleshooting
-
-**El routing-service tarda mucho en arrancar**  
-Es normal en el primer arranque: descarga el grafo OSM del Valle de Aburrá y puede tardar 2-5 minutos. El healthcheck tiene `start_period: 120s`. Monitorea con `docker compose logs routing-service`.
-
-**El backend falla al conectarse a la BD**  
-Verifica que el contenedor `mdva-postgres` pasó su healthcheck (`pg_isready`). El backend depende del healthcheck, no solo del arranque del contenedor.
-
-**Error de JOOQ: clase no encontrada**  
-Regenera el código JOOQ con `./gradlew generateJooq` y reconstruye el backend.
-
-**`POST /api/viajes/planificar` devuelve 502**  
-Verifica que `mdva-ml` está corriendo: `curl http://localhost:8081/health`. Si retorna 503, el modelo `.pkl` no está disponible en disco.
-
-**Frontend no carga el mapa (pantalla en blanco)**  
-Verifica que `VITE_GOOGLE_MAPS_KEY` tiene un valor válido en `.env.production` antes del build de Docker.
-
-**El gradlew falla con "bad interpreter" en Linux**  
-El archivo `gradlew` tiene line endings CRLF. El Dockerfile lo corrige automáticamente con `sed`. Si ejecutas fuera de Docker en Linux: `sed -i 's/\r$//' gradlew && chmod +x gradlew`.
-
-**Puerto 5436 en uso**  
-El mapeo es no estándar para evitar conflictos con instalaciones locales de PostgreSQL. Si el puerto 5436 también está ocupado, cambia el mapeo en `docker-compose.dev.yml` y actualiza `build.gradle.kts` → `generateJooq` URL.

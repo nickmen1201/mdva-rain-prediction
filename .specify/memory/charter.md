@@ -4,7 +4,7 @@
 > mandatos de cambio y requisitos funcionales a preservar. Está **subordinado** a
 > `.specify/memory/constitution.md`: si chocan, gana la constitución.
 
-- **Versión:** 2.0.0 (ver registro de cambios al final)
+- **Versión:** 2.1.0 (ver registro de cambios al final)
 - **Objetivo de la refactorización:** convertir MDVA en un proyecto de portafolio de **Ciencia de Datos / ML** reproducible, metodológicamente defendible y con la estructura **Cookiecutter Data Science v2 (CCDS v2)**, sin perder la funcionalidad de producto que ya existe y sin depender de APIs de pago.
 
 ---
@@ -239,8 +239,8 @@ Tras mover: actualizar *build contexts* en ambos `docker-compose`, `working-dire
 
 - R-34: Usar `ZoneId.of("America/Bogota")` en el cálculo de `hora`/`mes` enviados al ML (`WeatherMLServiceImpl`, `TripMonitorServiceImpl`), y agregar `TZ=America/Bogota` a los servicios en ambos compose.
 - R-35: Reemplazar Google Weather por Open-Meteo en todo el Backend (H-19), de modo que la fuente de inferencia coincida con la de entrenamiento (R-05); se elimina `inferCloudCover`.
-- R-35b: Reemplazar Google Directions por el routing service propio (`/api/v1/route/spring`, ya diseñado como sustituto) y Google Geocoding por Nominatim (OSM), respetando su política de uso (User-Agent identificable, ≤ 1 req/s, caché).
-- R-35c: Frontend: reemplazar Google Maps JS + Places por MapLibre GL + teselas OSM y autocompletado vía Backend (Nominatim). Se preservan heatmap, polyline, navegación con cámara inclinada y orientación del dispositivo.
+- R-35b: Reemplazar Google Directions por el routing service propio (`/api/v1/route/spring`, ya diseñado como sustituto) y Google Geocoding por Nominatim (OSM), respetando su política de uso (User-Agent identificable, ≤ 1 req/s, caché, **sin autocompletado por tecla**: búsqueda al enviar el texto).
+- R-35c: Frontend: reemplazar Google Maps JS + Places por MapLibre GL + teselas OSM y búsqueda de direcciones vía Backend (Nominatim, al enviar el texto). Se preservan heatmap, polyline, navegación con cámara inclinada y orientación del dispositivo.
 - R-36: No enviar `precip_lag_1h_mm` cuando el modelo no lo usa (forecast) y no enviar ceros de relleno (R-09).
 - R-37: ✅ Hecho (commit `a47c3c5`). Al retirar Google se elimina `GOOGLE_MAPS_API_KEY` de toda la configuración.
 
@@ -301,7 +301,7 @@ Ninguna spec puede romper estos comportamientos sin enmendar este charter. Son l
   | 0.40 – 0.70 | AMARILLO | ×1.20 |
   | > 0.70 | ROJO | ×1.35 + sugerir ruta alterna si distancia > 5 000 m |
 
-- RF-11: Si hay precipitación activa medida (> 0.1 mm), se fuerza `llueve=true`.
+- RF-11: *(Retirado en 2.1.0: la regla "precipitación > 0.1 mm fuerza `llueve`" nunca existió en el código; ver spec 007, Clarifications.)*
 - RF-12: Rutas multi-parada (`POST /api/v1/route/multi`), paradas persistidas (`GET /api/viajes/{id}/paradas`, `PATCH /api/viajes/{id}/paradas/{orden}/finalizar`).
 - RF-13: `PATCH /api/viajes/{id}/finalizar`, `GET /api/viajes/{id}`, historial `GET /api/viajes/usuario/{idUsuario}`.
 - RF-14: Tipo de vehículo en el enrutamiento (`car`, `bike`); las rutas alternativas están siempre disponibles para el usuario (commit `0a5dfa5`).
@@ -377,3 +377,4 @@ Cada spec recorre specify → clarify → plan → tasks → analyze → impleme
 - **1.1.0 (2026-10-28):** pasa a ser charter subordinado a `.specify/memory/constitution.md`; agrega H-19 (Google sin facturación) y H-20 (datos SIATA perdidos); fuente de datos Open-Meteo con SIATA como validación externa; retiro de Google (R-35, R-35b, R-35c); D-01 y R-37 hechos; nuevo orden de specs.
 - **1.2.0 (2026-10-31):** agrega §3.3.I (R-45–R-51, profundidad de ML) y la spec 012 correspondiente; la documentación de portafolio pasa a ser la spec 013.
 - **2.0.0 (2026-10-31):** MAJOR. RF-17, RF-22 y RF-23 pasan del API v1 (Random Forest + Regresión Logística heredados, sin evaluación temporal) al API v2 y al modelo evaluado; los endpoints v1 y los `.pkl` se retiran en la spec 009.
+- **2.1.0 (2026-10-31):** R-35b/R-35c precisan que Nominatim se consulta al enviar el texto (su política prohíbe el autocompletado); RF-11 retirado por no haber existido nunca.

@@ -116,6 +116,6 @@ commit que modifica este archivo, actualiza el Sync Impact Report e incrementa l
 material, PATCH si aclara). La versión de API (lo que cambia para consumidores) se mantiene
 distinta de la versión de artefacto (lo que cambia para el equipo). Toda spec y todo plan MUST
 incluir un *Constitution Check* que cite los principios afectados. Guía operativa en
-`CLAUDE.md`; contexto del proyecto en `.specify/memory/charter.md`.
+`README.md`; contexto del proyecto en `.specify/memory/charter.md`.
 
 **Version**: 1.0.0 | **Ratified**: 2026-10-28 | **Last Amended**: 2026-10-28

@@ -3,8 +3,14 @@
 .idea/
 *.iml
 
-# Claude Code (metadata local, no compartida)
+# Herramientas locales de asistentes y de spec-kit (solo se versionan la constitución y el charter)
 .claude/
+CLAUDE.md
+.specify/*
+!.specify/memory/
+.specify/memory/*
+!.specify/memory/constitution.md
+!.specify/memory/charter.md
 
 # Documentación interna del equipo (Trello/Teams es la fuente)
 doc/

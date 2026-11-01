@@ -112,6 +112,7 @@ services:
       ML_SERVICE_URL:                   http://ml-service:8081
       ROUTING_SERVICE_URL:              http://routing-service:8000
       NOMINATIM_URL:                    ${NOMINATIM_URL:-https://nominatim.openstreetmap.org}
+      PHOTON_URL:                       ${PHOTON_URL:-https://photon.komoot.io}
     depends_on:
       postgres:
         condition: service_healthy

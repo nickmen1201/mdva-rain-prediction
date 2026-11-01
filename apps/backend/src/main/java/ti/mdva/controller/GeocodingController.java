@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import ti.mdva.service.geocoding.GeocodingResultDTO;
 import ti.mdva.service.geocoding.NominatimClient;
+import ti.mdva.service.geocoding.PhotonClient;
 
 import java.util.List;
 
@@ -20,9 +21,20 @@ import java.util.List;
 public class GeocodingController {
 
     private final NominatimClient nominatim;
+    private final PhotonClient photon;
 
-    public GeocodingController(NominatimClient nominatim) {
+    public GeocodingController(NominatimClient nominatim, PhotonClient photon) {
         this.nominatim = nominatim;
+        this.photon = photon;
+    }
+
+    @GetMapping("/suggest")
+    @Operation(
+        summary = "Sugerencias mientras se escribe (máx. 5)",
+        description = "Texto parcial (≥ 3 caracteres) con Photon/OSM, limitado al Valle de Aburrá. Caché de 30 min."
+    )
+    public List<GeocodingResultDTO> suggest(@RequestParam("q") String q) {
+        return photon.suggest(q);
     }
 
     @GetMapping("/search")

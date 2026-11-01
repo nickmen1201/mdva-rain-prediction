@@ -16,6 +16,21 @@ api.interceptors.request.use((config) => {
   return Promise.reject(error);
 });
 
+// Sesión vencida o token inválido (p. ej. tras reiniciar el Backend con otro secreto):
+// limpiar la sesión y volver al login en lugar de mostrar un error genérico.
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    const status = error.response?.status;
+    const url = error.config?.url ?? '';
+    if (status === 401 && !url.startsWith('/auth/')) {
+      ['token', 'username', 'userId'].forEach((k) => localStorage.removeItem(k));
+      if (window.location.pathname !== '/login') window.location.assign('/login?expired=1');
+    }
+    return Promise.reject(error);
+  },
+);
+
 export const login = (data) =>
   api.post('/auth/login', data).then((r) => r.data);
 
@@ -58,6 +73,9 @@ export const getWeatherForecast = (latitude, longitude, hours = 6) =>
 
 // ── Geocodificación con Nominatim vía Backend (spec 008/011) ────────────────
 // Búsqueda al enviar el texto (no por tecla): la política de Nominatim prohíbe el autocompletado.
+export const suggestPlaces = (q, signal) =>
+  api.get('/api/geocoding/suggest', { params: { q }, signal }).then((r) => r.data);
+
 export const searchPlaces = (q) =>
   api.get('/api/geocoding/search', { params: { q } }).then((r) => r.data);
 

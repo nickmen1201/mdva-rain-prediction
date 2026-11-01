@@ -6,6 +6,7 @@ import org.springframework.http.HttpStatus;
 
 import ti.mdva.service.geocoding.GeocodingResultDTO;
 import ti.mdva.service.geocoding.NominatimClient;
+import ti.mdva.service.geocoding.PhotonClient;
 
 import java.util.List;
 import java.util.Optional;
@@ -20,7 +21,8 @@ import static org.mockito.Mockito.when;
 class GeocodingControllerTest {
 
     private final NominatimClient nominatim = mock(NominatimClient.class);
-    private final GeocodingController controller = new GeocodingController(nominatim);
+    private final PhotonClient photon = mock(PhotonClient.class);
+    private final GeocodingController controller = new GeocodingController(nominatim, photon);
     private static final GeocodingResultDTO EXPLORA =
             new GeocodingResultDTO("Parque Explora, Medellín", 6.2706, -75.5658, "museum");
 
@@ -29,6 +31,13 @@ class GeocodingControllerTest {
     void search() {
         when(nominatim.search("explora")).thenReturn(List.of(EXPLORA));
         assertThat(controller.search("explora")).containsExactly(EXPLORA);
+    }
+
+    @Test
+    @DisplayName("suggest delega en Photon")
+    void suggest() {
+        when(photon.suggest("explo")).thenReturn(List.of(EXPLORA));
+        assertThat(controller.suggest("explo")).containsExactly(EXPLORA);
     }
 
     @Test
@@ -46,6 +55,6 @@ class GeocodingControllerTest {
     void reverseFueraDeRango() {
         assertThatThrownBy(() -> controller.reverse(91, 0)).isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> controller.reverse(0, -181)).isInstanceOf(IllegalArgumentException.class);
-        verifyNoInteractions(nominatim);
+        verifyNoInteractions(nominatim, photon);
     }
 }

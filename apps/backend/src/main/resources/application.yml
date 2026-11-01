@@ -57,8 +57,11 @@ routing:
   service:
     url: ${ROUTING_SERVICE_URL:http://localhost:8000}
 
-# Nominatim (OSM): User-Agent identificable y ≤ 1 req/s (política de uso; spec 008)
+# Nominatim (OSM): User-Agent identificable y ≤ 1 req/s (política de uso; spec 008).
+# Photon (OSM) sirve las sugerencias mientras se escribe, que Nominatim público no permite.
 geocoding:
+  photon:
+    url: ${PHOTON_URL:https://photon.komoot.io}
   nominatim:
     url: ${NOMINATIM_URL:https://nominatim.openstreetmap.org}
     user-agent: ${NOMINATIM_USER_AGENT:MDVA/1.0 (+https://github.com/nickmen1201/mdva-rain-prediction)}

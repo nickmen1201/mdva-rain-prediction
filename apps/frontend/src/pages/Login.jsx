@@ -9,6 +9,7 @@ export default function Login() {
   const navigate = useNavigate();
   const location = useLocation();
   const successMessage = location.state?.message;
+  const expired = new URLSearchParams(location.search).has('expired');
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -27,6 +28,7 @@ export default function Login() {
     <div style={{ maxWidth: '400px', margin: '40px auto' }}>
       <h1 className="page-title fade-up" style={{ textAlign: 'center', marginBottom: '1.5rem' }}>Iniciar Sesión</h1>
       {successMessage && <div className="alerta-badge alerta-VERDE fade-up" style={{ display: 'flex', justifyContent: 'center', marginBottom: '15px' }}>✓ {successMessage}</div>}
+      {expired && !error && <div className="error-box fade-up-2">Tu sesión venció. Inicia sesión de nuevo.</div>}
       {error && <div className="error-box fade-up-2">{error}</div>}
       
       <form onSubmit={handleSubmit} className="card fade-up-2">

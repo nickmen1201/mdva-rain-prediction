@@ -1358,6 +1358,7 @@ a:focus-visible {
   width: 100%; text-align: left; padding: 0.5rem 0.7rem; background: transparent; border: 0;
   color: var(--text, inherit); cursor: pointer; font-size: 0.85rem;
 }
-.place-results button:hover { background: rgba(74, 240, 160, 0.12); }
+.place-results button:hover,
+.place-results button.active { background: rgba(74, 240, 160, 0.12); }
 .field-hint { display: block; margin-top: 0.4rem; font-size: 0.8rem; color: var(--text-muted, #9aa0aa); }
 .field-hint.error { color: var(--danger, #f06a6a); }

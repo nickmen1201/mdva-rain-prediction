@@ -65,12 +65,12 @@ def main() -> int:
         }
         page.screenshot(path=OUT / "1-mapa-ciudad.png")
 
-        # 2. Planificar: búsqueda de origen y destino (Enter), sin autocompletado
+        # 2. Planificar: origen por sugerencias mientras se escribe (texto parcial, sin Enter)
+        #    y destino por búsqueda completa (Enter)
         page.goto(FRONTEND + "/planificar")
         page.wait_for_selector(".maplibregl-canvas", timeout=30_000)
         busquedas = page.locator(".place-search input")
-        busquedas.nth(0).fill("Parque Explora")
-        busquedas.nth(0).press("Enter")
+        busquedas.nth(0).press_sequentially("Universidad de Ant", delay=40)
         page.wait_for_selector(".place-results button", timeout=30_000)
         page.locator(".place-results button").first.click()
         busquedas.nth(1).fill("Estadio Atanasio Girardot")
